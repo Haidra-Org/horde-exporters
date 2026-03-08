@@ -1,0 +1,28 @@
+# AI Horde Prometheus Exporter Configuration
+
+# Scrape intervals (in seconds)
+# Must balance freshness vs. API load
+scrape_intervals:
+  models: 8         # Scrape models every 8 seconds (matches current horde.py)
+  workers: 300      # Scrape workers every 5 minutes (matches current horde.py)
+  performance: 2    # Scrape performance every 2 seconds (matches current horde.py)
+
+# AI Horde API configuration
+api:
+  base_url: "https://aihorde.net/api/v2"
+  user_agent: "horde_prometheus_exporter"
+  timeout: 10       # Request timeout in seconds
+
+# Exporter configuration
+exporter:
+  port: 9100        # Port to expose /metrics endpoint
+  log_level: INFO   # Logging level: DEBUG, INFO, WARNING, ERROR
+
+# Prometheus configuration
+# prometheus:
+#  scrape_interval: 15s      # How often Prometheus scrapes this exporter
+#  scrape_timeout: 10s       # Scrape timeout
+  # Add this job to prometheus.yml:
+  # - job_name: 'horde'
+  #   static_configs:
+  #   - targets: ['localhost:9100']
