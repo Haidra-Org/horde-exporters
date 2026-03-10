@@ -7,11 +7,13 @@ Scrapes AI Horde APIs and exposes metrics in Prometheus format
 import logging
 import threading
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass, field
+from typing import Any
 
 import requests
 from prometheus_client import start_http_server, Gauge, Counter
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
@@ -33,6 +35,9 @@ class ScrapeIntervalsSettings(BaseModel):
     models: int = 8
     workers: int = 300
     performance: int = 2
+    stats: int = 120
+    modes: int = 30
+    teams: int = 300
 
 
 class ApiSettings(BaseModel):
@@ -42,7 +47,7 @@ class ApiSettings(BaseModel):
 
 
 class ExporterSettings(BaseModel):
-    port: int = 9100
+    port: int = 9150
     log_level: str = "INFO"
 
 
@@ -55,6 +60,7 @@ class ZeroOmissionSettings(BaseModel):
     models: list[str] = ["queued", "jobs", "eta"]
     workers: list[str] = ["uncompleted_jobs"]
     performance: list[str] = ["queued_forms", "queued_requests", "queued_text_requests"]
+    stats: list[str] = []
 
 
 class Settings(BaseSettings):
@@ -123,193 +129,525 @@ class RateLimitState:
             }
 
 
+# ---------------------------------------------------------------------------
+# API response models
+# ---------------------------------------------------------------------------
+
+
+class ApiModel(BaseModel):
+    """Base for API response models. Strips null values so field defaults apply."""
+
+    @model_validator(mode="before")
+    @classmethod
+    def _strip_nulls(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            return {k: v for k, v in data.items() if v is not None}
+        return data
+
+
+class HordeModelStatus(ApiModel):
+    name: str
+    count: int = 0
+    queued: float = 0
+    performance: float = 0
+    jobs: float = 0
+    eta: int = 0
+
+
+class WorkerKudosDetails(ApiModel):
+    generated: float = 0
+    uptime: float = 0
+
+
+class HordeWorker(ApiModel):
+    name: str
+    online: bool = False
+    requests_fulfilled: int = 0
+    kudos_rewards: float = 0
+    kudos_details: WorkerKudosDetails = WorkerKudosDetails()
+    performance: str = "0"
+    threads: int = 0
+    models: list[str] = []
+    uncompleted_jobs: int = 0
+    uptime: int = 0
+    maintenance_mode: bool = False
+    trusted: bool = False
+    flagged: bool = False
+    nsfw: bool = False
+    bridge_agent: str = "unknown"
+    # image-specific
+    max_pixels: int = 0
+    megapixelsteps_generated: float = 0
+    img2img: bool = False
+    painting: bool = False
+    lora: bool = False
+    # text-specific
+    max_length: int = 0
+    max_context_length: int = 0
+    tokens_generated: float = 0
+
+    @property
+    def parsed_performance(self) -> float:
+        if isinstance(self.performance, (int, float)):
+            return float(self.performance)
+        try:
+            return float(self.performance.split()[0])
+        except (ValueError, IndexError):
+            return 0.0
+
+    @property
+    def model_count(self) -> int:
+        return len(self.models)
+
+
+class PerformanceStatus(ApiModel):
+    queued_requests: int = 0
+    queued_text_requests: int = 0
+    worker_count: int = 0
+    text_worker_count: int = 0
+    interrogator_count: int = 0
+    thread_count: int = 0
+    text_thread_count: int = 0
+    interrogator_thread_count: int = 0
+    past_minute_megapixelsteps: float = 0
+    past_minute_tokens: float = 0
+    queued_megapixelsteps: float = 0
+    queued_tokens: float = 0
+    queued_forms: int = 0
+
+
+class ImageStatsPeriod(ApiModel):
+    images: int = 0
+    ps: int = 0
+
+
+class ImageStatsResponse(ApiModel):
+    minute: ImageStatsPeriod = ImageStatsPeriod()
+    hour: ImageStatsPeriod = ImageStatsPeriod()
+    day: ImageStatsPeriod = ImageStatsPeriod()
+    month: ImageStatsPeriod = ImageStatsPeriod()
+    total: ImageStatsPeriod = ImageStatsPeriod()
+
+
+class TextStatsPeriod(ApiModel):
+    requests: int = 0
+    tokens: int = 0
+
+
+class TextStatsResponse(ApiModel):
+    minute: TextStatsPeriod = TextStatsPeriod()
+    hour: TextStatsPeriod = TextStatsPeriod()
+    day: TextStatsPeriod = TextStatsPeriod()
+    month: TextStatsPeriod = TextStatsPeriod()
+    total: TextStatsPeriod = TextStatsPeriod()
+
+
+class StatsModelsResponse(ApiModel):
+    day: dict[str, int] = {}
+    month: dict[str, int] = {}
+    total: dict[str, int] = {}
+
+
+class ModesResponse(ApiModel):
+    maintenance_mode: bool = False
+    invite_only_mode: bool = False
+    raid_mode: bool = False
+
+
+class HordeTeam(ApiModel):
+    name: str = "unknown"
+    requests_fulfilled: int = 0
+    kudos: float = 0
+    worker_count: int = 0
+
+
+# ---------------------------------------------------------------------------
+# Metric specifications
+#
+# Each FieldSpec maps one attribute on an API response model to a Prometheus
+# gauge.  The generic emitter (_emit_fields) handles bool→int conversion,
+# zero-omission checks, and conditional type filtering in one place.
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class FieldSpec:
+    """Maps a model attribute to a Prometheus gauge for per-entity export."""
+
+    metric_name: str
+    help_text: str
+    attr: str
+    condition: str | None = None
+
+
+@dataclass(frozen=True)
+class AggregateSpec:
+    """Defines an aggregate metric computed across all entities of a collection."""
+
+    metric_name: str
+    help_text: str
+    func: str  # "sum" | "count" | "mean" | "count_true"
+    attr: str = ""
+    condition: str | None = None
+
+
+# Per-model fields (labels: model, type)
+MODEL_FIELDS: list[FieldSpec] = [
+    FieldSpec("horde_model_queued", "Queued requests for specific model", "queued"),
+    FieldSpec(
+        "horde_model_workers_count", "Active workers for specific model", "count"
+    ),
+    FieldSpec(
+        "horde_model_performance", "Performance for specific model", "performance"
+    ),
+    FieldSpec("horde_model_jobs", "Active jobs for specific model", "jobs"),
+    FieldSpec("horde_model_eta_seconds", "ETA for specific model", "eta"),
+]
+
+MODEL_AGGREGATES: list[AggregateSpec] = [
+    AggregateSpec(
+        "horde_models_queued_total",
+        "Total queued requests across all models",
+        "sum",
+        "queued",
+    ),
+    AggregateSpec(
+        "horde_models_workers_count",
+        "Total active workers across all models",
+        "sum",
+        "count",
+    ),
+    AggregateSpec(
+        "horde_models_performance_total",
+        "Total performance across all models",
+        "sum",
+        "performance",
+    ),
+    AggregateSpec(
+        "horde_models_jobs_total", "Total active jobs across all models", "sum", "jobs"
+    ),
+    AggregateSpec(
+        "horde_models_eta_seconds_avg", "Average ETA across all models", "mean", "eta"
+    ),
+    AggregateSpec(
+        "horde_models_active_total", "Count of distinct active models", "count"
+    ),
+]
+
+# Per-worker fields (labels: worker, type)
+WORKER_FIELDS: list[FieldSpec] = [
+    FieldSpec(
+        "horde_worker_requests_fulfilled_total",
+        "Requests fulfilled by specific worker",
+        "requests_fulfilled",
+    ),
+    FieldSpec(
+        "horde_worker_kudos_rewards",
+        "Kudos rewards for specific worker",
+        "kudos_rewards",
+    ),
+    FieldSpec(
+        "horde_worker_performance",
+        "Performance of specific worker",
+        "parsed_performance",
+    ),
+    FieldSpec("horde_worker_threads", "Thread count of specific worker", "threads"),
+    FieldSpec(
+        "horde_worker_kudos_generated_total",
+        "Kudos generated by specific worker",
+        "kudos_details.generated",
+    ),
+    FieldSpec(
+        "horde_worker_kudos_uptime",
+        "Kudos uptime for specific worker",
+        "kudos_details.uptime",
+    ),
+    FieldSpec(
+        "horde_worker_models_count",
+        "Number of models supported by worker",
+        "model_count",
+    ),
+    FieldSpec(
+        "horde_worker_uncompleted_jobs",
+        "Uncompleted jobs for specific worker",
+        "uncompleted_jobs",
+    ),
+    FieldSpec(
+        "horde_worker_uptime_seconds", "Total uptime of worker in seconds", "uptime"
+    ),
+    FieldSpec(
+        "horde_worker_maintenance", "Worker is in maintenance mode", "maintenance_mode"
+    ),
+    FieldSpec("horde_worker_trusted", "Worker is trusted", "trusted"),
+    FieldSpec("horde_worker_flagged", "Worker owner is flagged", "flagged"),
+    FieldSpec("horde_worker_nsfw_enabled", "Worker accepts NSFW requests", "nsfw"),
+    FieldSpec(
+        "horde_worker_max_pixels",
+        "Maximum pixels supported by worker",
+        "max_pixels",
+        condition="image",
+    ),
+    FieldSpec(
+        "horde_worker_megapixelsteps_generated_total",
+        "Megapixelsteps generated by worker",
+        "megapixelsteps_generated",
+        condition="image",
+    ),
+    FieldSpec(
+        "horde_worker_img2img_enabled",
+        "Worker supports img2img",
+        "img2img",
+        condition="image",
+    ),
+    FieldSpec(
+        "horde_worker_painting_enabled",
+        "Worker supports inpainting/outpainting",
+        "painting",
+        condition="image",
+    ),
+    FieldSpec(
+        "horde_worker_lora_enabled", "Worker supports LoRA", "lora", condition="image"
+    ),
+    FieldSpec(
+        "horde_worker_max_length",
+        "Maximum response length for text worker",
+        "max_length",
+        condition="text",
+    ),
+    FieldSpec(
+        "horde_worker_max_context_length",
+        "Maximum context length for text worker",
+        "max_context_length",
+        condition="text",
+    ),
+    FieldSpec(
+        "horde_worker_tokens_generated_total",
+        "Total tokens generated by text worker",
+        "tokens_generated",
+        condition="text",
+    ),
+]
+
+WORKER_AGGREGATES: list[AggregateSpec] = [
+    AggregateSpec("horde_workers_active_total", "Total active workers", "count"),
+    AggregateSpec(
+        "horde_workers_performance_total",
+        "Total worker performance",
+        "sum",
+        "parsed_performance",
+    ),
+    AggregateSpec(
+        "horde_workers_threads_total", "Total worker threads", "sum", "threads"
+    ),
+    AggregateSpec(
+        "horde_workers_uptime_seconds_total",
+        "Sum of all worker uptimes in seconds",
+        "sum",
+        "uptime",
+    ),
+    AggregateSpec(
+        "horde_workers_maintenance_total",
+        "Workers in maintenance mode",
+        "count_true",
+        "maintenance_mode",
+    ),
+    AggregateSpec(
+        "horde_workers_trusted_total", "Trusted workers count", "count_true", "trusted"
+    ),
+    AggregateSpec(
+        "horde_workers_flagged_total", "Flagged workers count", "count_true", "flagged"
+    ),
+    AggregateSpec(
+        "horde_workers_img2img_capable_total",
+        "Image workers supporting img2img",
+        "count_true",
+        "img2img",
+        condition="image",
+    ),
+    AggregateSpec(
+        "horde_workers_lora_capable_total",
+        "Image workers supporting LoRA",
+        "count_true",
+        "lora",
+        condition="image",
+    ),
+    AggregateSpec(
+        "horde_workers_avg_performance",
+        "Average performance across online workers",
+        "mean",
+        "parsed_performance",
+    ),
+]
+
+# Per-team fields (labels: team)
+TEAM_FIELDS: list[FieldSpec] = [
+    FieldSpec(
+        "horde_team_requests_fulfilled",
+        "Requests fulfilled by team workers",
+        "requests_fulfilled",
+    ),
+    FieldSpec("horde_team_kudos", "Total kudos earned by team workers", "kudos"),
+    FieldSpec("horde_team_worker_count", "Number of workers in team", "worker_count"),
+]
+
+
+# ---------------------------------------------------------------------------
+# Prometheus metric registry
+# ---------------------------------------------------------------------------
+
+
 class HordeMetrics:
-    """Container for all Prometheus metrics"""
+    """Creates and indexes every Prometheus metric the exporter produces.
+
+    Per-entity and aggregate metrics are registered from the spec tables above.
+    One-off metrics (performance, stats, modes, health) are registered inline.
+    All metrics are accessed via gauge(name) / counter(name).
+    """
 
     def __init__(self):
-        # Model aggregates
-        self.models_queued_total = Gauge(
-            "horde_models_queued_total",
-            "Total queued requests across all models",
-            ["type"],
-        )
-        self.models_workers_count = Gauge(
-            "horde_models_workers_count",
-            "Total active workers across all models",
-            ["type"],
-        )
-        self.models_performance = Gauge(
-            "horde_models_performance_total",
-            "Total performance across all models",
-            ["type"],
-        )
-        self.models_jobs = Gauge(
-            "horde_models_jobs_total", "Total active jobs across all models", ["type"]
-        )
-        self.models_eta_avg = Gauge(
-            "horde_models_eta_seconds_avg", "Average ETA across all models", ["type"]
+        self._gauges: dict[str, Gauge] = {}
+        self._counters: dict[str, Counter] = {}
+
+        # Per-entity metrics from spec tables
+        for spec in MODEL_FIELDS:
+            self._add_gauge(spec.metric_name, spec.help_text, ["model", "type"])
+        for spec in MODEL_AGGREGATES:
+            self._add_gauge(spec.metric_name, spec.help_text, ["type"])
+        for spec in WORKER_FIELDS:
+            self._add_gauge(spec.metric_name, spec.help_text, ["worker", "type"])
+        for spec in WORKER_AGGREGATES:
+            self._add_gauge(spec.metric_name, spec.help_text, ["type"])
+        for spec in TEAM_FIELDS:
+            self._add_gauge(spec.metric_name, spec.help_text, ["team"])
+
+        # Worker info (extra label for bridge_agent metadata)
+        self._add_gauge(
+            "horde_worker_info",
+            "Worker metadata (always 1, labels carry the info)",
+            ["worker", "type", "bridge_agent"],
         )
 
-        # Per-model metrics (top-N only)
-        self.model_queued = Gauge(
-            "horde_model_queued",
-            "Queued requests for specific model",
-            ["model", "type"],
-        )
-        self.model_workers_count = Gauge(
-            "horde_model_workers_count",
-            "Active workers for specific model",
-            ["model", "type"],
-        )
-        self.model_performance = Gauge(
-            "horde_model_performance",
-            "Performance for specific model",
-            ["model", "type"],
-        )
-        self.model_jobs = Gauge(
-            "horde_model_jobs", "Active jobs for specific model", ["model", "type"]
-        )
-        self.model_eta_seconds = Gauge(
-            "horde_model_eta_seconds", "ETA for specific model", ["model", "type"]
-        )
-
-        # Worker aggregates
-        self.workers_active_total = Gauge(
-            "horde_workers_active_total", "Total active workers", ["type"]
-        )
-        self.workers_performance_total = Gauge(
-            "horde_workers_performance_total", "Total worker performance", ["type"]
-        )
-        self.workers_threads_total = Gauge(
-            "horde_workers_threads_total", "Total worker threads", ["type"]
-        )
-        self.workers_requests_fulfilled_total = Counter(
+        # Workers aggregate counter (API gives cumulative totals, not deltas)
+        self._add_counter(
             "horde_workers_requests_fulfilled_total",
             "Total requests fulfilled by all workers",
             ["type"],
         )
 
-        # Per-worker metrics (top-N only)
-        # Note: requests_fulfilled stored as Gauge (absolute value from API)
-        # not Counter, since API provides cumulative totals not deltas
-        self.worker_requests_fulfilled = Gauge(
-            "horde_worker_requests_fulfilled_total",
-            "Requests fulfilled by specific worker",
-            ["worker", "type"],
-        )
-        self.worker_kudos_rewards = Gauge(
-            "horde_worker_kudos_rewards",
-            "Kudos rewards for specific worker",
-            ["worker", "type"],
-        )
-        self.worker_performance = Gauge(
-            "horde_worker_performance",
-            "Performance of specific worker",
-            ["worker", "type"],
-        )
-        self.worker_threads = Gauge(
-            "horde_worker_threads",
-            "Thread count of specific worker",
-            ["worker", "type"],
-        )
-        self.worker_uncompleted_jobs = Gauge(
-            "horde_worker_uncompleted_jobs",
-            "Uncompleted jobs for specific worker",
-            ["worker", "type"],
-        )
-        self.worker_kudos_generated = Gauge(
-            "horde_worker_kudos_generated_total",
-            "Kudos generated by specific worker",
-            ["worker", "type"],
-        )
-        self.worker_kudos_uptime = Gauge(
-            "horde_worker_kudos_uptime",
-            "Kudos uptime for specific worker",
-            ["worker", "type"],
-        )
-        self.worker_models_count = Gauge(
-            "horde_worker_models_count",
-            "Number of models supported by worker",
-            ["worker", "type"],
-        )
-        self.worker_max_pixels = Gauge(
-            "horde_worker_max_pixels",
-            "Maximum pixels supported by worker",
-            ["worker", "type"],
-        )
-        self.worker_megapixelsteps_generated = Gauge(
-            "horde_worker_megapixelsteps_generated_total",
-            "Megapixelsteps generated by worker",
-            ["worker", "type"],
-        )
-        self.worker_max_length = Gauge(
-            "horde_worker_max_length",
-            "Maximum response length for text worker",
-            ["worker", "type"],
-        )
-        self.worker_max_context_length = Gauge(
-            "horde_worker_max_context_length",
-            "Maximum context length for text worker",
-            ["worker", "type"],
-        )
+        # Performance metrics (labels: type)
+        for name, help_text in [
+            ("horde_performance_queued_requests", "Queued requests"),
+            ("horde_performance_worker_count", "Worker count"),
+            ("horde_performance_thread_count", "Thread count"),
+            (
+                "horde_performance_past_minute_megapixelsteps",
+                "Megapixelsteps in past minute",
+            ),
+            ("horde_performance_past_minute_tokens", "Tokens in past minute"),
+            ("horde_performance_queued_megapixelsteps", "Queued megapixelsteps"),
+            ("horde_performance_queued_tokens", "Queued tokens"),
+            ("horde_performance_queued_forms", "Queued interrogation forms"),
+            (
+                "horde_performance_estimated_queue_drain_seconds",
+                "Estimated seconds to drain the queue at current throughput",
+            ),
+            (
+                "horde_performance_throughput_per_thread",
+                "Throughput per thread in the past minute",
+            ),
+        ]:
+            self._add_gauge(name, help_text, ["type"])
 
-        # Performance (global) metrics
-        self.performance_queued_requests = Gauge(
-            "horde_performance_queued_requests", "Queued requests", ["type"]
-        )
-        self.performance_worker_count = Gauge(
-            "horde_performance_worker_count", "Worker count", ["type"]
-        )
-        self.performance_thread_count = Gauge(
-            "horde_performance_thread_count", "Thread count", ["type"]
-        )
-        self.performance_past_minute_megapixelsteps = Gauge(
-            "horde_performance_past_minute_megapixelsteps",
-            "Megapixelsteps in past minute",
-            ["type"],
-        )
-        self.performance_past_minute_tokens = Gauge(
-            "horde_performance_past_minute_tokens", "Tokens in past minute", ["type"]
-        )
-        self.performance_queued_megapixelsteps = Gauge(
-            "horde_performance_queued_megapixelsteps", "Queued megapixelsteps", ["type"]
-        )
-        self.performance_queued_tokens = Gauge(
-            "horde_performance_queued_tokens", "Queued tokens", ["type"]
-        )
-        self.performance_queued_forms = Gauge(
-            "horde_performance_queued_forms", "Queued interrogation forms", ["type"]
-        )
+        # Stats metrics
+        for name, help_text in [
+            ("horde_stats_images_generated", "Total images generated in time period"),
+            (
+                "horde_stats_pixelsteps_generated",
+                "Total pixelsteps generated in time period",
+            ),
+            (
+                "horde_stats_text_requests_generated",
+                "Total text requests generated in time period",
+            ),
+            ("horde_stats_tokens_generated", "Total tokens generated in time period"),
+        ]:
+            self._add_gauge(name, help_text, ["period"])
 
-        # Exporter health metrics
-        self.scrape_success = Gauge(
+        for name, help_text in [
+            (
+                "horde_stats_model_images_generated",
+                "Images generated per model in time period",
+            ),
+            (
+                "horde_stats_model_texts_generated",
+                "Text requests generated per model in time period",
+            ),
+        ]:
+            self._add_gauge(name, help_text, ["model", "period"])
+
+        # Mode / heartbeat
+        for name, help_text in [
+            ("horde_mode_maintenance", "Whether the horde is in maintenance mode"),
+            ("horde_mode_invite_only", "Whether the horde is in invite-only mode"),
+            ("horde_mode_raid", "Whether the horde is in raid mode"),
+            ("horde_api_up", "Whether the AI Horde API is reachable"),
+        ]:
+            self._add_gauge(name, help_text)
+
+        # Teams aggregate
+        self._add_gauge("horde_teams_total", "Total number of teams")
+
+        # Exporter health
+        self._add_gauge(
             "horde_exporter_scrape_success",
             "Whether the last scrape was successful",
             ["endpoint"],
         )
-        self.scrape_duration_seconds = Gauge(
+        self._add_gauge(
             "horde_exporter_scrape_duration_seconds",
             "Duration of the last scrape",
             ["endpoint"],
         )
-
-        # Rate-limit metrics
-        self.ratelimit_limit = Gauge(
-            "horde_exporter_ratelimit_limit",
-            "Rate-limit ceiling reported by the API",
+        self._add_gauge(
+            "horde_exporter_ratelimit_limit", "Rate-limit ceiling reported by the API"
         )
-        self.ratelimit_remaining = Gauge(
+        self._add_gauge(
             "horde_exporter_ratelimit_remaining",
             "Requests remaining in the current rate-limit window",
         )
-        self.ratelimit_reset_seconds = Gauge(
+        self._add_gauge(
             "horde_exporter_ratelimit_reset_seconds",
             "Seconds until the rate-limit window resets",
         )
-        self.ratelimit_backoff_total = Counter(
+        self._add_counter(
             "horde_exporter_ratelimit_backoff_total",
             "Times the exporter delayed a request due to rate-limit proximity",
         )
+
+    def _add_gauge(
+        self, name: str, help_text: str, labels: list[str] | None = None
+    ) -> Gauge:
+        g = Gauge(name, help_text, labels or [])
+        self._gauges[name] = g
+        return g
+
+    def _add_counter(
+        self, name: str, help_text: str, labels: list[str] | None = None
+    ) -> Counter:
+        c = Counter(name, help_text, labels or [])
+        self._counters[name] = c
+        return c
+
+    def gauge(self, name: str) -> Gauge:
+        return self._gauges[name]
+
+    def counter(self, name: str) -> Counter:
+        return self._counters[name]
+
+
+# ---------------------------------------------------------------------------
+# Exporter
+# ---------------------------------------------------------------------------
 
 
 class HordeExporter:
@@ -322,20 +660,16 @@ class HordeExporter:
         self.session.headers.update({"User-Agent": self.config.api.user_agent})
         self.rate_limit = RateLimitState()
 
-        # Track top-N entities to avoid churn
-        self.top_models_image = set()
-        self.top_models_text = set()
-        self.top_workers_image = set()
-        self.top_workers_text = set()
+    # --- networking ---
 
     def _wait_for_rate_limit(self):
         """Block if we're close to exhausting the rate-limit budget."""
         snap = self.rate_limit.snapshot()
         if snap["limit"] == 0:
-            return  # no data yet
+            return
 
         if snap["remaining"] <= RATE_LIMIT_BACKOFF_THRESHOLD:
-            wait = snap["seconds_until_reset"] + 0.5  # small buffer
+            wait = snap["seconds_until_reset"] + 0.5
             if wait > 0:
                 logger.warning(
                     "Rate-limit low (%d/%d remaining), backing off %.1fs until reset",
@@ -343,23 +677,24 @@ class HordeExporter:
                     snap["limit"],
                     wait,
                 )
-                self.metrics.ratelimit_backoff_total.inc()
+                self.metrics.counter("horde_exporter_ratelimit_backoff_total").inc()
                 time.sleep(wait)
 
     def _update_rate_limit_metrics(self):
         snap = self.rate_limit.snapshot()
-        self.metrics.ratelimit_limit.set(snap["limit"])
-        self.metrics.ratelimit_remaining.set(snap["remaining"])
-        self.metrics.ratelimit_reset_seconds.set(snap["seconds_until_reset"])
+        self.metrics.gauge("horde_exporter_ratelimit_limit").set(snap["limit"])
+        self.metrics.gauge("horde_exporter_ratelimit_remaining").set(snap["remaining"])
+        self.metrics.gauge("horde_exporter_ratelimit_reset_seconds").set(
+            snap["seconds_until_reset"]
+        )
 
-    def fetch_api(self, endpoint):
+    def fetch_api(self, endpoint: str) -> Any:
         """Fetch data from AI Horde API with fallback to stablehorde.net"""
         self._wait_for_rate_limit()
 
         primary_url = f"{self.config.api.base_url}{endpoint}"
         fallback_url = f"https://stablehorde.net/api/v2{endpoint}"
 
-        # Try primary URL first
         try:
             response = self.session.get(primary_url, timeout=self.config.api.timeout)
             self.rate_limit.update_from_headers(response.headers)
@@ -370,7 +705,6 @@ class HordeExporter:
             logger.warning(f"Error fetching from primary URL {primary_url}: {e}")
             logger.info(f"Attempting fallback to {fallback_url}")
 
-            # Try fallback URL
             try:
                 response = self.session.get(
                     fallback_url, timeout=self.config.api.timeout
@@ -386,309 +720,353 @@ class HordeExporter:
                 )
                 raise
 
-    def should_write_metric(self, metric_type, field_name, value):
+    # --- scrape bookkeeping ---
+
+    def _record_scrape_success(self, endpoint: str, start_time: float):
+        self.metrics.gauge("horde_exporter_scrape_success").labels(
+            endpoint=endpoint
+        ).set(1)
+        self.metrics.gauge("horde_exporter_scrape_duration_seconds").labels(
+            endpoint=endpoint
+        ).set(time.time() - start_time)
+
+    def _record_scrape_failure(self, endpoint: str):
+        self.metrics.gauge("horde_exporter_scrape_success").labels(
+            endpoint=endpoint
+        ).set(0)
+
+    # --- zero-omission ---
+
+    def should_write_metric(
+        self, metric_type: str, field_name: str, value: float
+    ) -> bool:
+        """Check whether a metric value should be emitted.
+
+        Non-zero values are always written.  Zero values are suppressed for
+        fields listed in the zero_omission config for the given metric_type.
         """
-        Determine if a metric should be written to Prometheus.
-
-        Zero values are only written if the field is NOT in the zero_omission list.
-        This reduces cardinality and storage by omitting semantically null values.
-
-        Args:
-            metric_type: Type of metric ('models', 'workers', 'performance')
-            field_name: Name of the field
-            value: The value to potentially write
-
-        Returns:
-            bool: True if the metric should be written
-        """
-        # Always write non-zero values
         if value != 0 and value != 0.0:
             return True
-
-        # Check if this field should omit zeros
         nullable_fields = getattr(self.config.zero_omission, metric_type, [])
-        if field_name in nullable_fields:
-            # Don't write zeros for nullable fields
-            return False
+        return field_name not in nullable_fields
 
-        # Write zeros for non-nullable fields
-        return True
+    # --- generic helpers ---
 
-    def collect_models(self, model_type="image"):
-        """Collect and expose model metrics"""
+    @staticmethod
+    def _resolve_attr(obj: object, path: str) -> Any:
+        """Resolve a dotted attribute path (e.g. 'kudos_details.generated')."""
+        for part in path.split("."):
+            obj = getattr(obj, part)
+        return obj
+
+    def _emit_fields(
+        self,
+        specs: list[FieldSpec],
+        entity: ApiModel,
+        labels: dict[str, str],
+        zero_omit_category: str,
+        entity_type: str | None = None,
+    ):
+        """Emit per-entity Prometheus gauges from a model's attributes.
+
+        bool fields are automatically converted to 0/1.
+        """
+        for spec in specs:
+            if spec.condition and spec.condition != entity_type:
+                continue
+
+            raw = self._resolve_attr(entity, spec.attr)
+            value = int(raw) if isinstance(raw, bool) else float(raw)
+
+            if not self.should_write_metric(zero_omit_category, spec.attr, value):
+                continue
+
+            self.metrics.gauge(spec.metric_name).labels(**labels).set(value)
+
+    def _emit_aggregates(
+        self,
+        specs: list[AggregateSpec],
+        entities: Sequence[ApiModel],
+        type_label: str,
+    ):
+        """Compute and emit aggregate metrics across a list of entities."""
+        for spec in specs:
+            if spec.condition and spec.condition != type_label:
+                continue
+
+            if spec.func == "count":
+                value = float(len(entities))
+            elif spec.func == "sum":
+                value = sum(float(self._resolve_attr(e, spec.attr)) for e in entities)
+            elif spec.func == "mean":
+                value = (
+                    sum(float(self._resolve_attr(e, spec.attr)) for e in entities)
+                    / len(entities)
+                    if entities
+                    else 0.0
+                )
+            elif spec.func == "count_true":
+                value = float(
+                    sum(1 for e in entities if self._resolve_attr(e, spec.attr))
+                )
+            else:
+                continue
+
+            self.metrics.gauge(spec.metric_name).labels(type=type_label).set(value)
+
+    # --- collectors ---
+
+    def collect_models(self, model_type: str = "image"):
         endpoint = f"/status/models?type={model_type}"
         start_time = time.time()
 
         try:
-            data = self.fetch_api(endpoint)
-            logger.info(f"Fetched {len(data)} {model_type} models")
+            models = [HordeModelStatus(**m) for m in self.fetch_api(endpoint)]
+            logger.info(f"Fetched {len(models)} {model_type} models")
 
-            # Calculate aggregates
-            total_queued = sum(float(m.get("queued", 0)) for m in data)
-            total_count = sum(int(m.get("count", 0)) for m in data)
-            total_performance = sum(float(m.get("performance", 0)) for m in data)
-            total_jobs = sum(float(m.get("jobs", 0)) for m in data)
-            avg_eta = sum(int(m.get("eta", 0)) for m in data) / len(data) if data else 0
+            self._emit_aggregates(MODEL_AGGREGATES, models, model_type)
 
-            # Set aggregate metrics
-            self.metrics.models_queued_total.labels(type=model_type).set(total_queued)
-            self.metrics.models_workers_count.labels(type=model_type).set(total_count)
-            self.metrics.models_performance.labels(type=model_type).set(
-                total_performance
-            )
-            self.metrics.models_jobs.labels(type=model_type).set(total_jobs)
-            self.metrics.models_eta_avg.labels(type=model_type).set(avg_eta)
+            for model in models:
+                labels = {"model": model.name, "type": model_type}
+                self._emit_fields(MODEL_FIELDS, model, labels, "models", model_type)
 
-            # Collect ALL models (no top-N filtering)
-            # Zero-omission will naturally filter out inactive models
-            all_models = data  # Use all models, not just top-N
-
-            # Update tracking set (for backward compatibility, though no longer strictly needed)
-            current_models = {m["name"] for m in all_models}
-            if model_type == "image":
-                self.top_models_image = current_models
-            else:
-                self.top_models_text = current_models
-
-            # Set per-model metrics (with zero-omission for nullable fields)
-            for model in all_models:
-                labels = {"model": model["name"], "type": model_type}
-
-                # Conditionally write nullable fields (queued, jobs, eta)
-                queued = float(model.get("queued", 0))
-                if self.should_write_metric("models", "queued", queued):
-                    self.metrics.model_queued.labels(**labels).set(queued)
-
-                jobs = float(model.get("jobs", 0))
-                if self.should_write_metric("models", "jobs", jobs):
-                    self.metrics.model_jobs.labels(**labels).set(jobs)
-
-                eta = int(model.get("eta", 0))
-                if self.should_write_metric("models", "eta", eta):
-                    self.metrics.model_eta_seconds.labels(**labels).set(eta)
-
-                # Always write non-nullable fields
-                self.metrics.model_workers_count.labels(**labels).set(
-                    int(model.get("count", 0))
-                )
-                self.metrics.model_performance.labels(**labels).set(
-                    float(model.get("performance", 0))
-                )
-
-            logger.info(f"Collected metrics for {len(all_models)} {model_type} models")
-
-            self.metrics.scrape_success.labels(endpoint=endpoint).set(1)
-            self.metrics.scrape_duration_seconds.labels(endpoint=endpoint).set(
-                time.time() - start_time
-            )
+            logger.info(f"Collected metrics for {len(models)} {model_type} models")
+            self._record_scrape_success(endpoint, start_time)
 
         except Exception as e:
             logger.error(f"Error collecting {model_type} models: {e}")
-            self.metrics.scrape_success.labels(endpoint=endpoint).set(0)
+            self._record_scrape_failure(endpoint)
 
-    def collect_workers(self, worker_type="image"):
-        """Collect and expose worker metrics"""
+    def collect_workers(self, worker_type: str = "image"):
         endpoint = f"/workers?type={worker_type}"
         start_time = time.time()
 
         try:
-            data = self.fetch_api(endpoint)
-            online_workers = [w for w in data if w.get("online", False)]
+            all_workers = [HordeWorker(**w) for w in self.fetch_api(endpoint)]
+            online_workers = [w for w in all_workers if w.online]
             logger.info(
-                f"Fetched {len(online_workers)} online {worker_type} workers (out of {len(data)} total)"
+                f"Fetched {len(online_workers)} online {worker_type} workers "
+                f"(out of {len(all_workers)} total)"
             )
 
-            # Calculate aggregates
-            total_performance = sum(
-                self._parse_performance(w.get("performance", "0"), worker_type)
-                for w in online_workers
-            )
-            total_threads = sum(int(w.get("threads", 0)) for w in online_workers)
-            # Note: Counter metrics need special handling - we track changes
-            # For now, we'll track the current total value
+            self._emit_aggregates(WORKER_AGGREGATES, online_workers, worker_type)
 
-            # Set aggregate metrics
-            self.metrics.workers_active_total.labels(type=worker_type).set(
-                len(online_workers)
-            )
-            self.metrics.workers_performance_total.labels(type=worker_type).set(
-                total_performance
-            )
-            self.metrics.workers_threads_total.labels(type=worker_type).set(
-                total_threads
-            )
+            for worker in online_workers:
+                labels = {"worker": worker.name, "type": worker_type}
+                self._emit_fields(WORKER_FIELDS, worker, labels, "workers", worker_type)
 
-            # Collect ALL online workers (no top-N filtering)
-            # Zero-omission will naturally filter out inactive workers
-            all_workers = online_workers  # Use all workers, not just top-N
-
-            # Update tracking set (for backward compatibility, though no longer strictly needed)
-            current_workers = {w["name"] for w in all_workers}
-            if worker_type == "image":
-                self.top_workers_image = current_workers
-            else:
-                self.top_workers_text = current_workers
-
-            # Set per-worker metrics (with zero-omission for nullable fields)
-            for worker in all_workers:
-                labels = {"worker": worker["name"], "type": worker_type}
-                perf = self._parse_performance(
-                    worker.get("performance", "0"), worker_type
-                )
-
-                # Always write non-nullable fields
-                self.metrics.worker_kudos_rewards.labels(**labels).set(
-                    float(worker.get("kudos_rewards", 0))
-                )
-                self.metrics.worker_performance.labels(**labels).set(perf)
-                self.metrics.worker_threads.labels(**labels).set(
-                    int(worker.get("threads", 0))
-                )
-                self.metrics.worker_requests_fulfilled.labels(**labels).set(
-                    int(worker.get("requests_fulfilled", 0))
-                )
-
-                # Worker kudos details (nested fields)
-                kudos_details = worker.get("kudos_details", {})
-                self.metrics.worker_kudos_generated.labels(**labels).set(
-                    float(kudos_details.get("generated", 0))
-                )
-                self.metrics.worker_kudos_uptime.labels(**labels).set(
-                    float(kudos_details.get("uptime", 0))
-                )
-
-                # Worker capabilities
-                self.metrics.worker_models_count.labels(**labels).set(
-                    len(worker.get("models", []))
-                )
-
-                # Type-specific fields
-                if worker_type == "image":
-                    self.metrics.worker_max_pixels.labels(**labels).set(
-                        int(worker.get("max_pixels", 0))
-                    )
-                    self.metrics.worker_megapixelsteps_generated.labels(**labels).set(
-                        float(worker.get("megapixelsteps_generated", 0))
-                    )
-                elif worker_type == "text":
-                    self.metrics.worker_max_length.labels(**labels).set(
-                        int(worker.get("max_length", 0))
-                    )
-                    self.metrics.worker_max_context_length.labels(**labels).set(
-                        int(worker.get("max_context_length", 0))
-                    )
-
-                # Conditionally write nullable fields (uncompleted_jobs)
-                uncompleted = int(worker.get("uncompleted_jobs", 0))
-                if self.should_write_metric("workers", "uncompleted_jobs", uncompleted):
-                    self.metrics.worker_uncompleted_jobs.labels(**labels).set(
-                        uncompleted
-                    )
+                self.metrics.gauge("horde_worker_info").labels(
+                    worker=worker.name,
+                    type=worker_type,
+                    bridge_agent=worker.bridge_agent,
+                ).set(1)
 
             logger.info(
-                f"Collected metrics for {len(all_workers)} {worker_type} workers"
+                f"Collected metrics for {len(online_workers)} {worker_type} workers"
             )
-
-            self.metrics.scrape_success.labels(endpoint=endpoint).set(1)
-            self.metrics.scrape_duration_seconds.labels(endpoint=endpoint).set(
-                time.time() - start_time
-            )
+            self._record_scrape_success(endpoint, start_time)
 
         except Exception as e:
             logger.error(f"Error collecting {worker_type} workers: {e}")
-            self.metrics.scrape_success.labels(endpoint=endpoint).set(0)
-
-    def _parse_performance(self, performance_str, worker_type):
-        """Parse performance string to float"""
-        if isinstance(performance_str, (int, float)):
-            return float(performance_str)
-
-        try:
-            if worker_type == "image":
-                return float(
-                    str(performance_str).replace(" megapixelsteps per second", "")
-                )
-            else:
-                return float(str(performance_str).replace(" tokens per second", ""))
-        except Exception:
-            return 0.0
+            self._record_scrape_failure(endpoint)
 
     def collect_performance(self):
-        """Collect and expose global performance metrics"""
         endpoint = "/status/performance"
         start_time = time.time()
 
         try:
-            data = self.fetch_api(endpoint)
+            perf = PerformanceStatus(**self.fetch_api(endpoint))
             logger.info("Fetched performance metrics")
 
-            # Conditionally write nullable queued metrics (can be zero when no activity)
-            queued_requests = int(data.get("queued_requests", 0))
+            g = self.metrics.gauge
+
+            # Queued metrics (with zero-omission)
             if self.should_write_metric(
-                "performance", "queued_requests", queued_requests
+                "performance", "queued_requests", perf.queued_requests
             ):
-                self.metrics.performance_queued_requests.labels(type="image").set(
-                    queued_requests
+                g("horde_performance_queued_requests").labels(type="image").set(
+                    perf.queued_requests
                 )
-
-            queued_text_requests = int(data.get("queued_text_requests", 0))
             if self.should_write_metric(
-                "performance", "queued_text_requests", queued_text_requests
+                "performance", "queued_text_requests", perf.queued_text_requests
             ):
-                self.metrics.performance_queued_requests.labels(type="text").set(
-                    queued_text_requests
+                g("horde_performance_queued_requests").labels(type="text").set(
+                    perf.queued_text_requests
+                )
+            if self.should_write_metric(
+                "performance", "queued_forms", perf.queued_forms
+            ):
+                g("horde_performance_queued_forms").labels(type="interrogator").set(
+                    perf.queued_forms
                 )
 
-            # Note: queued_forms had 96.7% zeros in analysis, treating as nullable
-            queued_forms = int(data.get("queued_forms", 0))
-            if self.should_write_metric("performance", "queued_forms", queued_forms):
-                self.metrics.performance_queued_forms.labels(type="interrogator").set(
-                    queued_forms
+            # Counts and throughput
+            g("horde_performance_worker_count").labels(type="image").set(
+                perf.worker_count
+            )
+            g("horde_performance_worker_count").labels(type="text").set(
+                perf.text_worker_count
+            )
+            g("horde_performance_worker_count").labels(type="interrogator").set(
+                perf.interrogator_count
+            )
+            g("horde_performance_thread_count").labels(type="image").set(
+                perf.thread_count
+            )
+            g("horde_performance_thread_count").labels(type="text").set(
+                perf.text_thread_count
+            )
+            g("horde_performance_thread_count").labels(type="interrogator").set(
+                perf.interrogator_thread_count
+            )
+            g("horde_performance_past_minute_megapixelsteps").labels(type="image").set(
+                perf.past_minute_megapixelsteps
+            )
+            g("horde_performance_past_minute_tokens").labels(type="text").set(
+                perf.past_minute_tokens
+            )
+            g("horde_performance_queued_megapixelsteps").labels(type="image").set(
+                perf.queued_megapixelsteps
+            )
+            g("horde_performance_queued_tokens").labels(type="text").set(
+                perf.queued_tokens
+            )
+
+            # Synthesized: estimated queue drain time and throughput per thread
+            if perf.past_minute_megapixelsteps > 0:
+                g("horde_performance_estimated_queue_drain_seconds").labels(
+                    type="image"
+                ).set(perf.queued_megapixelsteps / perf.past_minute_megapixelsteps * 60)
+            if perf.thread_count > 0:
+                g("horde_performance_throughput_per_thread").labels(type="image").set(
+                    perf.past_minute_megapixelsteps / perf.thread_count
                 )
 
-            # Always write non-nullable metrics (counts, throughput, etc.)
-            self.metrics.performance_worker_count.labels(type="image").set(
-                int(data.get("worker_count", 0))
-            )
-            self.metrics.performance_worker_count.labels(type="text").set(
-                int(data.get("text_worker_count", 0))
-            )
-            self.metrics.performance_worker_count.labels(type="interrogator").set(
-                int(data.get("interrogator_count", 0))
-            )
-            self.metrics.performance_thread_count.labels(type="image").set(
-                int(data.get("thread_count", 0))
-            )
-            self.metrics.performance_thread_count.labels(type="text").set(
-                int(data.get("text_thread_count", 0))
-            )
-            self.metrics.performance_thread_count.labels(type="interrogator").set(
-                int(data.get("interrogator_thread_count", 0))
-            )
-            self.metrics.performance_past_minute_megapixelsteps.labels(
-                type="image"
-            ).set(float(data.get("past_minute_megapixelsteps", 0)))
-            self.metrics.performance_past_minute_tokens.labels(type="text").set(
-                float(data.get("past_minute_tokens", 0))
-            )
-            self.metrics.performance_queued_megapixelsteps.labels(type="image").set(
-                float(data.get("queued_megapixelsteps", 0))
-            )
-            self.metrics.performance_queued_tokens.labels(type="text").set(
-                float(data.get("queued_tokens", 0))
-            )
+            if perf.past_minute_tokens > 0:
+                g("horde_performance_estimated_queue_drain_seconds").labels(
+                    type="text"
+                ).set(perf.queued_tokens / perf.past_minute_tokens * 60)
+            if perf.text_thread_count > 0:
+                g("horde_performance_throughput_per_thread").labels(type="text").set(
+                    perf.past_minute_tokens / perf.text_thread_count
+                )
 
-            self.metrics.scrape_success.labels(endpoint=endpoint).set(1)
-            self.metrics.scrape_duration_seconds.labels(endpoint=endpoint).set(
-                time.time() - start_time
-            )
+            self._record_scrape_success(endpoint, start_time)
 
         except Exception as e:
             logger.error(f"Error collecting performance: {e}")
-            self.metrics.scrape_success.labels(endpoint=endpoint).set(0)
+            self._record_scrape_failure(endpoint)
+
+    def collect_stats_totals(self):
+        g = self.metrics.gauge
+
+        # Image stats
+        endpoint = "/stats/img/totals"
+        start_time = time.time()
+        try:
+            stats = ImageStatsResponse(**self.fetch_api(endpoint))
+            for period_name in ("minute", "hour", "day", "month", "total"):
+                period = getattr(stats, period_name)
+                g("horde_stats_images_generated").labels(period=period_name).set(
+                    period.images
+                )
+                g("horde_stats_pixelsteps_generated").labels(period=period_name).set(
+                    period.ps
+                )
+            self._record_scrape_success(endpoint, start_time)
+        except Exception as e:
+            logger.error(f"Error collecting image stats totals: {e}")
+            self._record_scrape_failure(endpoint)
+
+        # Text stats
+        endpoint = "/stats/text/totals"
+        start_time = time.time()
+        try:
+            stats = TextStatsResponse(**self.fetch_api(endpoint))
+            for period_name in ("minute", "hour", "day", "month", "total"):
+                period = getattr(stats, period_name)
+                g("horde_stats_text_requests_generated").labels(period=period_name).set(
+                    period.requests
+                )
+                g("horde_stats_tokens_generated").labels(period=period_name).set(
+                    period.tokens
+                )
+            self._record_scrape_success(endpoint, start_time)
+        except Exception as e:
+            logger.error(f"Error collecting text stats totals: {e}")
+            self._record_scrape_failure(endpoint)
+
+    def collect_stats_models(self):
+        g = self.metrics.gauge
+
+        for kind, endpoint, metric in [
+            (
+                "image",
+                "/stats/img/models?model_state=known",
+                "horde_stats_model_images_generated",
+            ),
+            ("text", "/stats/text/models", "horde_stats_model_texts_generated"),
+        ]:
+            start_time = time.time()
+            try:
+                stats = StatsModelsResponse(**self.fetch_api(endpoint))
+                for period_name in ("day", "month", "total"):
+                    for model_name, count in getattr(stats, period_name).items():
+                        g(metric).labels(model=model_name, period=period_name).set(
+                            count
+                        )
+                self._record_scrape_success(endpoint, start_time)
+            except Exception as e:
+                logger.error(f"Error collecting stats models ({kind}): {e}")
+                self._record_scrape_failure(endpoint)
+
+    def collect_modes(self):
+        g = self.metrics.gauge
+
+        # Heartbeat
+        hb_endpoint = "/status/heartbeat"
+        try:
+            self.fetch_api(hb_endpoint)
+            g("horde_api_up").set(1)
+            g("horde_exporter_scrape_success").labels(endpoint=hb_endpoint).set(1)
+        except Exception:
+            g("horde_api_up").set(0)
+            g("horde_exporter_scrape_success").labels(endpoint=hb_endpoint).set(0)
+
+        # Modes
+        modes_endpoint = "/status/modes"
+        start_time = time.time()
+        try:
+            modes = ModesResponse(**self.fetch_api(modes_endpoint))
+            g("horde_mode_maintenance").set(int(modes.maintenance_mode))
+            g("horde_mode_invite_only").set(int(modes.invite_only_mode))
+            g("horde_mode_raid").set(int(modes.raid_mode))
+            self._record_scrape_success(modes_endpoint, start_time)
+        except Exception as e:
+            logger.error(f"Error collecting modes: {e}")
+            self._record_scrape_failure(modes_endpoint)
+
+    def collect_teams(self):
+        endpoint = "/teams"
+        start_time = time.time()
+
+        try:
+            teams = [HordeTeam(**t) for t in self.fetch_api(endpoint)]
+            self.metrics.gauge("horde_teams_total").set(len(teams))
+
+            for team in teams:
+                self._emit_fields(TEAM_FIELDS, team, {"team": team.name}, "teams")
+
+            logger.info(f"Collected metrics for {len(teams)} teams")
+            self._record_scrape_success(endpoint, start_time)
+
+        except Exception as e:
+            logger.error(f"Error collecting teams: {e}")
+            self._record_scrape_failure(endpoint)
+
+    # --- thread runners ---
 
     def run_models_collector(self):
-        """Background thread for collecting model metrics"""
         interval = self.config.scrape_intervals.models
         while True:
             try:
@@ -699,7 +1077,6 @@ class HordeExporter:
             time.sleep(interval)
 
     def run_workers_collector(self):
-        """Background thread for collecting worker metrics"""
         interval = self.config.scrape_intervals.workers
         while True:
             try:
@@ -710,7 +1087,6 @@ class HordeExporter:
             time.sleep(interval)
 
     def run_performance_collector(self):
-        """Background thread for collecting performance metrics"""
         interval = self.config.scrape_intervals.performance
         while True:
             try:
@@ -719,23 +1095,53 @@ class HordeExporter:
                 logger.error(f"Error in performance collector: {e}")
             time.sleep(interval)
 
+    def run_stats_collector(self):
+        interval = self.config.scrape_intervals.stats
+        while True:
+            try:
+                self.collect_stats_totals()
+                self.collect_stats_models()
+            except Exception as e:
+                logger.error(f"Error in stats collector: {e}")
+            time.sleep(interval)
+
+    def run_modes_collector(self):
+        interval = self.config.scrape_intervals.modes
+        while True:
+            try:
+                self.collect_modes()
+            except Exception as e:
+                logger.error(f"Error in modes collector: {e}")
+            time.sleep(interval)
+
+    def run_teams_collector(self):
+        interval = self.config.scrape_intervals.teams
+        while True:
+            try:
+                self.collect_teams()
+            except Exception as e:
+                logger.error(f"Error in teams collector: {e}")
+            time.sleep(interval)
+
+    # --- startup ---
+
     def start(self):
         """Start the exporter"""
         port = self.config.exporter.port
         logger.info(f"Starting Horde exporter on port {port}")
 
-        # Start Prometheus HTTP server
         start_http_server(port)
         logger.info(f"Metrics available at http://localhost:{port}/metrics")
 
-        # Start collector threads
         threading.Thread(target=self.run_models_collector, daemon=True).start()
         threading.Thread(target=self.run_workers_collector, daemon=True).start()
         threading.Thread(target=self.run_performance_collector, daemon=True).start()
+        threading.Thread(target=self.run_stats_collector, daemon=True).start()
+        threading.Thread(target=self.run_modes_collector, daemon=True).start()
+        threading.Thread(target=self.run_teams_collector, daemon=True).start()
 
         logger.info("All collectors started")
 
-        # Keep main thread alive
         try:
             while True:
                 time.sleep(1)

@@ -6,6 +6,9 @@ scrape_intervals:
   models: 8         # Scrape models every 8 seconds (matches current horde.py)
   workers: 300      # Scrape workers every 5 minutes (matches current horde.py)
   performance: 2    # Scrape performance every 2 seconds (matches current horde.py)
+  stats: 120        # Historical stats every 2 minutes (slow-changing data)
+  modes: 30         # Horde modes + heartbeat every 30 seconds
+  teams: 300        # Team metrics every 5 minutes
 
 # AI Horde API configuration
 api:
@@ -15,7 +18,7 @@ api:
 
 # Exporter configuration
 exporter:
-  port: 9100        # Port to expose /metrics endpoint
+  port: 9150        # Port to expose /metrics endpoint
   log_level: INFO   # Logging level: DEBUG, INFO, WARNING, ERROR
 
 # Prometheus configuration
