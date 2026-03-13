@@ -1,0 +1,30 @@
+[project]
+name = "horde-exporters"
+version = "0.1.0"
+description = "Prometheus-compatible stats exporters for the AI-Horde"
+readme = "README.md"
+license = "AGPL-3.0-or-later"
+requires-python = ">=3.12"
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv.sources]
+ai-horde-stats-exporter = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "ai-horde-stats-exporter",
+    "pytest>=9.0.2",
+    "ruff>=0.15.5",
+    "ty>=0.0.21",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["packages/*/tests"]
+
+[tool.ruff]
+src = ["packages/*/src"]

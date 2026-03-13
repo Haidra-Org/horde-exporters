@@ -1,0 +1,538 @@
+"""Metric specification types and constant tables.
+
+Each spec maps an API response attribute to a Prometheus metric.  The generic
+emitters in :mod:`.exporter` use these tables to drive all metric emission.
+"""
+
+from dataclasses import dataclass
+from enum import StrEnum
+
+from .models import ApiModel, ImageStatsResponse, TextStatsResponse
+
+
+# ---------------------------------------------------------------------------
+# Enums
+# ---------------------------------------------------------------------------
+
+
+class HordeType(StrEnum):
+    IMAGE = "image"
+    TEXT = "text"
+    INTERROGATOR = "interrogator"
+
+
+class AggregateFunc(StrEnum):
+    SUM = "sum"
+    COUNT = "count"
+    MEAN = "mean"
+    COUNT_TRUE = "count_true"
+
+
+# ---------------------------------------------------------------------------
+# Spec dataclasses
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class FieldSpec:
+    """Maps a model attribute to a Prometheus gauge for per-entity export."""
+
+    metric_name: str
+    help_text: str
+    attr: str
+    condition: HordeType | None = None
+
+
+@dataclass(frozen=True)
+class AggregateSpec:
+    """Defines an aggregate metric computed across all entities of a collection."""
+
+    metric_name: str
+    help_text: str
+    func: AggregateFunc
+    attr: str = ""
+    condition: HordeType | None = None
+
+
+@dataclass(frozen=True)
+class PerformanceFieldSpec:
+    """Maps a PerformanceStatus attribute to a typed gauge."""
+
+    metric_name: str
+    help_text: str
+    attr: str
+    type_label: HordeType
+    zero_omit_key: str | None = None
+
+
+@dataclass(frozen=True)
+class SynthesizedMetricSpec:
+    """A computed metric derived from two attributes of a response model."""
+
+    metric_name: str
+    help_text: str
+    type_label: HordeType
+    numerator_attr: str
+    denominator_attr: str
+    multiplier: float = 1.0
+
+
+@dataclass(frozen=True)
+class StatsPeriodFieldSpec:
+    """Maps a period sub-attribute to a Prometheus gauge."""
+
+    metric_name: str
+    help_text: str
+    period_attr: str
+
+
+@dataclass(frozen=True)
+class StatsTotalsSpec:
+    """Spec for a stats totals endpoint."""
+
+    endpoint: str
+    response_type: type[ApiModel]
+    periods: tuple[str, ...]
+    fields: list[StatsPeriodFieldSpec]
+
+
+@dataclass(frozen=True)
+class StatsModelSpec:
+    """Spec for a per-model stats endpoint."""
+
+    endpoint: str
+    metric_name: str
+    help_text: str
+    periods: tuple[str, ...]
+
+
+# ---------------------------------------------------------------------------
+# Per-model fields (labels: model, type)
+# ---------------------------------------------------------------------------
+
+MODEL_FIELDS: list[FieldSpec] = [
+    FieldSpec("horde_model_queued", "Queued requests for specific model", "queued"),
+    FieldSpec(
+        "horde_model_workers_count", "Active workers for specific model", "count"
+    ),
+    FieldSpec(
+        "horde_model_performance", "Performance for specific model", "performance"
+    ),
+    FieldSpec("horde_model_jobs", "Active jobs for specific model", "jobs"),
+    FieldSpec("horde_model_eta_seconds", "ETA for specific model", "eta"),
+]
+
+MODEL_AGGREGATES: list[AggregateSpec] = [
+    AggregateSpec(
+        "horde_models_queued_total",
+        "Total queued requests across all models",
+        AggregateFunc.SUM,
+        "queued",
+    ),
+    AggregateSpec(
+        "horde_models_workers_count",
+        "Total active workers across all models",
+        AggregateFunc.SUM,
+        "count",
+    ),
+    AggregateSpec(
+        "horde_models_performance_total",
+        "Total performance across all models",
+        AggregateFunc.SUM,
+        "performance",
+    ),
+    AggregateSpec(
+        "horde_models_jobs_total",
+        "Total active jobs across all models",
+        AggregateFunc.SUM,
+        "jobs",
+    ),
+    AggregateSpec(
+        "horde_models_eta_seconds_avg",
+        "Average ETA across all models",
+        AggregateFunc.MEAN,
+        "eta",
+    ),
+    AggregateSpec(
+        "horde_models_active_total",
+        "Count of distinct active models",
+        AggregateFunc.COUNT,
+    ),
+]
+
+# ---------------------------------------------------------------------------
+# Per-worker fields (labels: worker, type)
+# ---------------------------------------------------------------------------
+
+WORKER_FIELDS: list[FieldSpec] = [
+    FieldSpec(
+        "horde_worker_requests_fulfilled_total",
+        "Requests fulfilled by specific worker",
+        "requests_fulfilled",
+    ),
+    FieldSpec(
+        "horde_worker_kudos_rewards",
+        "Kudos rewards for specific worker",
+        "kudos_rewards",
+    ),
+    FieldSpec(
+        "horde_worker_performance",
+        "Performance of specific worker",
+        "parsed_performance",
+    ),
+    FieldSpec("horde_worker_threads", "Thread count of specific worker", "threads"),
+    FieldSpec(
+        "horde_worker_kudos_generated_total",
+        "Kudos generated by specific worker",
+        "kudos_details.generated",
+    ),
+    FieldSpec(
+        "horde_worker_kudos_uptime",
+        "Kudos uptime for specific worker",
+        "kudos_details.uptime",
+    ),
+    FieldSpec(
+        "horde_worker_models_count",
+        "Number of models supported by worker",
+        "model_count",
+    ),
+    FieldSpec(
+        "horde_worker_uncompleted_jobs",
+        "Uncompleted jobs for specific worker",
+        "uncompleted_jobs",
+    ),
+    FieldSpec(
+        "horde_worker_uptime_seconds", "Total uptime of worker in seconds", "uptime"
+    ),
+    FieldSpec(
+        "horde_worker_maintenance", "Worker is in maintenance mode", "maintenance_mode"
+    ),
+    FieldSpec("horde_worker_trusted", "Worker is trusted", "trusted"),
+    FieldSpec("horde_worker_flagged", "Worker owner is flagged", "flagged"),
+    FieldSpec("horde_worker_nsfw_enabled", "Worker accepts NSFW requests", "nsfw"),
+    FieldSpec(
+        "horde_worker_max_pixels",
+        "Maximum pixels supported by worker",
+        "max_pixels",
+        condition=HordeType.IMAGE,
+    ),
+    FieldSpec(
+        "horde_worker_megapixelsteps_generated_total",
+        "Megapixelsteps generated by worker",
+        "megapixelsteps_generated",
+        condition=HordeType.IMAGE,
+    ),
+    FieldSpec(
+        "horde_worker_img2img_enabled",
+        "Worker supports img2img",
+        "img2img",
+        condition=HordeType.IMAGE,
+    ),
+    FieldSpec(
+        "horde_worker_painting_enabled",
+        "Worker supports inpainting/outpainting",
+        "painting",
+        condition=HordeType.IMAGE,
+    ),
+    FieldSpec(
+        "horde_worker_lora_enabled",
+        "Worker supports LoRA",
+        "lora",
+        condition=HordeType.IMAGE,
+    ),
+    FieldSpec(
+        "horde_worker_max_length",
+        "Maximum response length for text worker",
+        "max_length",
+        condition=HordeType.TEXT,
+    ),
+    FieldSpec(
+        "horde_worker_max_context_length",
+        "Maximum context length for text worker",
+        "max_context_length",
+        condition=HordeType.TEXT,
+    ),
+    FieldSpec(
+        "horde_worker_tokens_generated_total",
+        "Total tokens generated by text worker",
+        "tokens_generated",
+        condition=HordeType.TEXT,
+    ),
+]
+
+WORKER_AGGREGATES: list[AggregateSpec] = [
+    AggregateSpec(
+        "horde_workers_active_total",
+        "Total active workers",
+        AggregateFunc.COUNT,
+    ),
+    AggregateSpec(
+        "horde_workers_performance_total",
+        "Total worker performance",
+        AggregateFunc.SUM,
+        "parsed_performance",
+    ),
+    AggregateSpec(
+        "horde_workers_threads_total",
+        "Total worker threads",
+        AggregateFunc.SUM,
+        "threads",
+    ),
+    AggregateSpec(
+        "horde_workers_uptime_seconds_total",
+        "Sum of all worker uptimes in seconds",
+        AggregateFunc.SUM,
+        "uptime",
+    ),
+    AggregateSpec(
+        "horde_workers_maintenance_total",
+        "Workers in maintenance mode",
+        AggregateFunc.COUNT_TRUE,
+        "maintenance_mode",
+    ),
+    AggregateSpec(
+        "horde_workers_trusted_total",
+        "Trusted workers count",
+        AggregateFunc.COUNT_TRUE,
+        "trusted",
+    ),
+    AggregateSpec(
+        "horde_workers_flagged_total",
+        "Flagged workers count",
+        AggregateFunc.COUNT_TRUE,
+        "flagged",
+    ),
+    AggregateSpec(
+        "horde_workers_img2img_capable_total",
+        "Image workers supporting img2img",
+        AggregateFunc.COUNT_TRUE,
+        "img2img",
+        condition=HordeType.IMAGE,
+    ),
+    AggregateSpec(
+        "horde_workers_lora_capable_total",
+        "Image workers supporting LoRA",
+        AggregateFunc.COUNT_TRUE,
+        "lora",
+        condition=HordeType.IMAGE,
+    ),
+    AggregateSpec(
+        "horde_workers_avg_performance",
+        "Average performance across online workers",
+        AggregateFunc.MEAN,
+        "parsed_performance",
+    ),
+]
+
+# ---------------------------------------------------------------------------
+# Per-team fields (labels: team)
+# ---------------------------------------------------------------------------
+
+TEAM_FIELDS: list[FieldSpec] = [
+    FieldSpec(
+        "horde_team_requests_fulfilled",
+        "Requests fulfilled by team workers",
+        "requests_fulfilled",
+    ),
+    FieldSpec("horde_team_kudos", "Total kudos earned by team workers", "kudos"),
+    FieldSpec("horde_team_worker_count", "Number of workers in team", "worker_count"),
+]
+
+# ---------------------------------------------------------------------------
+# Performance fields (labels: type)
+# ---------------------------------------------------------------------------
+
+PERFORMANCE_FIELDS: list[PerformanceFieldSpec] = [
+    PerformanceFieldSpec(
+        "horde_performance_queued_requests",
+        "Queued requests",
+        "queued_requests",
+        HordeType.IMAGE,
+        zero_omit_key="queued_requests",
+    ),
+    PerformanceFieldSpec(
+        "horde_performance_queued_requests",
+        "Queued requests",
+        "queued_text_requests",
+        HordeType.TEXT,
+        zero_omit_key="queued_text_requests",
+    ),
+    PerformanceFieldSpec(
+        "horde_performance_queued_forms",
+        "Queued interrogation forms",
+        "queued_forms",
+        HordeType.INTERROGATOR,
+        zero_omit_key="queued_forms",
+    ),
+    PerformanceFieldSpec(
+        "horde_performance_worker_count",
+        "Worker count",
+        "worker_count",
+        HordeType.IMAGE,
+    ),
+    PerformanceFieldSpec(
+        "horde_performance_worker_count",
+        "Worker count",
+        "text_worker_count",
+        HordeType.TEXT,
+    ),
+    PerformanceFieldSpec(
+        "horde_performance_worker_count",
+        "Worker count",
+        "interrogator_count",
+        HordeType.INTERROGATOR,
+    ),
+    PerformanceFieldSpec(
+        "horde_performance_thread_count",
+        "Thread count",
+        "thread_count",
+        HordeType.IMAGE,
+    ),
+    PerformanceFieldSpec(
+        "horde_performance_thread_count",
+        "Thread count",
+        "text_thread_count",
+        HordeType.TEXT,
+    ),
+    PerformanceFieldSpec(
+        "horde_performance_thread_count",
+        "Thread count",
+        "interrogator_thread_count",
+        HordeType.INTERROGATOR,
+    ),
+    PerformanceFieldSpec(
+        "horde_performance_past_minute_megapixelsteps",
+        "Megapixelsteps in past minute",
+        "past_minute_megapixelsteps",
+        HordeType.IMAGE,
+    ),
+    PerformanceFieldSpec(
+        "horde_performance_past_minute_tokens",
+        "Tokens in past minute",
+        "past_minute_tokens",
+        HordeType.TEXT,
+    ),
+    PerformanceFieldSpec(
+        "horde_performance_queued_megapixelsteps",
+        "Queued megapixelsteps",
+        "queued_megapixelsteps",
+        HordeType.IMAGE,
+    ),
+    PerformanceFieldSpec(
+        "horde_performance_queued_tokens",
+        "Queued tokens",
+        "queued_tokens",
+        HordeType.TEXT,
+    ),
+]
+
+PERFORMANCE_SYNTHESIZED: list[SynthesizedMetricSpec] = [
+    SynthesizedMetricSpec(
+        "horde_performance_estimated_queue_drain_seconds",
+        "Estimated seconds to drain the queue at current throughput",
+        HordeType.IMAGE,
+        "queued_megapixelsteps",
+        "past_minute_megapixelsteps",
+        multiplier=60.0,
+    ),
+    SynthesizedMetricSpec(
+        "horde_performance_throughput_per_thread",
+        "Throughput per thread in the past minute",
+        HordeType.IMAGE,
+        "past_minute_megapixelsteps",
+        "thread_count",
+    ),
+    SynthesizedMetricSpec(
+        "horde_performance_estimated_queue_drain_seconds",
+        "Estimated seconds to drain the queue at current throughput",
+        HordeType.TEXT,
+        "queued_tokens",
+        "past_minute_tokens",
+        multiplier=60.0,
+    ),
+    SynthesizedMetricSpec(
+        "horde_performance_throughput_per_thread",
+        "Throughput per thread in the past minute",
+        HordeType.TEXT,
+        "past_minute_tokens",
+        "text_thread_count",
+    ),
+]
+
+# ---------------------------------------------------------------------------
+# Stats totals specs
+# ---------------------------------------------------------------------------
+
+STATS_TOTALS: list[StatsTotalsSpec] = [
+    StatsTotalsSpec(
+        endpoint="/stats/img/totals",
+        response_type=ImageStatsResponse,
+        periods=("minute", "hour", "day", "month", "total"),
+        fields=[
+            StatsPeriodFieldSpec(
+                "horde_stats_images_generated",
+                "Total images generated in time period",
+                "images",
+            ),
+            StatsPeriodFieldSpec(
+                "horde_stats_pixelsteps_generated",
+                "Total pixelsteps generated in time period",
+                "ps",
+            ),
+        ],
+    ),
+    StatsTotalsSpec(
+        endpoint="/stats/text/totals",
+        response_type=TextStatsResponse,
+        periods=("minute", "hour", "day", "month", "total"),
+        fields=[
+            StatsPeriodFieldSpec(
+                "horde_stats_text_requests_generated",
+                "Total text requests generated in time period",
+                "requests",
+            ),
+            StatsPeriodFieldSpec(
+                "horde_stats_tokens_generated",
+                "Total tokens generated in time period",
+                "tokens",
+            ),
+        ],
+    ),
+]
+
+# ---------------------------------------------------------------------------
+# Stats per-model specs
+# ---------------------------------------------------------------------------
+
+STATS_MODELS: list[StatsModelSpec] = [
+    StatsModelSpec(
+        endpoint="/stats/img/models?model_state=known",
+        metric_name="horde_stats_model_images_generated",
+        help_text="Images generated per model in time period",
+        periods=("day", "month", "total"),
+    ),
+    StatsModelSpec(
+        endpoint="/stats/text/models",
+        metric_name="horde_stats_model_texts_generated",
+        help_text="Text requests generated per model in time period",
+        periods=("day", "month", "total"),
+    ),
+]
+
+# ---------------------------------------------------------------------------
+# Mode fields (no labels)
+# ---------------------------------------------------------------------------
+
+MODES_FIELDS: list[FieldSpec] = [
+    FieldSpec(
+        "horde_mode_maintenance",
+        "Whether the horde is in maintenance mode",
+        "maintenance_mode",
+    ),
+    FieldSpec(
+        "horde_mode_invite_only",
+        "Whether the horde is in invite-only mode",
+        "invite_only_mode",
+    ),
+    FieldSpec("horde_mode_raid", "Whether the horde is in raid mode", "raid_mode"),
+]

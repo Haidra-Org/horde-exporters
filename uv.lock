@@ -2,6 +2,33 @@ version = 1
 revision = 3
 requires-python = ">=3.12"
 
+[manifest]
+members = [
+    "ai-horde-stats-exporter",
+    "horde-exporters",
+]
+
+[[package]]
+name = "ai-horde-stats-exporter"
+version = "0.1.0"
+source = { editable = "packages/ai-horde-stats-exporter" }
+dependencies = [
+    { name = "prometheus-client" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "pyyaml" },
+    { name = "requests" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "prometheus-client", specifier = ">=0.24.1" },
+    { name = "pydantic", specifier = ">=2.12.5" },
+    { name = "pydantic-settings", specifier = ">=2.13.1" },
+    { name = "pyyaml", specifier = ">=6.0.3" },
+    { name = "requests", specifier = ">=2.32.5" },
+]
+
 [[package]]
 name = "annotated-types"
 version = "0.7.0"
@@ -87,35 +114,23 @@ wheels = [
 ]
 
 [[package]]
-name = "horde-grafana"
+name = "horde-exporters"
 version = "0.1.0"
 source = { virtual = "." }
-dependencies = [
-    { name = "prometheus-client" },
-    { name = "pydantic" },
-    { name = "pydantic-settings" },
-    { name = "pyyaml" },
-    { name = "requests" },
-]
 
 [package.dev-dependencies]
 dev = [
+    { name = "ai-horde-stats-exporter" },
     { name = "pytest" },
     { name = "ruff" },
     { name = "ty" },
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "prometheus-client", specifier = ">=0.24.1" },
-    { name = "pydantic", specifier = ">=2.12.5" },
-    { name = "pydantic-settings", specifier = ">=2.13.1" },
-    { name = "pyyaml", specifier = ">=6.0.3" },
-    { name = "requests", specifier = ">=2.32.5" },
-]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "ai-horde-stats-exporter", editable = "packages/ai-horde-stats-exporter" },
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "ruff", specifier = ">=0.15.5" },
     { name = "ty", specifier = ">=0.0.21" },
