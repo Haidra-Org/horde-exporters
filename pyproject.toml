@@ -1,6 +1,6 @@
 [project]
 name = "horde-exporters"
-version = "0.1.0"
+version = "0.1.2"
 description = "Prometheus-compatible stats exporters for the AI-Horde"
 readme = "README.md"
 license = "AGPL-3.0-or-later"
