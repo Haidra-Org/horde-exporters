@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ai-horde-stats-exporter"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Prometheus-compatible stats exporter for the AI-Horde"
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.12"
@@ -21,3 +21,6 @@ horde-exporter = "ai_horde_stats_exporter.__main__:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ai_horde_stats_exporter"]
+
+[tool.hatch.version]
+path = "src/ai_horde_stats_exporter/__about__.py"

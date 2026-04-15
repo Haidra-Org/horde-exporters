@@ -36,7 +36,13 @@ jobs:
 
       - name: Build wheel
         run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          # Ensure the wheel version matches the release tag.
+          # This is authoritative — pyproject.toml carries a development
+          # placeholder that is overwritten here at release time.
           cd packages/ai-horde-stats-exporter
+          sed -i "s/^version = .*/version = \"${VERSION}\"/" pyproject.toml
           uv build --wheel --out-dir ../../dist/
 
       - name: Assemble dashboard tarball

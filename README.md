@@ -121,6 +121,25 @@ horde-exporters/
 
 To add a new exporter, create a new directory under `packages/` with its own `pyproject.toml` and `src/` layout.
 
+## Versioning Policy
+
+Package versions are intentionally independent.
+
+- Each sub-package under `packages/*` owns its own version.
+- Sub-package versions do not need to match each other.
+- Runtime/build-impacting changes in `packages/<name>/` (for example `src/**`,
+    package `pyproject.toml`, build config, build helper `.py`, dependency manifests)
+    must bump that sub-package's version.
+- Runtime/build-impacting changes in any `packages/*` must also bump the root
+    `horde-exporters` version in `pyproject.toml`.
+
+For `ai-horde-stats-exporter`, the package version is single-sourced from
+`src/ai_horde_stats_exporter/__about__.py` and re-exported from
+`src/ai_horde_stats_exporter/__init__.py` via Hatch dynamic versioning.
+
+CI enforces this policy on pull requests with
+`.github/workflows/version-policy.yml`.
+
 ## Development
 
 ```bash
