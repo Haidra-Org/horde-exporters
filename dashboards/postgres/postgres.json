@@ -157,7 +157,7 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "SUM(pg_stat_database_tup_inserted{release=\"$release\", datname=~\"$datname\", instance=~\"$instance\"})",
+                        "expr": "SUM(pg_stat_database_tup_inserted{datname=~\"$datname\", instance=~\"$instance\"})",
                         "format": "time_series",
                         "intervalFactor": 2,
                         "step": 4
@@ -317,7 +317,7 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "avg(rate(process_cpu_seconds_total{release=\"$release\", instance=\"$instance\"}[5m]) * 1000)",
+                        "expr": "avg(rate(process_cpu_seconds_total{instance=\"$instance\"}[5m]) * 1000)",
                         "format": "time_series",
                         "intervalFactor": 2,
                         "legendFormat": "CPU Time"
@@ -370,7 +370,7 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "avg(rate(process_resident_memory_bytes{release=\"$release\", instance=\"$instance\"}[5m]))",
+                        "expr": "avg(rate(process_resident_memory_bytes{instance=\"$instance\"}[5m]))",
                         "format": "time_series",
                         "intervalFactor": 2,
                         "legendFormat": "Resident Mem"
@@ -391,7 +391,7 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "avg(rate(process_virtual_memory_bytes{release=\"$release\", instance=\"$instance\"}[5m]))",
+                        "expr": "avg(rate(process_virtual_memory_bytes{instance=\"$instance\"}[5m]))",
                         "format": "time_series",
                         "intervalFactor": 2,
                         "legendFormat": "Virtual Mem"
@@ -444,7 +444,7 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "process_open_fds{release=\"$release\", instance=\"$instance\"}",
+                        "expr": "process_open_fds{instance=\"$instance\"}",
                         "format": "time_series",
                         "intervalFactor": 2,
                         "legendFormat": "Open FD"
@@ -497,7 +497,7 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "pg_postmaster_start_time_seconds{release=\"$release\", instance=\"$instance\"} * 1000",
+                        "expr": "pg_postmaster_start_time_seconds{instance=\"$instance\"} * 1000",
                         "format": "time_series",
                         "intervalFactor": 2,
                         "legendFormat": ""
@@ -604,7 +604,7 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "pg_static{release=\"$release\", instance=\"$instance\"}",
+                        "expr": "pg_static{instance=\"$instance\"}",
                         "format": "time_series",
                         "instant": true,
                         "intervalFactor": 1,
@@ -658,7 +658,7 @@
                       "group": "prometheus",
                       "kind": "DataQuery",
                       "spec": {
-                        "expr": "pg_settings_max_connections{release=\"$release\", instance=\"$instance\"}",
+                        "expr": "pg_settings_max_connections{instance=\"$instance\"}",
                         "format": "time_series",
                         "intervalFactor": 1
                       },
@@ -2468,66 +2468,6 @@
           "definition": "",
           "hide": "dontHide",
           "includeAll": false,
-          "label": "Namespace",
-          "multi": false,
-          "name": "namespace",
-          "options": [],
-          "query": {
-            "group": "prometheus",
-            "kind": "DataQuery",
-            "spec": {
-              "__legacyStringValue": "query_result(pg_exporter_last_scrape_duration_seconds)"
-            },
-            "version": "v0"
-          },
-          "refresh": "onTimeRangeChanged",
-          "regex": "/.*kubernetes_namespace=\"([^\"]+).*/",
-          "regexApplyTo": "value",
-          "skipUrlSync": false,
-          "sort": "alphabeticalAsc"
-        }
-      },
-      {
-        "kind": "QueryVariable",
-        "spec": {
-          "allowCustomValue": true,
-          "current": {
-            "text": "",
-            "value": ""
-          },
-          "definition": "",
-          "hide": "dontHide",
-          "includeAll": false,
-          "label": "Release",
-          "multi": false,
-          "name": "release",
-          "options": [],
-          "query": {
-            "group": "prometheus",
-            "kind": "DataQuery",
-            "spec": {
-              "__legacyStringValue": "query_result(pg_exporter_last_scrape_duration_seconds{kubernetes_namespace=\"$namespace\"})"
-            },
-            "version": "v0"
-          },
-          "refresh": "onTimeRangeChanged",
-          "regex": "/.*release=\"([^\"]+)/",
-          "regexApplyTo": "value",
-          "skipUrlSync": false,
-          "sort": "alphabeticalAsc"
-        }
-      },
-      {
-        "kind": "QueryVariable",
-        "spec": {
-          "allowCustomValue": true,
-          "current": {
-            "text": "",
-            "value": ""
-          },
-          "definition": "",
-          "hide": "dontHide",
-          "includeAll": false,
           "label": "Instance",
           "multi": false,
           "name": "instance",
@@ -2536,12 +2476,12 @@
             "group": "prometheus",
             "kind": "DataQuery",
             "spec": {
-              "__legacyStringValue": "query_result(pg_up{release=\"$release\"})"
+              "__legacyStringValue": "label_values(pg_up, instance)"
             },
             "version": "v0"
           },
           "refresh": "onDashboardLoad",
-          "regex": "/.*instance=\"([^\"]+).*/",
+          "regex": "",
           "regexApplyTo": "value",
           "skipUrlSync": false,
           "sort": "alphabeticalAsc"
