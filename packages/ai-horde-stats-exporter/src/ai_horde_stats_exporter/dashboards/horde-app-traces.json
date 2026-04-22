@@ -239,7 +239,12 @@
         "regex": "",
         "multi": false,
         "includeAll": false,
-        "current": {}
+        "description": "Defaults to the Telemetry tenant where OTLP-sourced histograms (horde_*_duration, http_server_duration) and Tempo-derived span metrics live; switch to AI Horde App if you've routed OTLP exports to a different tenant.",
+        "current": {
+          "selected": false,
+          "text": "Telemetry",
+          "value": "mimir-telemetry"
+        }
       }
     ]
   },
