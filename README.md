@@ -58,6 +58,8 @@ See the [AI-Horde API docs](https://aihorde.net/api/) for detailed information.
 
 Pre-built Grafana dashboards are bundled with the package and also available in `packages/ai-horde-stats-exporter/src/ai_horde_stats_exporter/dashboards/`. They require a Prometheus datasource pointed at this exporter (default port `9150`).
 
+Infra dashboards shipped in release artifacts are emitted as classic dashboard JSON (v1 model) to remain compatible with Grafana file provisioning flows.
+
 | Dashboard | File | Description |
 |-----------|------|-------------|
 | **Horde Performance** | `horde-performance.json` | High-level stats — API status, image/text worker counts, throughput (MPS/min, tokens/min), queue depth, historical generation stats, queue drain estimates, and teams overview. |

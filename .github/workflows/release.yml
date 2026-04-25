@@ -58,7 +58,28 @@ jobs:
 
           # Infra dashboards (from the top-level dashboards directory)
           mkdir -p "$STAGING/infra"
-          find dashboards -name '*.json' -exec cp {} "$STAGING/infra/" \;
+          find dashboards -name '*.json' | while read -r src; do
+            dest="$STAGING/infra/$(basename "$src")"
+            python3 scripts/convert_grafana_v2_to_classic.py "$src" "$dest"
+          done
+
+          # Guardrail: release artifact must contain classic dashboard JSON.
+          python3 - <<'PY'
+          import json
+          import pathlib
+          base = pathlib.Path("$STAGING") / "infra"
+          bad = []
+          for path in sorted(base.glob("*.json")):
+              data = json.loads(path.read_text())
+              if isinstance(data, dict) and str(data.get("apiVersion", "")).startswith("dashboard.grafana.app/"):
+                  bad.append(f"{path.name}: still has apiVersion={data.get('apiVersion')}")
+              if "panels" not in data:
+                  bad.append(f"{path.name}: missing panels")
+              if "templating" not in data:
+                  bad.append(f"{path.name}: missing templating")
+          if bad:
+              raise SystemExit("\n".join(bad))
+          PY
 
           tar -czf "dist/horde-dashboards-${VERSION}.tar.gz" -C "$STAGING" app infra
           rm -rf "$STAGING"
