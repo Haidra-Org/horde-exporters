@@ -267,7 +267,8 @@ def _layout_panels(spec: dict[str, Any], panel_map: dict[str, dict[str, Any]]) -
     max_panel_id = max((p.get("id", 0) for p in panel_map.values() if isinstance(p.get("id"), int)), default=0)
     next_row_id = max_panel_id + 1
 
-    def add_grid_items(items: list[Any], y_offset: int) -> list[int]:
+    def build_grid_panels(items: list[Any], y_offset: int) -> tuple[list[dict[str, Any]], list[int]]:
+        built: list[dict[str, Any]] = []
         bottoms: list[int] = []
         for item in items:
             if not isinstance(item, dict):
@@ -289,13 +290,14 @@ def _layout_panels(spec: dict[str, Any], panel_map: dict[str, dict[str, Any]]) -
             y = int(ispec.get("y", 0)) + y_offset
             panel_obj = copy.deepcopy(panel)
             panel_obj["gridPos"] = {"h": h, "w": w, "x": x, "y": y}
-            out.append(panel_obj)
+            built.append(panel_obj)
             bottoms.append(y + h)
-        return bottoms
+        return built, bottoms
 
     if layout_kind == "GridLayout":
         items = layout_spec.get("items") if isinstance(layout_spec.get("items"), list) else []
-        add_grid_items(items, 0)
+        grid_panels, _ = build_grid_panels(items, 0)
+        out.extend(grid_panels)
         return out
 
     if layout_kind == "RowsLayout":
@@ -320,9 +322,16 @@ def _layout_panels(spec: dict[str, Any], panel_map: dict[str, dict[str, Any]]) -
             row_layout_spec = row_layout.get("spec") if isinstance(row_layout.get("spec"), dict) else {}
             row_items = row_layout_spec.get("items") if isinstance(row_layout_spec.get("items"), list) else []
 
-            row_bottoms = add_grid_items(row_items, global_y + 1)
+            row_panels, row_bottoms = build_grid_panels(row_items, global_y + 1)
             row_height = (max(row_bottoms) - (global_y + 1)) if row_bottoms else 0
-            global_y += 1 + max(0, row_height)
+
+            if row_panel["collapsed"]:
+                row_panel["panels"] = row_panels
+                # Collapsed rows consume only the header row in top-level layout.
+                global_y += 1
+            else:
+                out.extend(row_panels)
+                global_y += 1 + max(0, row_height)
 
         return out
 
