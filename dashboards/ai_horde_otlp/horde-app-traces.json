@@ -223,6 +223,79 @@
         { "expr": "histogram_quantile(0.50, sum(rate(horde_submit_kudos[$__rate_interval])))", "legendFormat": "p50", "refId": "A" },
         { "expr": "histogram_quantile(0.95, sum(rate(horde_submit_kudos[$__rate_interval])))", "legendFormat": "p95", "refId": "B" }
       ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 60 },
+      "id": 105,
+      "title": "Service Graph & Request Funnel (Tempo metrics-generator)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "tempo", "uid": "tempo" },
+      "description": "Service graph derived from traces. Cap query interval to ≤24h — the ai-horde-telemetry tenant has 3-day retention.",
+      "gridPos": { "h": 12, "w": 12, "x": 0, "y": 61 },
+      "id": 30,
+      "options": { "edges": { "mainStatUnit": "ms" }, "nodes": { "mainStatUnit": "short" } },
+      "targets": [{ "queryType": "serviceMap", "serviceMapQuery": "{}", "refId": "A" }],
+      "title": "Service Graph",
+      "type": "nodeGraph"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Request funnel via Tempo span-metrics generator: generate → pop → submit. Compare rates to spot stage-level bottlenecks.",
+      "gridPos": { "h": 6, "w": 4, "x": 12, "y": 61 },
+      "id": 31,
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "blue", "mode": "fixed" }, "unit": "ops" }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["mean"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "area" },
+      "targets": [{ "expr": "sum(rate(traces_spanmetrics_calls_total{service_name=\"ai-horde\", span_name=~\".*generate.*\"}[5m]))", "legendFormat": "/generate", "refId": "A" }],
+      "title": "/generate (rate)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 6, "w": 4, "x": 16, "y": 61 },
+      "id": 32,
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "purple", "mode": "fixed" }, "unit": "ops" }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["mean"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "area" },
+      "targets": [{ "expr": "sum(rate(traces_spanmetrics_calls_total{service_name=\"ai-horde\", span_name=~\".*pop.*\"}[5m]))", "legendFormat": "/pop", "refId": "A" }],
+      "title": "/pop (rate)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 6, "w": 4, "x": 20, "y": 61 },
+      "id": 33,
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "green", "mode": "fixed" }, "unit": "ops" }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["mean"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "area" },
+      "targets": [{ "expr": "sum(rate(traces_spanmetrics_calls_total{service_name=\"ai-horde\", span_name=~\".*submit.*\"}[5m]))", "legendFormat": "/submit", "refId": "A" }],
+      "title": "/submit (rate)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Combined funnel trend over time. Prefer time ranges ≤ 24h (telemetry tenant retention is 3d).",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 67 },
+      "id": 34,
+      "type": "timeseries",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "ops",
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "lineWidth": 2, "fillOpacity": 10, "gradientMode": "none", "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "none" }, "thresholdsStyle": { "mode": "off" } }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "calcs": ["lastNotNull", "mean"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        { "expr": "sum(rate(traces_spanmetrics_calls_total{service_name=\"ai-horde\", span_name=~\".*generate.*\"}[$__rate_interval]))", "legendFormat": "/generate", "refId": "A" },
+        { "expr": "sum(rate(traces_spanmetrics_calls_total{service_name=\"ai-horde\", span_name=~\".*pop.*\"}[$__rate_interval]))", "legendFormat": "/pop", "refId": "B" },
+        { "expr": "sum(rate(traces_spanmetrics_calls_total{service_name=\"ai-horde\", span_name=~\".*submit.*\"}[$__rate_interval]))", "legendFormat": "/submit", "refId": "C" }
+      ],
+      "title": "Funnel Trend (rate)"
     }
   ],
   "refresh": "30s",
@@ -253,5 +326,5 @@
   "timezone": "browser",
   "title": "Horde App Traces (OTLP RED)",
   "uid": "horde-app-traces",
-  "version": 1
+  "version": 2
 }

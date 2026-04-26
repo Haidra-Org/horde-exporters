@@ -62,17 +62,24 @@ Infra dashboards shipped in release artifacts are emitted as classic dashboard J
 
 | Dashboard | File | Description |
 |-----------|------|-------------|
-| **Horde Performance** | `horde-performance.json` | High-level stats — API status, image/text worker counts, throughput (MPS/min, tokens/min), queue depth, historical generation stats, queue drain estimates, and teams overview. |
-| **Image Workers Overview** | `horde-image-workers-overview.json` | Per-worker drill-down — summary table, performance/requests/kudos time series, image capabilities (img2img, LoRA, max pixels). |
-| **Text Workers Overview** | `horde-text-workers-overview.json` | Per-worker drill-down for text workers. |
+| **Horde Performance** | `horde-performance.json` | Operator Pulse top row (active alerts + key worker/queue/scrape stats), demoted Operator Modes row, per-period stat strips for historical generation stats (replaces the legacy bargauges), Pop Diagnostics, Generation Outcomes, Teams, and Exporter Health. |
+| **Horde Performance (public variant)** | `horde-performance-public.json` | Same as above without the Alertmanager `alertlist` panel and OTLP-only rows. Provisioned to the public Grafana org by the deployments role. |
+| **Horde Operations Overview** | `horde-operations-overview.json` | Single-pane operator dashboard: active alerts (Alertmanager) + p95 latencies (mimir-telemetry) + worker drop indicators + Postgres saturation + DB pool timeouts + host top-N + Loki critical/error log volume. **Org 1 (admin) only — relies on Alertmanager / mimir-telemetry / loki-app datasources.** |
+| **Image Workers Overview** | `horde-image-workers-overview.json` | Per-worker drill-down — summary table, performance/requests/kudos time series, image capabilities (img2img, LoRA, max pixels), plus a Pop Diagnostics row (skip reasons + suspicion log lines). |
+| **Text Workers Overview** | `horde-text-workers-overview.json` | Per-worker drill-down for text workers, plus the same Pop Diagnostics row. |
 | **Image Worker Detail** | `horde-image-worker-detail.json` | Single image worker drill-down. |
 | **Text Worker Detail** | `horde-text-worker-detail.json` | Single text worker drill-down. |
 | **Image Models Overview** | `horde-image-models-overview.json` | All image models at a glance — aggregate stats, merged table with queue % and worker % shares, top 15 time series, domain-wide MPS throughput, and historical generation rankings. |
 | **Text Models Overview** | `horde-text-models-overview.json` | All text models at a glance — aggregate stats, merged table with queue % and worker % shares, top 15 time series, domain-wide token throughput, and historical generation rankings. |
 | **Image Model Detail** | `horde-image-model-detail.json` | Single image model drill-down — live stats, capacity share gauges (queue/worker/jobs), computed ratios over time, and historical generation stats with % of total. |
 | **Text Model Detail** | `horde-text-model-detail.json` | Single text model drill-down — live stats, capacity share gauges (queue/worker/jobs), computed ratios over time, and historical generation stats with % of total. |
+| **Horde App Traces (OTLP RED)** | `dashboards/ai_horde_otlp/horde-app-traces.json` | OTLP-derived RED metrics, Tempo service graph, and a generate→pop→submit funnel (span-metrics from `mimir-telemetry`). Cap query intervals to ≤24h — telemetry-tenant retention is 3 days. |
 
 > **Note:** The legacy combined `horde-models.json` is superseded by the four model dashboards above.
+
+### Public-org variants (`-public.json`)
+
+A dashboard whose basename ends `-public.json` is the variant the deployments role provisions to the **public Grafana org (Org 2)**. The public org only has the `mimir-public`, `loki-public`, `tempo-public`, and `pyroscope-public` datasources — no Alertmanager, no `mimir-telemetry`, no `loki-app`. Bare-name dashboards that reference Org-1-only datasources should ship a `-public.json` sibling that drops or substitutes those panels. See `roles/horde_monitoring/tasks/dashboards.yml` in the deployments repo for the routing rules.
 
 ### Accessing Dashboards Programmatically
 

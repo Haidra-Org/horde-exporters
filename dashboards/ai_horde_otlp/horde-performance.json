@@ -1,0 +1,1164 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "AI Horde operator pulse — active alerts, headline workers/queue/throughput, historical stats, pop diagnostics, generation outcomes, and teams.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": ["horde"],
+      "targetBlank": false,
+      "title": "Horde Dashboards",
+      "type": "dashboards"
+    }
+  ],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "title": "Operator Pulse",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "alertmanager", "uid": "alertmanager" },
+      "description": "Active firing/pending alerts at warning or critical severity. Hidden when no Alertmanager datasource is provisioned (Org 1 only).",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 1 },
+      "id": 200,
+      "options": {
+        "alertInstanceLabelFilter": "{severity=~\"critical|warning\"}",
+        "alertName": "",
+        "dashboardAlerts": false,
+        "groupBy": [],
+        "groupMode": "default",
+        "maxItems": 25,
+        "showInactiveAlerts": false,
+        "sortOrder": 3,
+        "stateFilter": {
+          "firing": true,
+          "pending": true,
+          "noData": false,
+          "normal": false,
+          "error": true
+        },
+        "viewMode": "list"
+      },
+      "title": "Active Alerts",
+      "type": "alertlist"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "options": { "0": { "color": "red", "text": "DOWN" }, "1": { "color": "green", "text": "UP" } }, "type": "value" }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] },
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 3, "w": 4, "x": 12, "y": 1 },
+      "id": 1,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none" },
+      "targets": [{ "expr": "horde_api_up", "legendFormat": "", "refId": "A", "instant": true }],
+      "title": "API Status",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Active image workers. Below 1 is critical (HordeNoActiveImageWorkers); below 5 indicates degraded capacity.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "orange", "value": 1 }, { "color": "green", "value": 5 }] },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 3, "w": 4, "x": 16, "y": 1 },
+      "id": 201,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "area" },
+      "targets": [{ "expr": "horde_performance_worker_count{type=\"image\"}", "legendFormat": "", "refId": "A" }],
+      "title": "Image Workers",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Active text workers. Below 1 is warning (HordeNoActiveTextWorkers).",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "orange", "value": 1 }, { "color": "green", "value": 5 }] },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 3, "w": 4, "x": 20, "y": 1 },
+      "id": 202,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "area" },
+      "targets": [{ "expr": "horde_performance_worker_count{type=\"text\"}", "legendFormat": "", "refId": "A" }],
+      "title": "Text Workers",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Estimated time to drain the image queue at current throughput. >30m matches HordeImageQueueBacklog.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 300 }, { "color": "red", "value": 1800 }] },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 3, "w": 4, "x": 12, "y": 4 },
+      "id": 203,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "area" },
+      "targets": [{ "expr": "horde_performance_estimated_queue_drain_seconds{type=\"image\"}", "legendFormat": "", "refId": "A" }],
+      "title": "Image Queue Drain",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Estimated time to drain the text queue at current throughput.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 300 }, { "color": "red", "value": 1800 }] },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 3, "w": 4, "x": 16, "y": 4 },
+      "id": 204,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "area" },
+      "targets": [{ "expr": "horde_performance_estimated_queue_drain_seconds{type=\"text\"}", "legendFormat": "", "refId": "A" }],
+      "title": "Text Queue Drain",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Worst-case scrape success across all upstream API endpoints.",
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] },
+          "color": { "mode": "thresholds" }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 3, "w": 4, "x": 20, "y": 4 },
+      "id": 5,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none" },
+      "targets": [{ "expr": "min(horde_exporter_scrape_success)", "legendFormat": "All Endpoints", "refId": "A", "instant": true }],
+      "title": "Scrape Health",
+      "type": "stat"
+    },
+    {
+      "collapsed": true,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 7 },
+      "id": 110,
+      "title": "Operator Modes & Rate-Limit Budget",
+      "type": "row",
+      "panels": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "mappings": [
+                { "options": { "0": { "color": "green", "text": "OFF" }, "1": { "color": "orange", "text": "ON" } }, "type": "value" }
+              ],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 1 }] },
+              "color": { "mode": "thresholds" }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 3, "w": 3, "x": 0, "y": 8 },
+          "id": 2,
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none" },
+          "targets": [{ "expr": "horde_mode_maintenance", "legendFormat": "", "refId": "A", "instant": true }],
+          "title": "Maintenance",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "mappings": [
+                { "options": { "0": { "color": "green", "text": "OFF" }, "1": { "color": "orange", "text": "ON" } }, "type": "value" }
+              ],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 1 }] },
+              "color": { "mode": "thresholds" }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 3, "w": 3, "x": 3, "y": 8 },
+          "id": 3,
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none" },
+          "targets": [{ "expr": "horde_mode_invite_only", "legendFormat": "", "refId": "A", "instant": true }],
+          "title": "Invite-Only",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "mappings": [
+                { "options": { "0": { "color": "green", "text": "OFF" }, "1": { "color": "red", "text": "ON" } }, "type": "value" }
+              ],
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] },
+              "color": { "mode": "thresholds" }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 3, "w": 3, "x": 6, "y": 8 },
+          "id": 4,
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none" },
+          "targets": [{ "expr": "horde_mode_raid", "legendFormat": "", "refId": "A", "instant": true }],
+          "title": "Raid",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "min": 0,
+              "max": 100,
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "orange", "value": 10 }, { "color": "green", "value": 50 }] },
+              "color": { "mode": "thresholds" }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 3, "w": 6, "x": 9, "y": 8 },
+          "id": 6,
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "showThresholdLabels": false, "showThresholdMarkers": true },
+          "targets": [{ "expr": "horde_exporter_ratelimit_remaining", "legendFormat": "", "refId": "A", "instant": true }],
+          "title": "Rate Limit Remaining",
+          "type": "gauge"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 8 },
+      "id": 101,
+      "title": "Image Workers & Throughput",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "blue", "mode": "fixed" }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 9 },
+      "id": 10,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "area" },
+      "targets": [{ "expr": "horde_performance_worker_count{type=\"image\"}", "legendFormat": "", "refId": "A" }],
+      "title": "Image Workers",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "blue", "mode": "fixed" }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 9 },
+      "id": 11,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "area" },
+      "targets": [{ "expr": "horde_performance_thread_count{type=\"image\"}", "legendFormat": "", "refId": "A" }],
+      "title": "Image Threads",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "purple", "mode": "fixed" }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 9 },
+      "id": 12,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "area" },
+      "targets": [{ "expr": "horde_models_active_total{type=\"image\"}", "legendFormat": "", "refId": "A" }],
+      "title": "Active Image Models",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "orange", "mode": "fixed" }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 9 },
+      "id": 13,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "area" },
+      "targets": [{ "expr": "horde_performance_queued_requests{type=\"image\"}", "legendFormat": "", "refId": "A" }],
+      "title": "Queued Image Requests",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "none",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "axisCenteredZero": false,
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "scaleDistribution": { "type": "linear" },
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
+      "id": 14,
+      "options": {
+        "legend": { "calcs": ["lastNotNull", "mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [{ "expr": "horde_performance_past_minute_megapixelsteps", "legendFormat": "MPS / min", "refId": "A" }],
+      "title": "Megapixelsteps / Minute",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "none",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "axisCenteredZero": false,
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "scaleDistribution": { "type": "linear" },
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
+      "id": 15,
+      "options": {
+        "legend": { "calcs": ["lastNotNull", "mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [{ "expr": "horde_performance_queued_megapixelsteps", "legendFormat": "Queued MPS", "refId": "A" }],
+      "title": "Queued Megapixelsteps",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 21 },
+      "id": 102,
+      "title": "Text Workers & Throughput",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "green", "mode": "fixed" }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 22 },
+      "id": 20,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "area" },
+      "targets": [{ "expr": "horde_performance_worker_count{type=\"text\"}", "legendFormat": "", "refId": "A" }],
+      "title": "Text Workers",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "green", "mode": "fixed" }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 22 },
+      "id": 21,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "area" },
+      "targets": [{ "expr": "horde_performance_thread_count{type=\"text\"}", "legendFormat": "", "refId": "A" }],
+      "title": "Text Threads",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "super-light-green", "mode": "fixed" }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 22 },
+      "id": 22,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "area" },
+      "targets": [{ "expr": "horde_models_active_total{type=\"text\"}", "legendFormat": "", "refId": "A" }],
+      "title": "Active Text Models",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "orange", "mode": "fixed" }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 22 },
+      "id": 23,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "area" },
+      "targets": [{ "expr": "horde_performance_queued_requests{type=\"text\"}", "legendFormat": "", "refId": "A" }],
+      "title": "Queued Text Requests",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "none",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "axisCenteredZero": false,
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "scaleDistribution": { "type": "linear" },
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 26 },
+      "id": 24,
+      "options": {
+        "legend": { "calcs": ["lastNotNull", "mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [{ "expr": "horde_performance_past_minute_tokens", "legendFormat": "Tokens / min", "refId": "A" }],
+      "title": "Tokens / Minute",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "none",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "axisCenteredZero": false,
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "scaleDistribution": { "type": "linear" },
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 26 },
+      "id": 25,
+      "options": {
+        "legend": { "calcs": ["lastNotNull", "mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [{ "expr": "horde_performance_queued_tokens", "legendFormat": "Queued Tokens", "refId": "A" }],
+      "title": "Queued Tokens",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 34 },
+      "id": 103,
+      "title": "Historical Generation Stats",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "blue", "mode": "fixed" }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 4, "x": 0, "y": 35 },
+      "id": 30,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area" },
+      "targets": [{ "expr": "horde_stats_images_generated{period=\"minute\"}", "legendFormat": "", "refId": "A" }],
+      "title": "Images / Minute",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "blue", "mode": "fixed" }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 4, "x": 4, "y": 35 },
+      "id": 230,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area" },
+      "targets": [{ "expr": "horde_stats_images_generated{period=\"hour\"}", "legendFormat": "", "refId": "A" }],
+      "title": "Images / Hour",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "blue", "mode": "fixed" }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 4, "x": 8, "y": 35 },
+      "id": 231,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area" },
+      "targets": [{ "expr": "horde_stats_images_generated{period=\"day\"}", "legendFormat": "", "refId": "A" }],
+      "title": "Images / Day",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "blue", "mode": "fixed" }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 4, "x": 12, "y": 35 },
+      "id": 232,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area" },
+      "targets": [{ "expr": "horde_stats_images_generated{period=\"month\"}", "legendFormat": "", "refId": "A" }],
+      "title": "Images / Month",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "blue", "mode": "fixed" }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 8, "x": 16, "y": 35 },
+      "id": 233,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none" },
+      "targets": [{ "expr": "horde_stats_images_generated{period=\"total\"}", "legendFormat": "", "refId": "A" }],
+      "title": "Images Total",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "purple", "mode": "fixed" }, "unit": "short", "decimals": 2 }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 4, "x": 0, "y": 40 },
+      "id": 31,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area" },
+      "targets": [{ "expr": "horde_stats_pixelsteps_generated{period=\"minute\"} / 1e6", "legendFormat": "", "refId": "A" }],
+      "title": "MPx-step / Minute",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "purple", "mode": "fixed" }, "unit": "short", "decimals": 2 }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 4, "x": 4, "y": 40 },
+      "id": 234,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area" },
+      "targets": [{ "expr": "horde_stats_pixelsteps_generated{period=\"hour\"} / 1e6", "legendFormat": "", "refId": "A" }],
+      "title": "MPx-step / Hour",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "purple", "mode": "fixed" }, "unit": "short", "decimals": 2 }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 4, "x": 8, "y": 40 },
+      "id": 235,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area" },
+      "targets": [{ "expr": "horde_stats_pixelsteps_generated{period=\"day\"} / 1e6", "legendFormat": "", "refId": "A" }],
+      "title": "MPx-step / Day",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "purple", "mode": "fixed" }, "unit": "short", "decimals": 2 }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 4, "x": 12, "y": 40 },
+      "id": 236,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area" },
+      "targets": [{ "expr": "horde_stats_pixelsteps_generated{period=\"month\"} / 1e6", "legendFormat": "", "refId": "A" }],
+      "title": "MPx-step / Month",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "purple", "mode": "fixed" }, "unit": "short", "decimals": 2 }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 8, "x": 16, "y": 40 },
+      "id": 237,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none" },
+      "targets": [{ "expr": "horde_stats_pixelsteps_generated{period=\"total\"} / 1e6", "legendFormat": "", "refId": "A" }],
+      "title": "MPx-step Total",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "green", "mode": "fixed" }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 4, "x": 0, "y": 45 },
+      "id": 32,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area" },
+      "targets": [{ "expr": "horde_stats_text_requests_generated{period=\"minute\"}", "legendFormat": "", "refId": "A" }],
+      "title": "Text Reqs / Minute",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "green", "mode": "fixed" }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 4, "x": 4, "y": 45 },
+      "id": 238,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area" },
+      "targets": [{ "expr": "horde_stats_text_requests_generated{period=\"hour\"}", "legendFormat": "", "refId": "A" }],
+      "title": "Text Reqs / Hour",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "green", "mode": "fixed" }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 4, "x": 8, "y": 45 },
+      "id": 239,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area" },
+      "targets": [{ "expr": "horde_stats_text_requests_generated{period=\"day\"}", "legendFormat": "", "refId": "A" }],
+      "title": "Text Reqs / Day",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "green", "mode": "fixed" }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 4, "x": 12, "y": 45 },
+      "id": 240,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area" },
+      "targets": [{ "expr": "horde_stats_text_requests_generated{period=\"month\"}", "legendFormat": "", "refId": "A" }],
+      "title": "Text Reqs / Month",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "green", "mode": "fixed" }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 8, "x": 16, "y": 45 },
+      "id": 241,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none" },
+      "targets": [{ "expr": "horde_stats_text_requests_generated{period=\"total\"}", "legendFormat": "", "refId": "A" }],
+      "title": "Text Reqs Total",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "yellow", "mode": "fixed" }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 4, "x": 0, "y": 50 },
+      "id": 33,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area" },
+      "targets": [{ "expr": "horde_stats_tokens_generated{period=\"minute\"}", "legendFormat": "", "refId": "A" }],
+      "title": "Tokens / Minute",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "yellow", "mode": "fixed" }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 4, "x": 4, "y": 50 },
+      "id": 242,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area" },
+      "targets": [{ "expr": "horde_stats_tokens_generated{period=\"hour\"}", "legendFormat": "", "refId": "A" }],
+      "title": "Tokens / Hour",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "yellow", "mode": "fixed" }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 4, "x": 8, "y": 50 },
+      "id": 243,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area" },
+      "targets": [{ "expr": "horde_stats_tokens_generated{period=\"day\"}", "legendFormat": "", "refId": "A" }],
+      "title": "Tokens / Day",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "yellow", "mode": "fixed" }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 4, "x": 12, "y": 50 },
+      "id": 244,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area" },
+      "targets": [{ "expr": "horde_stats_tokens_generated{period=\"month\"}", "legendFormat": "", "refId": "A" }],
+      "title": "Tokens / Month",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "yellow", "mode": "fixed" }, "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 5, "w": 8, "x": 16, "y": 50 },
+      "id": 245,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none" },
+      "targets": [{ "expr": "horde_stats_tokens_generated{period=\"total\"}", "legendFormat": "", "refId": "A" }],
+      "title": "Tokens Total",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 55 },
+      "id": 104,
+      "title": "Queue Drain & Throughput Efficiency",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "axisCenteredZero": false,
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "scaleDistribution": { "type": "linear" },
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 56 },
+      "id": 40,
+      "options": {
+        "legend": { "calcs": ["lastNotNull", "mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        { "expr": "horde_performance_estimated_queue_drain_seconds{type=\"image\"}", "legendFormat": "Image Queue", "refId": "A" },
+        { "expr": "horde_performance_estimated_queue_drain_seconds{type=\"text\"}", "legendFormat": "Text Queue", "refId": "B" }
+      ],
+      "title": "Estimated Queue Drain Time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "none",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "axisCenteredZero": false,
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "scaleDistribution": { "type": "linear" },
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 56 },
+      "id": 41,
+      "options": {
+        "legend": { "calcs": ["lastNotNull", "mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        { "expr": "horde_performance_throughput_per_thread{type=\"image\"}", "legendFormat": "Image", "refId": "A" },
+        { "expr": "horde_performance_throughput_per_thread{type=\"text\"}", "legendFormat": "Text", "refId": "B" }
+      ],
+      "title": "Throughput Per Thread",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": true,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 64 },
+      "id": 107,
+      "title": "Pop Diagnostics (why workers can't pick up jobs)",
+      "type": "row",
+      "panels": [
+        {
+          "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
+          "description": "Job-pop skip rate by reason. A dominant reason indicates worker pool/model mismatch.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "fillOpacity": 25,
+                "gradientMode": "opacity",
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": { "group": "A", "mode": "normal" },
+                "thresholdsStyle": { "mode": "off" }
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 16, "x": 0, "y": 65 },
+          "id": 280,
+          "options": {
+            "legend": { "calcs": ["lastNotNull", "mean"], "displayMode": "table", "placement": "right", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [{ "expr": "sum by (horde_skip_reason) (rate(horde_pop_skipped_total[$__rate_interval]))", "legendFormat": "{{horde_skip_reason}}", "refId": "A" }],
+          "title": "Skips per Second by Reason",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
+          "description": "Top 10 skip reasons over the last hour.",
+          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "unit": "short", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] } }, "overrides": [] },
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 65 },
+          "id": 281,
+          "options": { "showHeader": true, "sortBy": [{ "desc": true, "displayName": "Count" }], "cellHeight": "sm", "footer": { "show": false } },
+          "targets": [{ "expr": "topk(10, sum by (horde_skip_reason) (increase(horde_pop_skipped_total[1h])))", "legendFormat": "", "refId": "A", "instant": true, "format": "table" }],
+          "transformations": [
+            { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "instance": true, "job": true }, "renameByName": { "horde_skip_reason": "Skip Reason", "Value": "Count" } } }
+          ],
+          "title": "Top Skip Reasons (1h)",
+          "type": "table"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
+          "description": "How many candidate WPs the pop loop evaluated before returning. High p95 with low return ratio = saturation/mismatch.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "off" }
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 16, "x": 0, "y": 73 },
+          "id": 282,
+          "options": {
+            "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+            { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_pop_candidates_evaluated_bucket[$__rate_interval])))", "legendFormat": "p95", "refId": "A" },
+            { "expr": "histogram_quantile(0.50, sum by (le) (rate(horde_pop_candidates_evaluated_bucket[$__rate_interval])))", "legendFormat": "p50", "refId": "B" }
+          ],
+          "title": "Pop Candidates Evaluated (p95/p50)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
+          "description": "Fraction of pop attempts that returned a job. Low values mean workers are connecting but not getting work.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "orange", "value": 0.1 }, { "color": "green", "value": 0.5 }] },
+              "unit": "percentunit",
+              "min": 0,
+              "max": 1
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 73 },
+          "id": 283,
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "area" },
+          "targets": [{ "expr": "sum(rate(horde_pop_returned_jobs_count{horde_outcome=\"match\"}[$__rate_interval])) / clamp_min(sum(rate(horde_pop_returned_jobs_count[$__rate_interval])), 1)", "legendFormat": "", "refId": "A" }],
+          "title": "Pop Match Ratio",
+          "type": "stat"
+        }
+      ]
+    },
+    {
+      "collapsed": true,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 65 },
+      "id": 108,
+      "title": "Generation Outcomes",
+      "type": "row",
+      "panels": [
+        {
+          "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
+          "description": "Submit outcome rate by category. Sustained censored/faulted indicate abuse, worker quality, or model failures.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "fillOpacity": 25,
+                "gradientMode": "opacity",
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": { "group": "A", "mode": "normal" },
+                "thresholdsStyle": { "mode": "off" }
+              }
+            },
+            "overrides": [
+              { "matcher": { "id": "byName", "options": "accepted" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }] },
+              { "matcher": { "id": "byName", "options": "censored" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }] },
+              { "matcher": { "id": "byName", "options": "faulted" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] },
+              { "matcher": { "id": "byName", "options": "error" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "dark-red" } }] }
+            ]
+          },
+          "gridPos": { "h": 8, "w": 16, "x": 0, "y": 66 },
+          "id": 290,
+          "options": {
+            "legend": { "calcs": ["lastNotNull", "mean"], "displayMode": "table", "placement": "right", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [{ "expr": "sum by (horde_outcome) (rate(horde_submit_outcomes_total[$__rate_interval]))", "legendFormat": "{{horde_outcome}}", "refId": "A" }],
+          "title": "Submit Outcome Rate (stacked)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
+          "description": "Faulted-to-total ratio. Threshold annotation tracks HordeSubmitFaultRate.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 0.05 }, { "color": "red", "value": 0.10 }] },
+              "unit": "percentunit",
+              "min": 0,
+              "max": 1,
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 20,
+                "gradientMode": "scheme",
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "line+area" }
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 66 },
+          "id": 291,
+          "options": {
+            "legend": { "calcs": ["lastNotNull"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "single", "sort": "none" }
+          },
+          "targets": [{ "expr": "sum(rate(horde_submit_outcomes_total{horde_outcome=\"faulted\"}[5m])) / clamp_min(sum(rate(horde_submit_outcomes_total[5m])), 1)", "legendFormat": "Faulted ratio", "refId": "A" }],
+          "title": "Faulted Ratio (5m)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
+          "description": "Censored-to-total ratio. Sustained elevation cross-checks raid mode.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 0.05 }, { "color": "red", "value": 0.20 }] },
+              "unit": "percentunit",
+              "min": 0,
+              "max": 1,
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 20,
+                "gradientMode": "scheme",
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "line+area" }
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 74 },
+          "id": 292,
+          "options": {
+            "legend": { "calcs": ["lastNotNull"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "single", "sort": "none" }
+          },
+          "targets": [{ "expr": "sum(rate(horde_submit_outcomes_total{horde_outcome=\"censored\"}[5m])) / clamp_min(sum(rate(horde_submit_outcomes_total[5m])), 1)", "legendFormat": "Censored ratio", "refId": "A" }],
+          "title": "Censored Ratio (5m)",
+          "type": "timeseries"
+        }
+      ]
+    },
+    {
+      "collapsed": true,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 66 },
+      "id": 105,
+      "title": "Teams Overview",
+      "type": "row",
+      "panels": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": { "defaults": { "color": { "fixedColor": "blue", "mode": "fixed" }, "unit": "short" }, "overrides": [] },
+          "gridPos": { "h": 4, "w": 4, "x": 0, "y": 67 },
+          "id": 50,
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none" },
+          "targets": [{ "expr": "horde_teams_total", "legendFormat": "", "refId": "A", "instant": true }],
+          "title": "Total Teams",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "thresholds" }, "unit": "short", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] } },
+            "overrides": [
+              { "matcher": { "id": "byName", "options": "team" }, "properties": [{ "id": "custom.width", "value": 250 }] },
+              { "matcher": { "id": "byName", "options": "Value" }, "properties": [{ "id": "displayName", "value": "Kudos" }] }
+            ]
+          },
+          "gridPos": { "h": 10, "w": 10, "x": 4, "y": 67 },
+          "id": 51,
+          "options": { "showHeader": true, "sortBy": [{ "desc": true, "displayName": "Kudos" }], "cellHeight": "sm", "footer": { "show": false } },
+          "targets": [{ "expr": "topk(15, horde_team_kudos)", "legendFormat": "", "refId": "A", "instant": true, "format": "table" }],
+          "transformations": [
+            { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "instance": true, "job": true }, "renameByName": { "team": "Team", "Value": "Kudos" } } }
+          ],
+          "title": "Top Teams by Kudos",
+          "type": "table"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": { "color": { "mode": "thresholds" }, "unit": "short", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] } },
+            "overrides": [
+              { "matcher": { "id": "byName", "options": "team" }, "properties": [{ "id": "custom.width", "value": 250 }] },
+              { "matcher": { "id": "byName", "options": "Value" }, "properties": [{ "id": "displayName", "value": "Requests" }] }
+            ]
+          },
+          "gridPos": { "h": 10, "w": 10, "x": 14, "y": 67 },
+          "id": 52,
+          "options": { "showHeader": true, "sortBy": [{ "desc": true, "displayName": "Requests" }], "cellHeight": "sm", "footer": { "show": false } },
+          "targets": [{ "expr": "topk(15, horde_team_requests_fulfilled)", "legendFormat": "", "refId": "A", "instant": true, "format": "table" }],
+          "transformations": [
+            { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "instance": true, "job": true }, "renameByName": { "team": "Team", "Value": "Requests Fulfilled" } } }
+          ],
+          "title": "Top Teams by Requests",
+          "type": "table"
+        }
+      ]
+    },
+    {
+      "collapsed": true,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 67 },
+      "id": 106,
+      "title": "Exporter Health",
+      "type": "row",
+      "panels": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "unit": "s",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "fillOpacity": 5,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": true,
+                "axisCenteredZero": false,
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "scaleDistribution": { "type": "linear" },
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "off" }
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 68 },
+          "id": 60,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [{ "expr": "horde_exporter_scrape_duration_seconds", "legendFormat": "{{endpoint}}", "refId": "A" }],
+          "title": "Scrape Duration by Endpoint",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "fillOpacity": 5,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": true,
+                "axisCenteredZero": false,
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "scaleDistribution": { "type": "linear" },
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "off" }
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 68 },
+          "id": 61,
+          "options": {
+            "legend": { "calcs": ["lastNotNull"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+            { "expr": "horde_exporter_ratelimit_remaining", "legendFormat": "Remaining", "refId": "A" },
+            { "expr": "horde_exporter_ratelimit_limit", "legendFormat": "Limit", "refId": "B" },
+            { "expr": "horde_exporter_ratelimit_backoff_total", "legendFormat": "Backoffs", "refId": "C" }
+          ],
+          "title": "Rate Limit Status",
+          "type": "timeseries"
+        }
+      ]
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "tags": ["horde", "ai-horde", "prometheus"],
+  "templating": {
+    "list": [
+      {
+        "current": { "selected": false, "text": "", "value": "" },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Data Source",
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Horde Performance (Internal)",
+  "uid": "horde-performance",
+  "version": 2
+}
