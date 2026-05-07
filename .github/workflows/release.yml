@@ -17,6 +17,7 @@ on:
 
 permissions:
   contents: write
+  packages: write
 
 jobs:
   build:
@@ -129,14 +130,146 @@ jobs:
           name: release-artifacts
           path: dist/
 
-  release:
+  images:
     needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - package: ai-horde-stats-exporter
+            manifest_key: ai_horde_stats_exporter
+            image: ghcr.io/haidra-org/ai-horde-stats-exporter
+          - package: ai-horde-service-alerts
+            manifest_key: ai_horde_service_alerts
+            image: ghcr.io/haidra-org/ai-horde-service-alerts
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ matrix.image }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest
+            type=sha,format=short
+
+      - name: Build and push image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: packages/${{ matrix.package }}
+          file: packages/${{ matrix.package }}/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: true
+          sbom: true
+
+      - name: Emit per-image manifest fragment
+        env:
+          MATRIX_KEY: ${{ matrix.manifest_key }}
+          IMAGE: ${{ matrix.image }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p image-manifests
+          python3 - <<'PY'
+          import json
+          import os
+          import pathlib
+
+          fragment = {
+              os.environ["MATRIX_KEY"]: {
+                  "ref": f"{os.environ['IMAGE']}:{os.environ['GITHUB_REF_NAME'][1:]}",
+                  "digest": os.environ["DIGEST"],
+              }
+          }
+          out = pathlib.Path("image-manifests") / f"{os.environ['MATRIX_KEY']}.json"
+          out.write_text(json.dumps(fragment, indent=2) + "\n")
+          PY
+
+      - name: Upload image manifest fragment
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-manifest-${{ matrix.manifest_key }}
+          path: image-manifests/
+
+  manifest:
+    needs: [build, images]
     runs-on: ubuntu-latest
     steps:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: release-artifacts
+          path: dist/
+
+      - name: Download image manifest fragments
+        uses: actions/download-artifact@v4
+        with:
+          pattern: image-manifest-*
+          path: image-manifests/
+          merge-multiple: true
+
+      - name: Augment release manifest with image refs
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import pathlib
+
+          manifest_path = pathlib.Path("dist/release-manifest.json")
+          data = json.loads(manifest_path.read_text())
+          images: dict = {}
+          for fragment in sorted(pathlib.Path("image-manifests").glob("*.json")):
+              images.update(json.loads(fragment.read_text()))
+          if not images:
+              raise SystemExit("no image manifest fragments found")
+          data["images"] = images
+          manifest_path.write_text(json.dumps(data, indent=2) + "\n")
+          PY
+
+      - name: Refresh checksums
+        run: |
+          set -euo pipefail
+          cd dist
+          sha256sum * > checksums.txt
+
+      - name: Upload updated artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts-final
+          path: dist/
+          overwrite: true
+
+  release:
+    needs: manifest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts-final
           path: dist/
 
       - name: Create GitHub Release

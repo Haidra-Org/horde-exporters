@@ -1,0 +1,3 @@
+[submodule "packages/ai-horde-service-alerts/docs/haidra-assets"]
+	path = packages/ai-horde-service-alerts/docs/haidra-assets
+	url = https://github.com/Haidra-Org/haidra-assets.git

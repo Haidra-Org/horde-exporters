@@ -383,7 +383,7 @@
     },
     {
       "datasource": { "type": "prometheus", "uid": "mimir-app" },
-      "description": "Age of oldest open transaction. Requires the pg_horde_long_tx custom query.",
+      "description": "Age of oldest open transaction from built-in postgres_exporter pg_stat_activity_max_tx_duration.",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -409,7 +409,7 @@
         "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
         "tooltip": { "mode": "single", "sort": "none" }
       },
-      "targets": [{ "expr": "pg_horde_long_tx_oldest_seconds", "legendFormat": "oldest tx", "refId": "A" }],
+      "targets": [{ "expr": "max by (instance) (pg_stat_activity_max_tx_duration{datname=~\"horde.*\",state=~\"active|idle in transaction.*\"})", "legendFormat": "{{instance}}", "refId": "A" }],
       "title": "Oldest Open Transaction",
       "type": "timeseries"
     },
