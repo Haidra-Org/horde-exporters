@@ -44,7 +44,7 @@ python3 -m venv .venv
 .venv/bin/pip install -e '.[dev]'
 HORDE_PROBER_PROBER_SHARED_SECRET=devsecret \
 HORDE_PROBER_AIHORDE_BASE_URL=https://aihorde.net/api \
-HORDE_PROBER_ALERTS_BASE_URL=http://127.0.0.1:8000/api/v1 \
+HORDE_PROBER_ALERTS_BASE_URL=http://127.0.0.1:19810/api/v1 \
   .venv/bin/horde-status-prober
 ```
 

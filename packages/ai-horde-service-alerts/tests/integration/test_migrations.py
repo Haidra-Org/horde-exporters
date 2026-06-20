@@ -35,9 +35,13 @@ from ai_horde_service_alerts.settings import get_settings
 _PG_URL = os.environ.get("HORDE_ALERTS_TEST_DATABASE_URL", "")
 _PACKAGE_ROOT = Path(__file__).resolve().parents[2]
 
-# compare_metadata op codes that signal genuine schema drift (vs. cosmetic
-# type/default representation differences that are noisy across dialects).
-_STRUCTURAL_OPS = {"add_table", "remove_table", "add_column", "remove_column"}
+# The only diff compare_metadata legitimately reports for this schema is
+# ``modify_default``: the ORM models use Python-side ``default=`` while the
+# migration declares a few server_defaults, which alembic surfaces as a
+# representation difference. Everything else — a missing/extra table, column,
+# index, constraint, foreign key, type change, or nullability change — is real
+# model<->migration drift and must fail the test.
+_ALLOWED_OPS = {"modify_default"}
 
 pytestmark = pytest.mark.skipif(
     not _PG_URL.startswith("postgresql"),
@@ -82,8 +86,8 @@ def test_migrations_apply_and_match_models(monkeypatch: pytest.MonkeyPatch) -> N
         sync_engine.dispose()
         get_settings.cache_clear()
 
-    structural = [op for op in _op_codes(diff) if op in _STRUCTURAL_OPS]
-    assert not structural, f"model<->migration structural drift detected: {structural}\nfull diff: {diff}"
+    drift = [op for op in _op_codes(diff) if op not in _ALLOWED_OPS]
+    assert not drift, f"model<->migration drift detected: {drift}\nfull diff: {diff}"
 
 
 def _op_codes(diff: object) -> list[str]:

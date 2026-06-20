@@ -1,0 +1,67 @@
+# Lint + type-check + test the Python packages on every push/PR that touches
+# them. The image-publish/release workflows assume this has passed.
+
+name: Tests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/ai-horde-service-alerts/**"
+      - "packages/horde-status-prober/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/test.yml"
+  pull_request:
+    paths:
+      - "packages/ai-horde-service-alerts/**"
+      - "packages/horde-status-prober/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/test.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    # Postgres so the Alembic parity test (tests/integration/test_migrations.py)
+    # runs for real instead of skipping.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: pw
+          POSTGRES_DB: horde_status
+        ports:
+          - "5432:5432"
+        options: >-
+          --health-cmd "pg_isready -U postgres -d horde_status"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      HORDE_ALERTS_TEST_DATABASE_URL: postgresql+asyncpg://postgres:pw@localhost:5432/horde_status
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.11.2"
+
+      - name: ai-horde-service-alerts — lint, type-check, test
+        working-directory: packages/ai-horde-service-alerts
+        run: |
+          uv run ruff check src tests
+          uv run zuban check
+          uv run pytest -q
+
+      - name: horde-status-prober — lint, test
+        working-directory: packages/horde-status-prober
+        run: |
+          uv run ruff check src tests
+          uv run pytest -q
