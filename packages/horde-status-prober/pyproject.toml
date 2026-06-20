@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[project]
+name = "horde-status-prober"
+version = "0.1.0"
+description = "External blackbox prober that posts probe samples into ai-horde-service-alerts."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "Haidra" }]
+dependencies = [
+  "apscheduler>=3.10,<4",
+  "httpx>=0.27,<1",
+  "pydantic>=2.7,<3",
+  "pydantic-settings>=2.2,<3",
+  "fastapi>=0.111,<1",
+  "uvicorn[standard]>=0.30,<1",
+  "structlog>=24.1,<26",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=9.0,<10",
+  "pytest-asyncio",
+  "respx>=0.21,<1",
+  "ruff>=0.6,<1",
+  "pyrefly>=1.0,<2",
+]
+
+[project.scripts]
+horde-status-prober = "horde_status_prober.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/horde_status_prober"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

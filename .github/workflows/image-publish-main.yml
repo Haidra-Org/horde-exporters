@@ -11,6 +11,7 @@ on:
     paths:
       - "packages/ai-horde-stats-exporter/**"
       - "packages/ai-horde-service-alerts/**"
+      - "packages/horde-status-prober/**"
       - ".github/workflows/image-publish-main.yml"
   workflow_dispatch:
 
@@ -29,6 +30,8 @@ jobs:
             image: ghcr.io/haidra-org/ai-horde-stats-exporter
           - package: ai-horde-service-alerts
             image: ghcr.io/haidra-org/ai-horde-service-alerts
+          - package: horde-status-prober
+            image: ghcr.io/haidra-org/horde-status-prober
     steps:
       - uses: actions/checkout@v5
 

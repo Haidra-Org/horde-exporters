@@ -14,6 +14,7 @@ from ai_horde_service_alerts.clients.errors import UpstreamUnavailable
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass(frozen=True, slots=True)
 class ModeratorIdentity:
     """Represents an authenticated moderator's identity passed to handlers."""

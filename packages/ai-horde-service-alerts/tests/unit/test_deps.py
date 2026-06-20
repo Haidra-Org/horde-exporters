@@ -11,6 +11,7 @@ from ai_horde_service_alerts.clients.aihorde import AiHordeClient
 from ai_horde_service_alerts.clients.alertmanager import AlertmanagerClient
 from ai_horde_service_alerts.clients.mimir import MimirClient
 from ai_horde_service_alerts.deps import build_dependency_bundle
+from ai_horde_service_alerts.services.alert_mapping import AlertMapping
 from ai_horde_service_alerts.settings import HordeAlertsSettings
 
 
@@ -47,6 +48,8 @@ async def test_bundle_returns_bound_singleton_instances(
         alertmanager_client=alertmanager_client,
         mimir_client=mimir_client,
         auth_guard=auth_guard,
+        database=None,
+        alert_mapping=AlertMapping([]),
     )
 
     try:
@@ -73,12 +76,14 @@ async def test_require_moderator_dependency_delegates_to_guard(
         alertmanager_client=AlertmanagerClient(alertmanager_http),
         mimir_client=MimirClient(mimir_http, default_tenant=settings.mimir_tenant_default),
         auth_guard=guard_stub,
+        database=None,
+        alert_mapping=AlertMapping([]),
     )
 
     try:
         result = await bundle.require_moderator(
             guard=bundle.get_auth_guard(),
-            apikey="moderator-key",
+            api_key="moderator-key",
         )
         assert result == identity
         stub = cast(_GuardStub, bundle.get_auth_guard())

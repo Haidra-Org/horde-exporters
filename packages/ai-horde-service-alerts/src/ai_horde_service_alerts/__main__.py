@@ -11,8 +11,9 @@ def run() -> None:
     """Run the FastAPI service. Configurable via ``HORDE_ALERTS_HOST`` / ``_PORT``."""
     host = os.environ.get("HORDE_ALERTS_HOST", "0.0.0.0")
     port = int(os.environ.get("HORDE_ALERTS_PORT", "19810"))
-    
-    from ai_horde_service_alerts import create_app 
+
+    from ai_horde_service_alerts import create_app
+
     uvicorn.run(
         create_app,
         factory=True,

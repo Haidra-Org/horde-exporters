@@ -1,0 +1,95 @@
+# Component registry for the AI Horde status page.
+#
+# Loaded at startup and upserted into the `components` table. Edit, then
+# restart the service (or POST /internal/admin/reload) to apply changes.
+#
+# Audience controls visibility:
+#   public   → shown on /api/v1/public/components and the public status page.
+#   internal → only visible to authenticated moderators.
+
+components:
+  # ---- Public-facing services ----
+  - id: api
+    name: AI Horde API
+    description: Public REST API for image and text generation.
+    audience: public
+    display_order: 10
+
+  - id: image
+    name: Image Generation
+    description: Stable Diffusion / SDXL / FLUX worker pool.
+    audience: public
+    display_order: 20
+
+  - id: text
+    name: Text Generation
+    description: KoboldAI / LLM worker pool.
+    audience: public
+    display_order: 30
+
+  - id: alchemy
+    name: Alchemy (Image Interrogation)
+    description: Captioning, NSFW classification, upscaling.
+    audience: public
+    display_order: 40
+
+  - id: workers
+    name: Worker Coordination
+    description: Job dispatch and worker pop endpoints.
+    audience: public
+    display_order: 50
+
+  - id: webhooks
+    name: Webhooks
+    description: Outbound completion webhooks to integrators.
+    audience: public
+    display_order: 60
+
+  # ---- Internal-only infrastructure ----
+  - id: postgres
+    name: PostgreSQL
+    description: Primary application database.
+    audience: internal
+    display_order: 110
+
+  - id: mimir
+    name: Mimir (Metrics)
+    description: Long-term metrics storage.
+    audience: internal
+    display_order: 120
+
+  - id: s3
+    name: S3 Object Storage
+    description: Mimir block storage backend.
+    audience: internal
+    display_order: 130
+
+  - id: loki
+    name: Loki (Logs)
+    description: Log aggregation backend.
+    audience: internal
+    display_order: 140
+
+  - id: tempo
+    name: Tempo (Tracing)
+    description: Distributed tracing backend.
+    audience: internal
+    display_order: 150
+
+  - id: prometheus
+    name: Prometheus
+    description: Scrape + rule evaluation.
+    audience: internal
+    display_order: 160
+
+  - id: alertmanager
+    name: Alertmanager
+    description: Alert routing, deduplication, and silencing.
+    audience: internal
+    display_order: 170
+
+  - id: host
+    name: Host Infrastructure
+    description: CPU, memory, disk, systemd units.
+    audience: internal
+    display_order: 180

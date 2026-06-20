@@ -1,15 +1,18 @@
 """Reusable FastAPI dependency factories for runtime service objects."""
 
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass
 from typing import Annotated
 
-from fastapi import Depends, Security
+from fastapi import Depends, HTTPException, Security, status
 from fastapi.security import APIKeyHeader
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ai_horde_service_alerts.auth import ModeratorAuthGuard, ModeratorIdentity
 from ai_horde_service_alerts.clients.alertmanager import AlertmanagerClient
 from ai_horde_service_alerts.clients.mimir import MimirClient
+from ai_horde_service_alerts.db.session import DatabaseBundle
+from ai_horde_service_alerts.services.alert_mapping import AlertMapping
 from ai_horde_service_alerts.settings import HordeAlertsSettings
 
 AIHORDE_API_KEY_HEADER = APIKeyHeader(
@@ -18,6 +21,13 @@ AIHORDE_API_KEY_HEADER = APIKeyHeader(
     description="AI Horde API key used to authorize moderator-only endpoints.",
     auto_error=False,
 )
+PROBER_SECRET_HEADER = APIKeyHeader(
+    name="x-prober-secret",
+    scheme_name="ProberSharedSecret",
+    description="Shared secret used by the external prober to push samples.",
+    auto_error=False,
+)
+
 
 @dataclass(frozen=True, slots=True)
 class DependencyBundle:
@@ -28,6 +38,10 @@ class DependencyBundle:
     get_mimir_client: Callable[[], MimirClient]
     get_auth_guard: Callable[[], ModeratorAuthGuard]
     require_moderator: Callable[..., Awaitable[ModeratorIdentity]]
+    get_database: Callable[[], DatabaseBundle | None]
+    get_session: Callable[..., AsyncIterator[AsyncSession]]
+    get_alert_mapping: Callable[[], AlertMapping]
+    require_prober_secret: Callable[..., Awaitable[None]]
 
 
 def build_dependency_bundle(
@@ -36,6 +50,8 @@ def build_dependency_bundle(
     alertmanager_client: AlertmanagerClient,
     mimir_client: MimirClient,
     auth_guard: ModeratorAuthGuard,
+    database: DatabaseBundle | None,
+    alert_mapping: AlertMapping,
 ) -> DependencyBundle:
     """Create app-scoped dependency callables from concrete service instances."""
 
@@ -55,6 +71,24 @@ def build_dependency_bundle(
         """Return the shared moderator authentication guard."""
         return auth_guard
 
+    def get_database_dep() -> DatabaseBundle | None:
+        """Return the shared database bundle (None when ``enable_db=False``)."""
+        return database
+
+    def get_alert_mapping_dep() -> AlertMapping:
+        """Return the loaded alert→component mapping."""
+        return alert_mapping
+
+    async def get_session_dep() -> AsyncIterator[AsyncSession]:
+        """Yield a per-request async session bound to the app database."""
+        if database is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Database is not configured for this deployment.",
+            )
+        async with database.session() as session:
+            yield session
+
     async def require_moderator_dep(
         guard: Annotated[ModeratorAuthGuard, Depends(get_auth_guard_dep)],
         api_key: Annotated[str | None, Security(AIHORDE_API_KEY_HEADER)],
@@ -62,10 +96,37 @@ def build_dependency_bundle(
         """Enforce moderator-only access via the ``apikey`` request header."""
         return await guard.authenticate(api_key)
 
+    async def require_prober_secret_dep(
+        provided: Annotated[str | None, Security(PROBER_SECRET_HEADER)],
+    ) -> None:
+        """Reject requests that omit or mis-spell the prober shared secret."""
+        configured = settings.prober_shared_secret.get_secret_value() if settings.prober_shared_secret else None
+        if not configured:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Probe ingestion is not configured (no shared secret set).",
+            )
+        if not provided or not _constant_time_eq(provided, configured):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid prober secret.",
+            )
+
     return DependencyBundle(
         get_settings=get_settings_dep,
         get_alertmanager_client=get_alertmanager_client_dep,
         get_mimir_client=get_mimir_client_dep,
         get_auth_guard=get_auth_guard_dep,
         require_moderator=require_moderator_dep,
+        get_database=get_database_dep,
+        get_session=get_session_dep,
+        get_alert_mapping=get_alert_mapping_dep,
+        require_prober_secret=require_prober_secret_dep,
     )
+
+
+def _constant_time_eq(a: str, b: str) -> bool:
+    """Constant-time string equality to defeat timing oracles on the prober secret."""
+    import hmac
+
+    return hmac.compare_digest(a.encode("utf-8"), b.encode("utf-8"))
