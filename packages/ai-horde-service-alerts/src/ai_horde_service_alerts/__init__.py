@@ -8,3 +8,4 @@ from __future__ import annotations
 from ai_horde_service_alerts.app import create_app
 
 __all__ = ["create_app"]
+__version__ = "0.2.0"
