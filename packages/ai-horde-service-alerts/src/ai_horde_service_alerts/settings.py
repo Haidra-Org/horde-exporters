@@ -66,7 +66,7 @@ class HordeAlertsSettings(BaseSettings):
 
     enable_internal_swagger_docs: bool = Field(
         default=True,
-        description="Expose /docs and /redoc. Disable for purely public-facing deployments.",
+        description="Expose /api/docs and /api/redoc. Disable for purely public-facing deployments.",
     )
 
     database_url: str = Field(

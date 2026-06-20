@@ -164,9 +164,11 @@ def create_app(
             if owns_database and db_bundle is not None:
                 await db_bundle.dispose()
 
-    docs_url = "/docs" if resolved_settings.enable_internal_swagger_docs else None
-    redoc_url = "/redoc" if resolved_settings.enable_internal_swagger_docs else None
-    openapi_url = "/openapi.json" if resolved_settings.enable_internal_swagger_docs else None
+    # Docs/OpenAPI live under /api to match the API routes (/api/v1/*); only the
+    # liveness/readiness probes (/healthz, /readyz) stay at the root.
+    docs_url = "/api/docs" if resolved_settings.enable_internal_swagger_docs else None
+    redoc_url = "/api/redoc" if resolved_settings.enable_internal_swagger_docs else None
+    openapi_url = "/api/openapi.json" if resolved_settings.enable_internal_swagger_docs else None
 
     app = FastAPI(
         title="AI Horde Service Alerts",

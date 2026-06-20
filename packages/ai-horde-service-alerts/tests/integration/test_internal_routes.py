@@ -31,8 +31,16 @@ def test_internal_alerts_requires_apikey(client: TestClient) -> None:
     assert response.status_code == 401
 
 
+def test_docs_and_openapi_served_under_api_prefix(client: TestClient) -> None:
+    # Docs + OpenAPI live under /api (matching /api/v1/*), not the root.
+    assert client.get("/api/docs").status_code == 200
+    assert client.get("/api/openapi.json").status_code == 200
+    assert client.get("/docs").status_code == 404
+    assert client.get("/openapi.json").status_code == 404
+
+
 def test_internal_routes_advertise_apikey_security_scheme(client: TestClient) -> None:
-    response = client.get("/openapi.json")
+    response = client.get("/api/openapi.json")
     assert response.status_code == 200
 
     document = response.json()
