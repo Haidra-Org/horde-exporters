@@ -19,6 +19,7 @@ import logging
 import signal
 from collections.abc import Awaitable, Callable
 from contextlib import AsyncExitStack, asynccontextmanager
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Literal, TypedDict
 
 import httpx
@@ -114,23 +115,39 @@ async def _lifespan(
         )
         pusher = AlertsPusher(settings=settings, client=alerts)
 
-        scheduler = AsyncIOScheduler()
-        for probe, attr in build_probes():
-            interval = getattr(settings, attr)
-            scheduler.add_job(
-                build_runner(probe, aihorde, pusher),
-                trigger="interval",
-                seconds=interval,
-                id=probe.name,
-                next_run_time=None,
-                max_instances=1,
-                coalesce=True,
-            )
+        scheduler = build_scheduler(settings, aihorde, pusher)
         scheduler.start()
         try:
             yield scheduler, pusher
         finally:
             scheduler.shutdown(wait=False)
+
+
+def build_scheduler(
+    settings: ProberSettings,
+    aihorde: httpx.AsyncClient,
+    pusher: AlertsPusher,
+) -> AsyncIOScheduler:
+    """Build (but do not start) the scheduler with one job per probe.
+
+    Each job fires immediately (``next_run_time`` = now) and then repeats on its
+    configured interval. Passing ``next_run_time=None`` to ``add_job`` would add
+    the job *paused* — APScheduler would never run it — so we set an explicit
+    first-run time instead.
+    """
+    scheduler = AsyncIOScheduler()
+    for probe, attr in build_probes():
+        interval = getattr(settings, attr)
+        scheduler.add_job(
+            build_runner(probe, aihorde, pusher),
+            trigger="interval",
+            seconds=interval,
+            id=probe.name,
+            next_run_time=datetime.now(tz=UTC),
+            max_instances=1,
+            coalesce=True,
+        )
+    return scheduler
 
 
 async def _serve_healthz(app: FastAPI, settings: ProberSettings) -> None:
