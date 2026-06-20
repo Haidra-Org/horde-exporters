@@ -1,0 +1,57 @@
+# Curated map: Alertmanager alertname (+ optional label match) → public component.
+#
+# An alert that fires and matches an entry here will flip the listed component
+# to the listed status (worst-of-both is applied across multiple matches and
+# the prober). Anything NOT listed cannot affect public component pills,
+# even when promoted to a public incident — promotion only creates an
+# operator-authored incident card; it never changes the source pill driver.
+#
+# Status values must be one of: degraded, partial, down, maintenance.
+# (operational and unknown are reserved for the absence of signal.)
+
+mappings:
+  # ---- API ----
+  - component: api
+    alertname: HordeAPIDown
+    status: down
+  - component: api
+    alertname: HordeAPILatencyHigh
+    status: degraded
+
+  # ---- Image generation ----
+  - component: image
+    alertname: HordeNoActiveImageWorkers
+    status: down
+  - component: image
+    alertname: HordeImageWorkerCountDrop
+    status: degraded
+  - component: image
+    alertname: HordeImageQueueBacklog
+    status: degraded
+  - component: image
+    alertname: HordeGenerateLatencyHigh
+    label_match:
+      horde_gentype: image
+    status: degraded
+
+  # ---- Text generation ----
+  - component: text
+    alertname: HordeNoActiveTextWorkers
+    status: down
+  - component: text
+    alertname: HordeGenerateLatencyHigh
+    label_match:
+      horde_gentype: text
+    status: degraded
+
+  # ---- Worker coordination ----
+  - component: workers
+    alertname: HordePopLatencyHigh
+    status: degraded
+  - component: workers
+    alertname: HordePopSkipDominant
+    status: degraded
+
+  # alchemy and webhooks: pill driven only by the external prober — no
+  # curated alertname mapping today. Add here when a public-determinable
+  # alert exists.

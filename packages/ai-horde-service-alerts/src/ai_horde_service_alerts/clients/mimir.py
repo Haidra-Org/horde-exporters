@@ -9,7 +9,12 @@ from typing import Any
 import httpx
 
 from ai_horde_service_alerts.clients.errors import UpstreamUnavailable
-from ai_horde_service_alerts.models.internal import MimirInstantResult, MimirInstantSample
+from ai_horde_service_alerts.models.internal import (
+    MimirInstantResult,
+    MimirInstantSample,
+    MimirRangeResult,
+    MimirRangeSeries,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +74,64 @@ class MimirClient:
             )
         return _parse_instant(response.json())
 
+    async def query_range(
+        self,
+        query: str,
+        *,
+        start: float,
+        end: float,
+        step: float,
+        tenant: str | None = None,
+    ) -> MimirRangeResult:
+        """Run a Prometheus range query against Mimir and return parsed series.
+
+        Args:
+            query: PromQL expression. Validated like :meth:`query_instant`.
+            start: Unix timestamp (seconds) for the start of the range.
+            end: Unix timestamp (seconds) for the end of the range.
+            step: Step duration in seconds.
+            tenant: Override for the ``X-Scope-OrgID`` header.
+
+        Raises:
+            UpstreamUnavailable: On non-2xx response or transport failure.
+            ValueError: On invalid query / range parameters.
+        """
+        validated = _validate_query(query)
+        if step <= 0:
+            raise ValueError("step must be positive")
+        if end <= start:
+            raise ValueError("end must be greater than start")
+        scope_tenant = tenant or self._default_tenant
+        try:
+            response = await self._http.get(
+                "/prometheus/api/v1/query_range",
+                params={
+                    "query": validated,
+                    "start": f"{start:.3f}",
+                    "end": f"{end:.3f}",
+                    "step": f"{step:g}s",
+                },
+                headers={"X-Scope-OrgID": scope_tenant},
+            )
+        except httpx.HTTPError as exc:
+            raise UpstreamUnavailable("mimir", str(exc)) from exc
+        if response.status_code >= httpx.codes.BAD_REQUEST:
+            raise UpstreamUnavailable(
+                "mimir",
+                f"range query {validated!r} -> {response.status_code}",
+                status_code=response.status_code,
+            )
+        return _parse_range(response.json())
+
+    async def is_ready(self) -> bool:
+        """Return True when Mimir reports readiness via ``/ready``."""
+        try:
+            response = await self._http.get("/ready")
+        except httpx.HTTPError as exc:
+            logger.warning("mimir readiness probe failed: %s", exc)
+            return False
+        return response.status_code == httpx.codes.OK
+
 
 def _validate_query(query: str) -> str:
     stripped = query.strip()
@@ -99,3 +162,26 @@ def _parse_instant(payload: Any) -> MimirInstantResult:  # noqa: ANN401 - JSON s
             ),
         )
     return MimirInstantResult(result_type=result_type, samples=samples)
+
+
+def _parse_range(payload: Any) -> MimirRangeResult:  # noqa: ANN401 - JSON shape
+    if not isinstance(payload, dict) or payload.get("status") != "success":
+        raise UpstreamUnavailable("mimir", "range query did not return status=success")
+    data: dict[str, Any] = payload.get("data") or {}
+    raw_series: list[Any] = data.get("result") or []
+    series: list[MimirRangeSeries] = []
+    for raw in raw_series:
+        metric: dict[str, Any] = raw.get("metric") or {}
+        raw_values: list[Any] = raw.get("values") or []
+        values: list[tuple[float, str]] = []
+        for pair in raw_values:
+            if not isinstance(pair, list) or len(pair) < 2:
+                continue
+            values.append((float(pair[0]), str(pair[1])))
+        series.append(
+            MimirRangeSeries(
+                metric={str(k): str(v) for k, v in metric.items()},
+                values=values,
+            ),
+        )
+    return MimirRangeResult(series=series)

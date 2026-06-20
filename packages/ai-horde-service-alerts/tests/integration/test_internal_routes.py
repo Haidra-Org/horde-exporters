@@ -12,6 +12,18 @@ UNKNOWN_KEY = "unknown-key"
 
 ALERTMANAGER = "http://alertmanager.test"
 MIMIR = "http://mimir.test"
+PROBER_SECRET = "prober-test-secret"
+
+
+def _probe_payload(*, component_id: str = "api") -> dict[str, str | int | dict[str, int]]:
+    return {
+        "probe_name": "api-heartbeat",
+        "component_id": component_id,
+        "outcome": "ok",
+        "observed_at": "2025-01-01T00:00:00Z",
+        "latency_ms": 123,
+        "detail": {"status_code": 200},
+    }
 
 
 def test_internal_alerts_requires_apikey(client: TestClient) -> None:
@@ -30,7 +42,16 @@ def test_internal_routes_advertise_apikey_security_scheme(client: TestClient) ->
         "name": "apikey",
         "description": "AI Horde API key used to authorize moderator-only endpoints.",
     }
+    assert document["components"]["securitySchemes"]["ProberSharedSecret"] == {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-prober-secret",
+        "description": "Shared secret used by the external prober to push samples.",
+    }
     assert document["paths"]["/api/v1/internal/alerts"]["get"]["security"] == [{"AiHordeApiKey": []}]
+    assert document["paths"]["/api/v1/internal/probe-results"]["post"]["security"] == [
+        {"ProberSharedSecret": []},
+    ]
 
 
 def test_internal_alerts_rejects_non_moderator(client: TestClient) -> None:
@@ -47,6 +68,33 @@ def test_internal_alerts_rejects_unknown_user(client: TestClient) -> None:
         headers={"apikey": UNKNOWN_KEY},
     )
     assert response.status_code == 403
+
+
+def test_probe_ingestion_requires_shared_secret(client: TestClient) -> None:
+    response = client.post(
+        "/api/v1/internal/probe-results",
+        json=_probe_payload(),
+    )
+    assert response.status_code == 401
+
+
+def test_probe_ingestion_accepts_shared_secret_without_apikey(client: TestClient) -> None:
+    response = client.post(
+        "/api/v1/internal/probe-results",
+        headers={"x-prober-secret": PROBER_SECRET},
+        json=_probe_payload(),
+    )
+    assert response.status_code == 202
+    assert response.json()["status"] == "accepted"
+
+
+def test_probe_ingestion_rejects_invalid_shared_secret(client: TestClient) -> None:
+    response = client.post(
+        "/api/v1/internal/probe-results",
+        headers={"x-prober-secret": "wrong-secret"},
+        json=_probe_payload(),
+    )
+    assert response.status_code == 401
 
 
 def test_internal_alerts_returns_raw_payload_for_moderator(

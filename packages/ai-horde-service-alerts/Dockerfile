@@ -22,8 +22,10 @@ ENV UV_LINK_MODE=copy \
 COPY --from=uv /uv /usr/local/bin/uv
 
 WORKDIR /src
-COPY pyproject.toml README.md ./
+COPY pyproject.toml README.md alembic.ini ./
 COPY src ./src
+COPY config ./config
+COPY migrations ./migrations
 
 RUN uv venv "${VIRTUAL_ENV}" \
     && uv pip install --python "${VIRTUAL_ENV}/bin/python" .
@@ -42,11 +44,29 @@ RUN groupadd --system --gid 1000 horde \
 
 COPY --from=builder /opt/venv /opt/venv
 
+# Copy config files needed at runtime for component seeding and alert mapping.
+# The app reads these from the filesystem, not from env vars.
+COPY --from=builder /src/config /opt/config
+
+# Alembic config + migration scripts. The entrypoint runs `alembic upgrade head`
+# from /opt/app, so alembic.ini (script_location = migrations) resolves here.
+COPY --from=builder /src/alembic.ini /opt/app/alembic.ini
+COPY --from=builder /src/migrations /opt/app/migrations
+
+# Entrypoint runs Alembic migrations before starting the app.
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Config paths default to locations relative to the package root.
+# Override so they work inside the container.
+ENV HORDE_ALERTS_COMPONENTS_CONFIG_PATH=/opt/config/components.yaml \
+    HORDE_ALERTS_ALERT_COMPONENT_MAP_PATH=/opt/config/alert_component_map.yaml
+
 USER horde
-WORKDIR /home
+WORKDIR /opt/app
 EXPOSE 19810
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=5 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:19810/healthz')" || exit 1
 
-ENTRYPOINT ["ai-horde-service-alerts"]
+ENTRYPOINT ["docker-entrypoint.sh"]
