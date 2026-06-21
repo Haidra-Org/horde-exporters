@@ -148,7 +148,6 @@ def history_response(
             PublicHistoryDay(
                 date=b.date,
                 status_level=b.status_level,
-                observed_seconds=b.observed_seconds,
                 operational_seconds=b.operational_seconds,
                 degraded_seconds=b.degraded_seconds,
                 down_seconds=b.down_seconds,

@@ -35,8 +35,7 @@ class DailyBucket:
     """Daily roll-up used for the public 90-day history bars."""
 
     date: str  # ISO YYYY-MM-DD
-    status_level: int  # 0 ok, 1 minor (degraded/unknown), 2 major (partial/down), 3 maintenance
-    observed_seconds: int  # elapsed/observable seconds in this day (86400 for past days, partial for today)
+    status_level: int  # 0 ok, 1 minor (degraded), 2 major (partial/down), 3 maintenance
     operational_seconds: int
     degraded_seconds: int
     down_seconds: int
@@ -44,9 +43,13 @@ class DailyBucket:
     unknown_seconds: int
 
 
+# Unknown == "no signal", not an outage: it must never raise the bar above OK. A
+# bucket is only minor/major/maintenance when it actually saw degraded/down/maint
+# time. (Real degradation outranks UNKNOWN in STATUS_RANK, so a day that mixes
+# unknown with a genuine problem still reports the problem's level.)
 _LEVEL_BY_STATUS: dict[ComponentStatusValue, int] = {
     ComponentStatusValue.OPERATIONAL: 0,
-    ComponentStatusValue.UNKNOWN: 1,
+    ComponentStatusValue.UNKNOWN: 0,
     ComponentStatusValue.DEGRADED: 1,
     ComponentStatusValue.PARTIAL: 2,
     ComponentStatusValue.DOWN: 2,
@@ -163,13 +166,10 @@ class HistoryRepository:
                 if secs > 0 and STATUS_RANK[status] > STATUS_RANK[worst_status]:
                     worst_status = status
             worst_level = _LEVEL_BY_STATUS[worst_status]
-            observed_end = min(anchor, day_end)
-            observed_seconds = max(0, int((observed_end - day_start).total_seconds()))
             buckets.append(
                 DailyBucket(
                     date=day_start.date().isoformat(),
                     status_level=worst_level,
-                    observed_seconds=observed_seconds,
                     operational_seconds=seconds[ComponentStatusValue.OPERATIONAL],
                     degraded_seconds=seconds[ComponentStatusValue.DEGRADED],
                     down_seconds=seconds[ComponentStatusValue.DOWN] + seconds[ComponentStatusValue.PARTIAL],
@@ -186,24 +186,26 @@ class HistoryRepository:
         days: int,
         now: datetime | None = None,
     ) -> float | None:
-        """Return uptime% over the trailing window, excluding maintenance time.
+        """Return uptime% over the trailing window.
 
-        Returns ``None`` when no history exists at all (so callers can render
-        ``—`` instead of a misleading ``0%``).
+        The denominator is time for which we have a real status signal
+        (operational + degraded + down). Maintenance, unknown, and no-data days
+        are excluded outright: counting them would conflate "we weren't watching"
+        / "scheduled maintenance" with downtime. The current day is therefore
+        self-correcting too — its not-yet-elapsed remainder has no signal and so
+        never enters the denominator.
+
+        Returns ``None`` when there is no signal at all in the window (so callers
+        can render ``—`` instead of a misleading ``0%`` or ``100%``).
         """
         buckets = await self.daily_buckets(component_id, days=days, now=now)
         operational = sum(b.operational_seconds for b in buckets)
-        maintenance = sum(b.maintenance_seconds for b in buckets)
-        # Use elapsed/observable time, not days * 86400: the current day is only
-        # partially elapsed, so counting its future remainder would understate uptime.
-        observable = sum(b.observed_seconds for b in buckets)
-        non_maintenance = observable - maintenance
-        if non_maintenance <= 0:
+        degraded = sum(b.degraded_seconds for b in buckets)
+        down = sum(b.down_seconds for b in buckets)
+        signal = operational + degraded + down
+        if signal == 0:
             return None
-        observed = operational + sum((b.degraded_seconds + b.down_seconds + b.unknown_seconds) for b in buckets)
-        if observed == 0:
-            return None
-        return round(operational / non_maintenance * 100.0, 4)
+        return round(operational / signal * 100.0, 4)
 
     async def close_open_slice_at(
         self,
