@@ -36,6 +36,7 @@ class DailyBucket:
 
     date: str  # ISO YYYY-MM-DD
     status_level: int  # 0 ok, 1 minor (degraded/unknown), 2 major (partial/down), 3 maintenance
+    observed_seconds: int  # elapsed/observable seconds in this day (86400 for past days, partial for today)
     operational_seconds: int
     degraded_seconds: int
     down_seconds: int
@@ -162,10 +163,13 @@ class HistoryRepository:
                 if secs > 0 and STATUS_RANK[status] > STATUS_RANK[worst_status]:
                     worst_status = status
             worst_level = _LEVEL_BY_STATUS[worst_status]
+            observed_end = min(anchor, day_end)
+            observed_seconds = max(0, int((observed_end - day_start).total_seconds()))
             buckets.append(
                 DailyBucket(
                     date=day_start.date().isoformat(),
                     status_level=worst_level,
+                    observed_seconds=observed_seconds,
                     operational_seconds=seconds[ComponentStatusValue.OPERATIONAL],
                     degraded_seconds=seconds[ComponentStatusValue.DEGRADED],
                     down_seconds=seconds[ComponentStatusValue.DOWN] + seconds[ComponentStatusValue.PARTIAL],
@@ -190,7 +194,10 @@ class HistoryRepository:
         buckets = await self.daily_buckets(component_id, days=days, now=now)
         operational = sum(b.operational_seconds for b in buckets)
         maintenance = sum(b.maintenance_seconds for b in buckets)
-        non_maintenance = days * 86_400 - maintenance
+        # Use elapsed/observable time, not days * 86400: the current day is only
+        # partially elapsed, so counting its future remainder would understate uptime.
+        observable = sum(b.observed_seconds for b in buckets)
+        non_maintenance = observable - maintenance
         if non_maintenance <= 0:
             return None
         observed = operational + sum((b.degraded_seconds + b.down_seconds + b.unknown_seconds) for b in buckets)

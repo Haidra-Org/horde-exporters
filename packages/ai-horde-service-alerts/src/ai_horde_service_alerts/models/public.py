@@ -130,6 +130,10 @@ class PublicHistoryDay(BaseModel):
         le=3,
         description="0 ok | 1 minor (degraded/unknown) | 2 major (partial/down) | 3 maintenance.",
     )
+    observed_seconds: int = Field(
+        description="Elapsed/observable seconds in this day: 86400 for past days, partial for today. "
+        "Normalize the bar against this rather than assuming a full 86400-second day.",
+    )
     operational_seconds: int
     degraded_seconds: int
     down_seconds: int
