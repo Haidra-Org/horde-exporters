@@ -288,12 +288,41 @@ class AdminAlertSummary(BaseModel):
     severity: str | None = None
     component: str | None = None
     summary: str | None = None
+    value: str | None = Field(
+        default=None,
+        description="The alert's current value annotation (e.g. 'p95 = 2.6s'), when the rule sets one.",
+    )
     started_at: datetime
+    state_age_seconds: int | None = Field(
+        default=None,
+        description="Seconds since the alert started firing, computed at response time.",
+    )
     state: str
     promoted_incident_id: UUID | None = None
 
 
+class AdminAlertLogEntry(BaseModel):
+    """One firing/resolved alert interval reconstructed from Mimir ``ALERTS``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    alertname: str
+    severity: str | None = None
+    component: str | None = None
+    state: str = Field(description="'firing' while still active, else 'resolved'.")
+    started_at: datetime
+    ended_at: datetime | None = Field(
+        default=None,
+        description="When the alert stopped firing; null while it is still firing.",
+    )
+    for_seconds: int = Field(
+        ge=0,
+        description="Duration the alert has been (or was) firing, in seconds.",
+    )
+
+
 __all__ = [
+    "AdminAlertLogEntry",
     "AdminAlertSummary",
     "AdminComponent",
     "AdminIncident",

@@ -33,6 +33,7 @@ from ai_horde_service_alerts.models.public import (
     PublicHistoryResponse,
     PublicIncidentsResponse,
     PublicMaintenanceResponse,
+    PublicStats,
 )
 from ai_horde_service_alerts.services.projections import (
     history_response,
@@ -40,6 +41,7 @@ from ai_horde_service_alerts.services.projections import (
     public_incident_from_row,
     public_maintenance_from_row,
 )
+from ai_horde_service_alerts.services.public_stats import PublicStatsService
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +55,15 @@ def create_router(dependencies: DependencyBundle) -> APIRouter:
     router = APIRouter(prefix="/api/v1/public", tags=["public"])
 
     SessionDep = Annotated[AsyncSession, Depends(dependencies.get_session)]
+
+    # One service per app so its TTL cache is shared across requests. The Mimir
+    # client and default (public) tenant are app-scoped, so it is safe to build
+    # the service eagerly here at router-construction time.
+    settings = dependencies.get_settings()
+    stats_service = PublicStatsService(
+        dependencies.get_mimir_client(),
+        tenant=settings.mimir_tenant_default,
+    )
 
     @router.get("/components", response_model=PublicComponentsResponse)
     async def get_public_components(session: SessionDep) -> PublicComponentsResponse:
@@ -139,5 +150,15 @@ def create_router(dependencies: DependencyBundle) -> APIRouter:
             buckets=buckets,
             uptime_percent=uptime,
         )
+
+    @router.get("/stats", response_model=PublicStats)
+    async def get_public_stats() -> PublicStats:
+        """Return the headline throughput / capacity numbers for the stats strip.
+
+        Values come from a fixed allow-list of PromQL run against the public
+        Mimir tenant and are cached briefly. Missing series surface as ``null``;
+        the endpoint never 5xxs on a single absent or unavailable metric.
+        """
+        return await stats_service.get_stats()
 
     return router

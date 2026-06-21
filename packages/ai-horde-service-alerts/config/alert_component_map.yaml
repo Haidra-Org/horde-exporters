@@ -14,9 +14,13 @@ mappings:
   - component: api
     alertname: HordeAPIDown
     status: down
-  - component: api
-    alertname: HordeAPILatencyHigh
-    status: degraded
+  # HordeAPILatencyHigh has no corresponding rule in the deployed monitoring
+  # stack (deployments/roles/horde_monitoring/templates/alerting-rules.yml.j2),
+  # so the entry below would never fire. Re-enable it once that alert rule
+  # exists (e.g. a p95 latency alert on the API).
+  # - component: api
+  #   alertname: HordeAPILatencyHigh
+  #   status: degraded
 
   # ---- Image generation ----
   - component: image
@@ -52,6 +56,11 @@ mappings:
     alertname: HordePopSkipDominant
     status: degraded
 
-  # alchemy and webhooks: pill driven only by the external prober — no
-  # curated alertname mapping today. Add here when a public-determinable
-  # alert exists.
+  # ---- Webhooks ----
+  - component: webhooks
+    alertname: HordeWebhookFailureBurst
+    status: degraded
+
+  # alchemy: pill driven only by the external prober — the deployed rules
+  # carry no alchemy/interrogation-specific alert, so there is nothing curated
+  # to map. Add an entry here once a public-determinable alchemy alert exists.

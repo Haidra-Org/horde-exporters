@@ -31,6 +31,7 @@ from ai_horde_service_alerts.db.types import (
 )
 from ai_horde_service_alerts.deps import DependencyBundle
 from ai_horde_service_alerts.models.internal import (
+    AdminAlertLogEntry,
     AdminAlertSummary,
     AdminComponent,
     AdminIncident,
@@ -48,6 +49,8 @@ from ai_horde_service_alerts.models.internal import (
     MimirInstantResult,
     ProbeResultSubmission,
 )
+from ai_horde_service_alerts.services.alert_log import build_alert_log
+from ai_horde_service_alerts.services.alert_mapping import AlertMapping
 from ai_horde_service_alerts.services.projections import (
     admin_component,
     admin_incident_from_row,
@@ -70,6 +73,7 @@ def create_router(dependencies: DependencyBundle) -> APIRouter:
     )
 
     AlertmanagerDep = Annotated[AlertmanagerClient, Depends(dependencies.get_alertmanager_client)]
+    AlertMappingDep = Annotated[AlertMapping, Depends(dependencies.get_alert_mapping)]
     MimirDep = Annotated[MimirClient, Depends(dependencies.get_mimir_client)]
     SessionDep = Annotated[AsyncSession, Depends(dependencies.get_session)]
     ModeratorDep = Annotated[ModeratorIdentity, Depends(dependencies.require_moderator)]
@@ -99,6 +103,7 @@ def create_router(dependencies: DependencyBundle) -> APIRouter:
     @router.get("/alerts/summary", response_model=list[AdminAlertSummary])
     async def list_internal_alerts_summary(
         alertmanager: AlertmanagerDep,
+        alert_mapping: AlertMappingDep,
         session: SessionDep,
     ) -> list[AdminAlertSummary]:
         """Condensed alert list with linked-incident hints (for the promotion UI)."""
@@ -110,23 +115,42 @@ def create_router(dependencies: DependencyBundle) -> APIRouter:
                 detail="Alertmanager unavailable.",
             ) from exc
         repo = IncidentRepository(session)
+        moment = _now()
         out: list[AdminAlertSummary] = []
         for alert in alerts:
             existing = await repo.get_by_linked_alert(alert.fingerprint)
             state_value = alert.status.state or "active"
+            age = int((moment - alert.starts_at).total_seconds())
             out.append(
                 AdminAlertSummary(
                     fingerprint=alert.fingerprint,
                     alertname=alert.labels.get("alertname", "unknown"),
                     severity=alert.labels.get("severity"),
-                    component=alert.labels.get("component"),
+                    component=_resolve_component(alert, alert_mapping),
                     summary=alert.annotations.get("summary"),
+                    value=alert.annotations.get("value"),
                     started_at=alert.starts_at,
+                    state_age_seconds=max(age, 0),
                     state=state_value,
                     promoted_incident_id=existing.id if existing is not None else None,
                 ),
             )
         return out
+
+    @router.get("/alerts/log", response_model=list[AdminAlertLogEntry])
+    async def list_internal_alerts_log(
+        mimir: MimirDep,
+        hours: Annotated[int, Query(ge=1, le=168)] = 24,
+        tenant: Annotated[str | None, Query()] = None,
+    ) -> list[AdminAlertLogEntry]:
+        """Firing + resolved alert intervals over the trailing window (from Mimir ``ALERTS``)."""
+        try:
+            return await build_alert_log(mimir, hours=hours, tenant=tenant)
+        except UpstreamUnavailable as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Mimir unavailable.",
+            ) from exc
 
     @router.get("/silences", response_model=list[AlertmanagerSilence])
     async def list_internal_silences(
@@ -544,6 +568,20 @@ def create_probe_router(dependencies: DependencyBundle) -> APIRouter:
         return {"status": "accepted"}
 
     return router
+
+
+def _resolve_component(alert: AlertmanagerAlert, alert_mapping: AlertMapping) -> str | None:
+    """Prefer an explicit ``component`` label, else fall back to the curated map.
+
+    The deployed alert rules don't carry a ``component`` label, so the operator UI
+    can only group alerts under their service via the same curated alertname →
+    component map the status evaluator uses.
+    """
+    explicit = alert.labels.get("component")
+    if explicit:
+        return explicit
+    results = alert_mapping.resolve(alert)
+    return results[0].component_id if results else None
 
 
 async def _ensure_components(session: AsyncSession, ids: list[str]) -> None:

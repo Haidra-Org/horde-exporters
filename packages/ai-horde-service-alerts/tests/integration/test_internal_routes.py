@@ -134,6 +134,72 @@ def test_internal_alerts_returns_raw_payload_for_moderator(
     assert "internal" in body
 
 
+def test_internal_alerts_summary_enriches_component_age_and_value(
+    client: TestClient,
+    respx_mock: respx.MockRouter,
+) -> None:
+    raw = [
+        {
+            "fingerprint": "f1",
+            "startsAt": "2025-01-01T00:00:00Z",
+            "endsAt": "0001-01-01T00:00:00Z",
+            "status": {"state": "active"},
+            # No explicit component label: must be derived from the curated map.
+            "labels": {"alertname": "HordeAPIDown", "severity": "critical"},
+            "annotations": {"summary": "API down", "value": "horde_api_up = 0"},
+        },
+    ]
+    respx_mock.get(f"{ALERTMANAGER}/api/v2/alerts").mock(return_value=httpx.Response(200, json=raw))
+    response = client.get("/api/v1/internal/alerts/summary", headers={"apikey": MODERATOR_KEY})
+    assert response.status_code == 200
+    [entry] = response.json()
+    assert entry["component"] == "api"  # resolved via alert_component_map
+    assert entry["value"] == "horde_api_up = 0"
+    assert entry["state_age_seconds"] is not None and entry["state_age_seconds"] >= 0
+
+
+def test_internal_alerts_log_reconstructs_firing_interval(
+    client: TestClient,
+    respx_mock: respx.MockRouter,
+) -> None:
+    from datetime import UTC, datetime, timedelta
+
+    now = datetime.now(tz=UTC)
+    values = [[(now - timedelta(minutes=m)).timestamp(), "1"] for m in range(5, -1, -1)]
+    respx_mock.get(f"{MIMIR}/prometheus/api/v1/query_range").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "status": "success",
+                "data": {
+                    "resultType": "matrix",
+                    "result": [
+                        {
+                            "metric": {
+                                "alertname": "HordeImageQueueBacklog",
+                                "severity": "warning",
+                                "component": "image",
+                            },
+                            "values": values,
+                        },
+                    ],
+                },
+            },
+        ),
+    )
+    response = client.get("/api/v1/internal/alerts/log", headers={"apikey": MODERATOR_KEY})
+    assert response.status_code == 200
+    [entry] = response.json()
+    assert entry["alertname"] == "HordeImageQueueBacklog"
+    assert entry["component"] == "image"
+    assert entry["state"] == "firing"
+    assert entry["ended_at"] is None
+
+
+def test_internal_alerts_log_requires_apikey(client: TestClient) -> None:
+    assert client.get("/api/v1/internal/alerts/log").status_code == 401
+
+
 def test_internal_metrics_instant_queries_mimir(
     client: TestClient,
     respx_mock: respx.MockRouter,

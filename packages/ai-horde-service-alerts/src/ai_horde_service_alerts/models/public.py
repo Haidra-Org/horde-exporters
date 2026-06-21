@@ -149,6 +149,43 @@ class PublicHistoryResponse(BaseModel):
     uptime_percent: float | None = None
 
 
+class PublicStats(BaseModel):
+    """Headline throughput / capacity numbers for the public stats strip.
+
+    Every field is nullable: a metric that is missing from the backend (no
+    series, or Mimir unavailable) renders as ``—`` on the page rather than a
+    misleading ``0``. The ``*_day`` / ``*_month`` totals are AI Horde's native
+    named-period counters (today / this calendar month), **not** rolling 24h /
+    30d windows — the UI must label them as such.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    active_image_workers: int | None = None
+    active_text_workers: int | None = None
+    active_alchemy_workers: int | None = Field(
+        default=None,
+        description="Always null today: the stats exporter does not emit an alchemy worker count.",
+    )
+    queued_image_requests: int | None = None
+    queued_text_requests: int | None = None
+    queue_drain_image_seconds: float | None = None
+    queue_drain_text_seconds: float | None = None
+    images_generated_day: int | None = Field(
+        default=None,
+        description='Images generated so far in the current day (period="day"), not a rolling 24h.',
+    )
+    images_generated_month: int | None = Field(
+        default=None,
+        description='Images generated in the current calendar month (period="month"), not a rolling 30d.',
+    )
+    tokens_generated_day: int | None = Field(
+        default=None,
+        description='Text tokens generated so far in the current day (period="day"), not a rolling 24h.',
+    )
+    generated_at: datetime
+
+
 # Re-exports kept for callers that reach for the enums via the models module.
 __all__ = [
     "Audience",
@@ -164,4 +201,5 @@ __all__ = [
     "PublicIncidentsResponse",
     "PublicMaintenance",
     "PublicMaintenanceResponse",
+    "PublicStats",
 ]

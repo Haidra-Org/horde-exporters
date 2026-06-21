@@ -35,6 +35,7 @@ from ai_horde_service_alerts.clients.mimir import MimirClient
 from ai_horde_service_alerts.db.models import ComponentStatusHistory
 from ai_horde_service_alerts.db.session import DatabaseBundle
 from ai_horde_service_alerts.db.types import BackfillHistoryTrigger, ComponentStatusValue, HistorySource
+from ai_horde_service_alerts.services.alert_intervals import coalesce_intervals
 from ai_horde_service_alerts.services.alert_mapping import AlertMapping, AlertMatch
 
 logger = logging.getLogger(__name__)
@@ -101,7 +102,7 @@ async def run_backfill(
             logger.warning("backfill: mimir range query failed for %s: %s", match.alertname, exc)
             continue
         for series in result.series:
-            for interval in _coalesce_intervals(
+            for interval in coalesce_intervals(
                 [ts for ts, _ in series.values],
                 coalesce_gap_seconds=coalesce_gap,
             ):
@@ -171,27 +172,3 @@ def _build_alerts_query(match: AlertMatch) -> str:
 
 def _escape(value: str) -> str:
     return value.replace("\\", "\\\\").replace('"', '\\"')
-
-
-def _coalesce_intervals(
-    timestamps: list[float],
-    *,
-    coalesce_gap_seconds: float,
-) -> list[tuple[datetime, datetime]]:
-    if not timestamps:
-        return []
-    timestamps = sorted(timestamps)
-    intervals: list[tuple[datetime, datetime]] = []
-    run_start = timestamps[0]
-    prev = timestamps[0]
-    for ts in timestamps[1:]:
-        if ts - prev > coalesce_gap_seconds:
-            intervals.append((_to_utc(run_start), _to_utc(prev)))
-            run_start = ts
-        prev = ts
-    intervals.append((_to_utc(run_start), _to_utc(prev)))
-    return intervals
-
-
-def _to_utc(ts: float) -> datetime:
-    return datetime.fromtimestamp(ts, tz=UTC)

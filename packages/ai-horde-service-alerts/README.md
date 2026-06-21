@@ -26,8 +26,8 @@ on schedule, and a one-shot **Mimir backfill** can reconstruct history from the
 | Surface | Routes | Auth |
 | --- | --- | --- |
 | Health | `GET /healthz` (liveness), `GET /readyz` (DB + upstream readiness) | none |
-| Public | `GET /api/v1/public/{components,incidents,maintenance,history}` | none (structural only — no alert prose/labels leak) |
-| Internal | `GET/POST/PATCH /api/v1/internal/*` — incident/maintenance/override CRUD, raw Alertmanager/Mimir passthrough | moderator `apikey` (validated against AI Horde `GET /v2/find_user`) |
+| Public | `GET /api/v1/public/{components,incidents,maintenance,history,stats}` | none (structural only — no alert prose/labels leak; `stats` serves a fixed allow-list of public-tenant throughput numbers, cached, never 5xx) |
+| Internal | `GET/POST/PATCH /api/v1/internal/*` — incident/maintenance/override CRUD, raw Alertmanager/Mimir passthrough, `alerts/summary` (active, component-resolved) + `alerts/log` (firing+resolved over a window, from Mimir `ALERTS`) | moderator `apikey` (validated against AI Horde `GET /v2/find_user`) |
 | Probe ingest | `POST /api/v1/internal/probe-results` | `x-prober-secret` shared secret |
 
 ## Configuration
