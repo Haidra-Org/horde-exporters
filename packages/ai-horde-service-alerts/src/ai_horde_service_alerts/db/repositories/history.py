@@ -11,11 +11,35 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ai_horde_service_alerts.db.models import ComponentStatusHistory
 from ai_horde_service_alerts.db.types import (
-    STATUS_RANK,
     ComponentStatusValue,
     HistorySource,
     HistoryTrigger,
 )
+
+
+@dataclass(frozen=True, slots=True)
+class BucketThresholds:
+    """Duration thresholds that decide a day bar's colour.
+
+    A day escalates only when a *meaningful* amount of the day's observed signal
+    was bad, not merely because a single flapping scrape recorded a few seconds
+    of down/degraded time. Each level uses an absolute floor OR a fraction of the
+    day's observed signal (whichever is larger), so brief blips on a busy day and
+    a couple of bad samples on a quiet day both stay green — the sub-threshold
+    remainder is surfaced by the front-end "flapping" marker instead.
+    """
+
+    #: Cumulative down/partial seconds that make a day "major" (red).
+    major_down_floor_seconds: int = 300
+    #: ...or this fraction of the day's observed signal, whichever is larger.
+    major_down_fraction: float = 0.01
+    #: Cumulative degraded seconds that make a day "minor" (orange).
+    minor_degraded_floor_seconds: int = 600
+    #: ...or this fraction of the day's observed signal, whichever is larger.
+    minor_degraded_fraction: float = 0.05
+
+
+DEFAULT_BUCKET_THRESHOLDS = BucketThresholds()
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,18 +67,32 @@ class DailyBucket:
     unknown_seconds: int
 
 
-# Unknown == "no signal", not an outage: it must never raise the bar above OK. A
-# bucket is only minor/major/maintenance when it actually saw degraded/down/maint
-# time. (Real degradation outranks UNKNOWN in STATUS_RANK, so a day that mixes
-# unknown with a genuine problem still reports the problem's level.)
-_LEVEL_BY_STATUS: dict[ComponentStatusValue, int] = {
-    ComponentStatusValue.OPERATIONAL: 0,
-    ComponentStatusValue.UNKNOWN: 0,
-    ComponentStatusValue.DEGRADED: 1,
-    ComponentStatusValue.PARTIAL: 2,
-    ComponentStatusValue.DOWN: 2,
-    ComponentStatusValue.MAINTENANCE: 3,
-}
+def classify_day_level(
+    *,
+    operational_seconds: int,
+    degraded_seconds: int,
+    down_seconds: int,
+    maintenance_seconds: int,
+    thresholds: BucketThresholds = DEFAULT_BUCKET_THRESHOLDS,
+) -> int:
+    """Return the day bar level (0 ok | 1 minor | 2 major | 3 maintenance).
+
+    Duration-weighted, not worst-observed: a level is raised only when the bad
+    time crosses that level's floor/fraction of the day's observed signal.
+    Unknown ("no signal") time never counts and is excluded from the signal
+    denominator, so a scrape gap can't paint the bar. A day with no real signal
+    at all reads as maintenance (3) if it saw maintenance, else ok (0).
+    """
+    signal = operational_seconds + degraded_seconds + down_seconds
+    if signal == 0:
+        return 3 if maintenance_seconds > 0 else 0
+    major_cut = max(thresholds.major_down_floor_seconds, thresholds.major_down_fraction * signal)
+    if down_seconds >= major_cut:
+        return 2
+    minor_cut = max(thresholds.minor_degraded_floor_seconds, thresholds.minor_degraded_fraction * signal)
+    if degraded_seconds >= minor_cut:
+        return 1
+    return 0
 
 
 class HistoryRepository:
@@ -143,6 +181,7 @@ class HistoryRepository:
         *,
         days: int,
         now: datetime | None = None,
+        thresholds: BucketThresholds = DEFAULT_BUCKET_THRESHOLDS,
     ) -> list[DailyBucket]:
         """Compute one ``DailyBucket`` per day for the trailing ``days`` days."""
         anchor = (now or datetime.now(tz=UTC)).astimezone(UTC)
@@ -160,20 +199,25 @@ class HistoryRepository:
                 if slice_end <= slice_start:
                     continue
                 seconds[row.status] += int((slice_end - slice_start).total_seconds())
-            worst_level = 0
-            worst_status = ComponentStatusValue.OPERATIONAL
-            for status, secs in seconds.items():
-                if secs > 0 and STATUS_RANK[status] > STATUS_RANK[worst_status]:
-                    worst_status = status
-            worst_level = _LEVEL_BY_STATUS[worst_status]
+            operational = seconds[ComponentStatusValue.OPERATIONAL]
+            degraded = seconds[ComponentStatusValue.DEGRADED]
+            down = seconds[ComponentStatusValue.DOWN] + seconds[ComponentStatusValue.PARTIAL]
+            maintenance = seconds[ComponentStatusValue.MAINTENANCE]
+            level = classify_day_level(
+                operational_seconds=operational,
+                degraded_seconds=degraded,
+                down_seconds=down,
+                maintenance_seconds=maintenance,
+                thresholds=thresholds,
+            )
             buckets.append(
                 DailyBucket(
                     date=day_start.date().isoformat(),
-                    status_level=worst_level,
-                    operational_seconds=seconds[ComponentStatusValue.OPERATIONAL],
-                    degraded_seconds=seconds[ComponentStatusValue.DEGRADED],
-                    down_seconds=seconds[ComponentStatusValue.DOWN] + seconds[ComponentStatusValue.PARTIAL],
-                    maintenance_seconds=seconds[ComponentStatusValue.MAINTENANCE],
+                    status_level=level,
+                    operational_seconds=operational,
+                    degraded_seconds=degraded,
+                    down_seconds=down,
+                    maintenance_seconds=maintenance,
                     unknown_seconds=seconds[ComponentStatusValue.UNKNOWN],
                 ),
             )
@@ -188,12 +232,15 @@ class HistoryRepository:
     ) -> float | None:
         """Return uptime% over the trailing window.
 
-        The denominator is time for which we have a real status signal
-        (operational + degraded + down). Maintenance, unknown, and no-data days
-        are excluded outright: counting them would conflate "we weren't watching"
-        / "scheduled maintenance" with downtime. The current day is therefore
-        self-correcting too — its not-yet-elapsed remainder has no signal and so
-        never enters the denominator.
+        "Uptime" here means *available* time: operational and degraded both count
+        as up, because degraded is slow-but-serving, not an outage. Only hard
+        down/partial time is subtracted. The denominator is time for which we
+        have a real status signal (operational + degraded + down); maintenance,
+        unknown, and no-data days are excluded outright, since counting them
+        would conflate "we weren't watching" / "scheduled maintenance" with
+        downtime. The current day is therefore self-correcting too — its
+        not-yet-elapsed remainder has no signal and so never enters the
+        denominator.
 
         Returns ``None`` when there is no signal at all in the window (so callers
         can render ``—`` instead of a misleading ``0%`` or ``100%``).
@@ -205,7 +252,7 @@ class HistoryRepository:
         signal = operational + degraded + down
         if signal == 0:
             return None
-        return round(operational / signal * 100.0, 4)
+        return round((operational + degraded) / signal * 100.0, 4)
 
     async def close_open_slice_at(
         self,

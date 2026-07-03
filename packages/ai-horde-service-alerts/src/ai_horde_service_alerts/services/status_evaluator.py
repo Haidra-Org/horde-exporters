@@ -74,13 +74,23 @@ class StatusEvaluator:
         *,
         probe_freshness: timedelta = timedelta(minutes=15),
         no_signal_grace: timedelta = timedelta(minutes=15),
+        flap_confirmations: int = 1,
     ) -> None:
-        """Bind the evaluator to its dependencies and freshness threshold."""
+        """Bind the evaluator to its dependencies and freshness threshold.
+
+        ``flap_confirmations`` is the number of consecutive ticks that must agree
+        on a new prober/alert-derived status before it is committed (hysteresis
+        against flapping). 1 means commit immediately. Operator overrides and
+        maintenance transitions are always committed at once, bypassing this.
+        """
         self._database = database
         self._alertmanager = alertmanager_client
         self._alert_mapping = alert_mapping
         self._probe_freshness = probe_freshness
         self._no_signal_grace = no_signal_grace
+        self._flap_confirmations = max(1, flap_confirmations)
+        # component_id -> (candidate status awaiting confirmation, consecutive count)
+        self._pending: dict[str, tuple[ComponentStatusValue, int]] = {}
 
     async def evaluate_once(self, *, now: datetime | None = None) -> list[EvaluatedComponent]:
         """Run one evaluation tick and persist any transitions. Returns the per-component result."""
@@ -178,16 +188,57 @@ class StatusEvaluator:
                 )
 
             for result in results:
-                await history_repo.transition(
-                    component_id=result.component_id,
-                    new_status=result.status,
-                    source=result.source,
-                    when=moment,
-                    reason=result.reason,
-                    triggered_by=result.triggered_by,
-                )
+                await self._commit(history_repo, result, moment)
 
         return results
+
+    async def _commit(
+        self,
+        history_repo: HistoryRepository,
+        result: EvaluatedComponent,
+        moment: datetime,
+    ) -> None:
+        """Persist ``result`` as a transition, applying flap hysteresis.
+
+        Overrides and maintenance are intentional/scheduled and commit at once.
+        Automatic (prober/alert) status *changes* must be confirmed by
+        ``flap_confirmations`` consecutive agreeing ticks before they are
+        written, so a single flapping sample can no longer open a degraded/down
+        slice. A candidate that matches the currently-open status, or that
+        differs from the pending candidate, resets the counter.
+        """
+
+        async def write() -> None:
+            self._pending.pop(result.component_id, None)
+            await history_repo.transition(
+                component_id=result.component_id,
+                new_status=result.status,
+                source=result.source,
+                when=moment,
+                reason=result.reason,
+                triggered_by=result.triggered_by,
+            )
+
+        if result.source in (HistorySource.OVERRIDE, HistorySource.MAINTENANCE):
+            await write()
+            return
+
+        open_row = await history_repo.get_open(result.component_id)
+        current = open_row.status if open_row is not None else None
+        if result.status == current:
+            # Already in this state (or flapped back before confirming): stand down.
+            self._pending.pop(result.component_id, None)
+            return
+        if self._flap_confirmations <= 1:
+            await write()
+            return
+
+        pending = self._pending.get(result.component_id)
+        count = pending[1] + 1 if pending is not None and pending[0] == result.status else 1
+        if count >= self._flap_confirmations:
+            await write()
+        else:
+            self._pending[result.component_id] = (result.status, count)
 
 
 def _classify_alerts(

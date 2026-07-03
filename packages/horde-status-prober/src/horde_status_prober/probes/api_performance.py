@@ -11,11 +11,19 @@ import httpx
 from horde_status_prober.probes.base import Probe, ProbeOutcome, ProbeResult, ProbeResultDetail
 
 
+#: Latency (ms) at or above which a parseable 200 response is graded DEGRADED.
+DEFAULT_DEGRADED_MS = 3_000
+
+
 class ApiPerformanceProbe(Probe):
     """Performance endpoint should respond quickly and parse as JSON."""
 
     name = "api_performance"
     component_id = "api"
+
+    def __init__(self, *, degraded_ms: int = DEFAULT_DEGRADED_MS) -> None:
+        """Grade a parseable 200 as DEGRADED when latency reaches ``degraded_ms``."""
+        self._degraded_ms = degraded_ms
 
     @override
     async def run(self, http: httpx.AsyncClient) -> ProbeResult:
@@ -44,7 +52,7 @@ class ApiPerformanceProbe(Probe):
                     latency_ms=latency_ms,
                     detail=ProbeResultDetail(parse_error=str(exc)),
                 )
-            outcome = ProbeOutcome.OK if latency_ms < 3_000 else ProbeOutcome.DEGRADED
+            outcome = ProbeOutcome.OK if latency_ms < self._degraded_ms else ProbeOutcome.DEGRADED
             return ProbeResult(
                 probe_name=self.name,
                 component_id=self.component_id,

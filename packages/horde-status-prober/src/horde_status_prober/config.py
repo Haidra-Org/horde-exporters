@@ -41,6 +41,17 @@ class ProberSettings(BaseSettings):
     webhooks_smoke_interval: int = 300
     alchemy_smoke_interval: int = 300
 
+    # ── Probe grading thresholds ─────────────────────────────────────────────
+    # Latency (ms) at/above which an otherwise-healthy API response is graded
+    # DEGRADED, and the worker-pool floors below which a tier is DEGRADED. Raise
+    # these (or the alerts service's flap-confirmation count) if healthy but slow
+    # responses / brief pool dips are producing noisy degraded time.
+    api_heartbeat_degraded_ms: int = 2_000
+    api_performance_degraded_ms: int = 3_000
+    image_workers_degraded_below: int = 5
+    text_workers_degraded_below: int = 3
+    alchemy_workers_degraded_below: int = 2
+
     healthz_host: str = "0.0.0.0"
     healthz_port: int = 8081
 

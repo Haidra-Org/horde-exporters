@@ -50,15 +50,32 @@ class HealthzResponse(TypedDict):
     consecutive_failures: int
 
 
-def build_probes() -> list[tuple[Probe, str]]:
-    """Return ``(probe, settings-attr-for-interval)`` for every probe."""
+def build_probes(settings: ProberSettings | None = None) -> list[tuple[Probe, str]]:
+    """Return ``(probe, settings-attr-for-interval)`` for every probe.
+
+    When ``settings`` is provided, probe grading thresholds are taken from it;
+    otherwise each probe uses its own built-in defaults (so the no-arg form stays
+    usable without a fully-populated settings object).
+    """
+    if settings is None:
+        heartbeat = ApiHeartbeatProbe()
+        performance = ApiPerformanceProbe()
+        image = ImageWorkersProbe()
+        text = TextWorkersProbe()
+        alchemy = AlchemySmokeProbe()
+    else:
+        heartbeat = ApiHeartbeatProbe(degraded_ms=settings.api_heartbeat_degraded_ms)
+        performance = ApiPerformanceProbe(degraded_ms=settings.api_performance_degraded_ms)
+        image = ImageWorkersProbe(degraded_below=settings.image_workers_degraded_below)
+        text = TextWorkersProbe(degraded_below=settings.text_workers_degraded_below)
+        alchemy = AlchemySmokeProbe(degraded_below=settings.alchemy_workers_degraded_below)
     return [
-        (ApiHeartbeatProbe(), "api_heartbeat_interval"),
-        (ApiPerformanceProbe(), "api_performance_interval"),
-        (ImageWorkersProbe(), "image_workers_interval"),
-        (TextWorkersProbe(), "text_workers_interval"),
+        (heartbeat, "api_heartbeat_interval"),
+        (performance, "api_performance_interval"),
+        (image, "image_workers_interval"),
+        (text, "text_workers_interval"),
         (WebhooksSmokeProbe(), "webhooks_smoke_interval"),
-        (AlchemySmokeProbe(), "alchemy_smoke_interval"),
+        (alchemy, "alchemy_smoke_interval"),
     ]
 
 
@@ -136,7 +153,7 @@ def build_scheduler(
     first-run time instead.
     """
     scheduler = AsyncIOScheduler()
-    for probe, attr in build_probes():
+    for probe, attr in build_probes(settings):
         interval = getattr(settings, attr)
         scheduler.add_job(
             build_runner(probe, aihorde, pusher),

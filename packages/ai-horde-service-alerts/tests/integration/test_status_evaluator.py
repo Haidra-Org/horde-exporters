@@ -93,3 +93,55 @@ async def test_status_evaluator_marks_unknown_after_no_signal_grace(
 
     by_id = {r.component_id: r for r in results}
     assert by_id["api"].status is ComponentStatusValue.UNKNOWN
+
+
+async def test_status_evaluator_debounces_flapping_transition(
+    settings: HordeAlertsSettings,
+    database_bundle: DatabaseBundle,
+    respx_mock: respx.MockRouter,
+) -> None:
+    """With flap_confirmations=2, one firing tick must not commit; two must.
+
+    The evaluator still *reports* the degraded status each tick, but the change
+    is only written to component_status_history once it has been confirmed by
+    two consecutive agreeing evaluations (hysteresis against flapping).
+    """
+    await seed_components(database_bundle, components_path=settings.components_config_path)
+    alert_mapping = AlertMapping.from_yaml(settings.alert_component_map_path)
+    respx_mock.get(f"{ALERTMANAGER}/api/v2/alerts").mock(
+        return_value=httpx.Response(
+            200,
+            json=[
+                {
+                    "fingerprint": "img-1",
+                    "startsAt": "2025-01-01T00:00:00Z",
+                    "endsAt": "0001-01-01T00:00:00Z",
+                    "updatedAt": "2025-01-01T00:01:00Z",
+                    "status": {"state": "active"},
+                    "labels": {
+                        "alertname": "HordeImageWorkerCountDrop",
+                        "severity": "warning",
+                    },
+                    "annotations": {"summary": "Image worker count dropped"},
+                },
+            ],
+        ),
+    )
+
+    async with httpx.AsyncClient(base_url=ALERTMANAGER) as http:
+        client = AlertmanagerClient(http)
+        evaluator = StatusEvaluator(database_bundle, client, alert_mapping, flap_confirmations=2)
+
+        first = await evaluator.evaluate_once()
+        assert {r.component_id: r for r in first}["image"].status is ComponentStatusValue.DEGRADED
+        async with database_bundle.session() as session:
+            open_slice = await HistoryRepository(session).get_open("image")
+        # Reported degraded, but not yet committed after a single tick.
+        assert open_slice is None or open_slice.status is not ComponentStatusValue.DEGRADED
+
+        second = await evaluator.evaluate_once()
+        assert {r.component_id: r for r in second}["image"].status is ComponentStatusValue.DEGRADED
+        async with database_bundle.session() as session:
+            open_slice = await HistoryRepository(session).get_open("image")
+        assert open_slice is not None
+        assert open_slice.status is ComponentStatusValue.DEGRADED

@@ -20,6 +20,11 @@ class AlchemySmokeProbe(Probe):
     name = "alchemy_smoke"
     component_id = "alchemy"
 
+    def __init__(self, *, degraded_below: int = DEGRADED_BELOW, down_below: int = DOWN_BELOW) -> None:
+        """Grade DEGRADED below ``degraded_below`` online workers, DOWN below ``down_below``."""
+        self._degraded_below = degraded_below
+        self._down_below = down_below
+
     @override
     async def run(self, http: httpx.AsyncClient) -> ProbeResult:
         observed_at = datetime.now(tz=UTC)
@@ -68,9 +73,9 @@ class AlchemySmokeProbe(Probe):
         online = sum(
             1 for worker in payload if isinstance(worker, dict) and worker.get("online") is True
         )
-        if online < DOWN_BELOW:
+        if online < self._down_below:
             outcome = ProbeOutcome.DOWN
-        elif online < DEGRADED_BELOW:
+        elif online < self._degraded_below:
             outcome = ProbeOutcome.DEGRADED
         else:
             outcome = ProbeOutcome.OK

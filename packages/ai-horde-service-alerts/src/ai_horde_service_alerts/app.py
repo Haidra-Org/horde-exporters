@@ -130,6 +130,7 @@ def create_app(
                 alertmanager_client,
                 alert_mapping,
                 no_signal_grace=timedelta(seconds=resolved_settings.no_signal_grace_seconds),
+                flap_confirmations=resolved_settings.status_flap_confirmations,
             )
             background_tasks.append(
                 asyncio.create_task(

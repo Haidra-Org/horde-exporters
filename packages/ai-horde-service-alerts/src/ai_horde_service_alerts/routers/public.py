@@ -23,6 +23,7 @@ from ai_horde_service_alerts.db.repositories import (
     HistoryRepository,
     MaintenanceRepository,
 )
+from ai_horde_service_alerts.db.repositories.history import BucketThresholds
 from ai_horde_service_alerts.db.repositories.incidents import IncidentRepository
 from ai_horde_service_alerts.db.repositories.overrides import OverrideRepository
 from ai_horde_service_alerts.db.types import Audience, ComponentStatusValue, worst_status
@@ -63,6 +64,12 @@ def create_router(dependencies: DependencyBundle) -> APIRouter:
     stats_service = PublicStatsService(
         dependencies.get_mimir_client(),
         tenant=settings.mimir_tenant_default,
+    )
+    bucket_thresholds = BucketThresholds(
+        major_down_floor_seconds=settings.history_bucket_major_down_floor_seconds,
+        major_down_fraction=settings.history_bucket_major_down_fraction,
+        minor_degraded_floor_seconds=settings.history_bucket_minor_degraded_floor_seconds,
+        minor_degraded_fraction=settings.history_bucket_minor_degraded_fraction,
     )
 
     @router.get("/components", response_model=PublicComponentsResponse)
@@ -142,7 +149,12 @@ def create_router(dependencies: DependencyBundle) -> APIRouter:
             )
         history_repo = HistoryRepository(session)
         moment = _now()
-        buckets = await history_repo.daily_buckets(component, days=days, now=moment)
+        buckets = await history_repo.daily_buckets(
+            component,
+            days=days,
+            now=moment,
+            thresholds=bucket_thresholds,
+        )
         uptime = await history_repo.uptime_percent(component, days=days, now=moment)
         return history_response(
             component_id=component,

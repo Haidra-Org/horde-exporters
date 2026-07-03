@@ -89,12 +89,31 @@ class HordeAlertsSettings(BaseSettings):
     )
 
     status_evaluator_interval_seconds: float = Field(default=15.0, gt=0.0, le=300.0)
+    status_flap_confirmations: int = Field(
+        default=2,
+        ge=1,
+        le=10,
+        description=(
+            "Consecutive same-outcome evaluations required before a prober/alert-derived "
+            "status change is committed (hysteresis). 1 = commit immediately (no debounce). "
+            "Operator overrides and maintenance transitions are never debounced."
+        ),
+    )
     no_signal_grace_seconds: int = Field(
         default=900,
         ge=0,
         le=86_400,
         description="Grace period before no-signal components become UNKNOWN.",
     )
+    # ── Public 90-day history bar classification ─────────────────────────────
+    # A day bar is duration-weighted, not worst-observed: a level is raised only
+    # when the bad time crosses an absolute floor OR a fraction of the day's
+    # observed signal (whichever is larger). Sub-threshold blips stay green and
+    # are surfaced by the front-end flapping marker instead.
+    history_bucket_major_down_floor_seconds: int = Field(default=300, ge=0, le=86_400)
+    history_bucket_major_down_fraction: float = Field(default=0.01, ge=0.0, le=1.0)
+    history_bucket_minor_degraded_floor_seconds: int = Field(default=600, ge=0, le=86_400)
+    history_bucket_minor_degraded_fraction: float = Field(default=0.05, ge=0.0, le=1.0)
     maintenance_runner_interval_seconds: float = Field(default=30.0, gt=0.0, le=600.0)
     history_retention_days: int = Field(default=400, ge=90, le=3650)
     probe_result_retention_days: int = Field(default=7, ge=1, le=90)

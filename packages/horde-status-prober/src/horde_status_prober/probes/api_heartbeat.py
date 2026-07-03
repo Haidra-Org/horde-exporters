@@ -11,11 +11,19 @@ import httpx
 from horde_status_prober.probes.base import Probe, ProbeOutcome, ProbeResult, ProbeResultDetail
 
 
+#: Latency (ms) at or above which a 200 response is graded DEGRADED.
+DEFAULT_DEGRADED_MS = 2_000
+
+
 class ApiHeartbeatProbe(Probe):
     """Hits the heartbeat endpoint and grades on HTTP status + latency."""
 
     name = "api_heartbeat"
     component_id = "api"
+
+    def __init__(self, *, degraded_ms: int = DEFAULT_DEGRADED_MS) -> None:
+        """Grade a 200 as DEGRADED when latency reaches ``degraded_ms``."""
+        self._degraded_ms = degraded_ms
 
     @override
     async def run(self, http: httpx.AsyncClient) -> ProbeResult:
@@ -33,7 +41,7 @@ class ApiHeartbeatProbe(Probe):
                     latency_ms=latency_ms,
                     detail=ProbeResultDetail(status_code=response.status_code),
                 )
-            outcome = ProbeOutcome.OK if latency_ms < 2_000 else ProbeOutcome.DEGRADED
+            outcome = ProbeOutcome.OK if latency_ms < self._degraded_ms else ProbeOutcome.DEGRADED
             return ProbeResult(
                 probe_name=self.name,
                 component_id=self.component_id,

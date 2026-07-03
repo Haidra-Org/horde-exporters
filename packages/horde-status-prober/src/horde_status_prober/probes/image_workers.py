@@ -23,6 +23,11 @@ class ImageWorkersProbe(Probe):
     name = "image_workers"
     component_id = "image"
 
+    def __init__(self, *, degraded_below: int = DEGRADED_BELOW, down_below: int = DOWN_BELOW) -> None:
+        """Grade DEGRADED below ``degraded_below`` workers, DOWN below ``down_below``."""
+        self._degraded_below = degraded_below
+        self._down_below = down_below
+
     @override
     async def run(self, http: httpx.AsyncClient) -> ProbeResult:
         observed_at = datetime.now(tz=UTC)
@@ -71,9 +76,9 @@ class ImageWorkersProbe(Probe):
                 latency_ms=latency_ms,
                 detail=ProbeResultDetail(reason="worker_count missing"),
             )
-        if worker_count < DOWN_BELOW:
+        if worker_count < self._down_below:
             outcome = ProbeOutcome.DOWN
-        elif worker_count < DEGRADED_BELOW:
+        elif worker_count < self._degraded_below:
             outcome = ProbeOutcome.DEGRADED
         else:
             outcome = ProbeOutcome.OK

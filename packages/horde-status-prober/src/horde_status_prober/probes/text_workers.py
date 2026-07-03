@@ -20,6 +20,11 @@ class TextWorkersProbe(Probe):
     name = "text_workers"
     component_id = "text"
 
+    def __init__(self, *, degraded_below: int = DEGRADED_BELOW, down_below: int = DOWN_BELOW) -> None:
+        """Grade DEGRADED below ``degraded_below`` workers, DOWN below ``down_below``."""
+        self._degraded_below = degraded_below
+        self._down_below = down_below
+
     @override
     async def run(self, http: httpx.AsyncClient) -> ProbeResult:
         observed_at = datetime.now(tz=UTC)
@@ -77,9 +82,9 @@ class TextWorkersProbe(Probe):
                 detail=ProbeResultDetail(reason="text_worker_count missing"),
             )
 
-        if text_count < DOWN_BELOW:
+        if text_count < self._down_below:
             outcome = ProbeOutcome.DOWN
-        elif text_count < DEGRADED_BELOW:
+        elif text_count < self._degraded_below:
             outcome = ProbeOutcome.DEGRADED
         else:
             outcome = ProbeOutcome.OK
