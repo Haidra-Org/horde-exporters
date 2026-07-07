@@ -47,17 +47,17 @@
       "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true } },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, sum by (horde_gentype) (rate(horde_generate_duration[$__rate_interval])))",
+          "expr": "histogram_quantile(0.50, sum by (le, horde_gentype) (rate(horde_generate_duration_bucket[5m])))",
           "legendFormat": "p50 {{horde_gentype}}",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, sum by (horde_gentype) (rate(horde_generate_duration[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum by (le, horde_gentype) (rate(horde_generate_duration_bucket[5m])))",
           "legendFormat": "p95 {{horde_gentype}}",
           "refId": "B"
         },
         {
-          "expr": "histogram_quantile(0.99, sum by (horde_gentype) (rate(horde_generate_duration[$__rate_interval])))",
+          "expr": "histogram_quantile(0.99, sum by (le, horde_gentype) (rate(horde_generate_duration_bucket[5m])))",
           "legendFormat": "p99 {{horde_gentype}}",
           "refId": "C"
         }
@@ -72,9 +72,9 @@
       "fieldConfig": { "defaults": { "unit": "s", "color": { "mode": "palette-classic" } }, "overrides": [] },
       "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true } },
       "targets": [
-        { "expr": "histogram_quantile(0.50, sum(rate(horde_pop_duration[$__rate_interval])))", "legendFormat": "p50", "refId": "A" },
-        { "expr": "histogram_quantile(0.95, sum(rate(horde_pop_duration[$__rate_interval])))", "legendFormat": "p95", "refId": "B" },
-        { "expr": "histogram_quantile(0.99, sum(rate(horde_pop_duration[$__rate_interval])))", "legendFormat": "p99", "refId": "C" }
+        { "expr": "histogram_quantile(0.50, sum by (le) (rate(horde_pop_duration_bucket[5m])))", "legendFormat": "p50", "refId": "A" },
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_pop_duration_bucket[5m])))", "legendFormat": "p95", "refId": "B" },
+        { "expr": "histogram_quantile(0.99, sum by (le) (rate(horde_pop_duration_bucket[5m])))", "legendFormat": "p99", "refId": "C" }
       ]
     },
     {
@@ -86,9 +86,9 @@
       "fieldConfig": { "defaults": { "unit": "s", "color": { "mode": "palette-classic" } }, "overrides": [] },
       "options": { "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true } },
       "targets": [
-        { "expr": "histogram_quantile(0.50, sum(rate(horde_submit_duration[$__rate_interval])))", "legendFormat": "p50", "refId": "A" },
-        { "expr": "histogram_quantile(0.95, sum(rate(horde_submit_duration[$__rate_interval])))", "legendFormat": "p95", "refId": "B" },
-        { "expr": "histogram_quantile(0.99, sum(rate(horde_submit_duration[$__rate_interval])))", "legendFormat": "p99", "refId": "C" }
+        { "expr": "histogram_quantile(0.50, sum by (le) (rate(horde_submit_duration_bucket[5m])))", "legendFormat": "p50", "refId": "A" },
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_duration_bucket[5m])))", "legendFormat": "p95", "refId": "B" },
+        { "expr": "histogram_quantile(0.99, sum by (le) (rate(horde_submit_duration_bucket[5m])))", "legendFormat": "p99", "refId": "C" }
       ]
     },
 
@@ -107,7 +107,7 @@
       "type": "timeseries",
       "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
       "targets": [
-        { "expr": "histogram_quantile(0.95, sum(rate(horde_pop_wp_query_duration[$__rate_interval])))", "legendFormat": "p95", "refId": "A" }
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_pop_wp_query_duration_bucket[5m])))", "legendFormat": "p95", "refId": "A" }
       ]
     },
     {
@@ -118,8 +118,8 @@
       "type": "timeseries",
       "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
       "targets": [
-        { "expr": "histogram_quantile(0.50, sum(rate(horde_pop_candidates_evaluated[$__rate_interval])))", "legendFormat": "p50", "refId": "A" },
-        { "expr": "histogram_quantile(0.95, sum(rate(horde_pop_candidates_evaluated[$__rate_interval])))", "legendFormat": "p95", "refId": "B" }
+        { "expr": "histogram_quantile(0.50, sum by (le) (rate(horde_pop_candidates_evaluated_bucket[5m])))", "legendFormat": "p50", "refId": "A" },
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_pop_candidates_evaluated_bucket[5m])))", "legendFormat": "p95", "refId": "B" }
       ]
     },
     {
@@ -130,7 +130,7 @@
       "type": "timeseries",
       "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
       "targets": [
-        { "expr": "sum by (reason) (rate(horde_pop_skipped_total[$__rate_interval]))", "legendFormat": "{{reason}}", "refId": "A" }
+        { "expr": "sum by (horde_skip_reason) (rate(horde_pop_skipped[5m]))", "legendFormat": "{{horde_skip_reason}}", "refId": "A" }
       ]
     },
 
@@ -149,7 +149,7 @@
       "type": "timeseries",
       "fieldConfig": { "defaults": { "unit": "reqps", "color": { "mode": "palette-classic" } }, "overrides": [] },
       "targets": [
-        { "expr": "sum by (outcome) (rate(horde_webhook_outcomes_total[$__rate_interval]))", "legendFormat": "{{outcome}}", "refId": "A" }
+        { "expr": "sum by (outcome) (rate(horde_webhook_outcomes[5m]))", "legendFormat": "{{outcome}}", "refId": "A" }
       ]
     },
     {
@@ -160,7 +160,7 @@
       "type": "timeseries",
       "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
       "targets": [
-        { "expr": "histogram_quantile(0.95, sum by (outcome) (rate(horde_webhook_attempt_duration[$__rate_interval])))", "legendFormat": "p95 {{outcome}}", "refId": "A" }
+        { "expr": "histogram_quantile(0.95, sum by (le, outcome) (rate(horde_webhook_attempt_duration_bucket[5m])))", "legendFormat": "p95 {{outcome}}", "refId": "A" }
       ]
     },
 
@@ -179,7 +179,7 @@
       "type": "timeseries",
       "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
       "targets": [
-        { "expr": "histogram_quantile(0.95, sum by (horde_job_name) (rate(horde_job_duration[$__rate_interval])))", "legendFormat": "{{horde_job_name}}", "refId": "A" }
+        { "expr": "histogram_quantile(0.95, sum by (le, horde_job_name) (rate(horde_job_duration_bucket[5m])))", "legendFormat": "{{horde_job_name}}", "refId": "A" }
       ]
     },
     {
@@ -190,7 +190,7 @@
       "type": "timeseries",
       "fieldConfig": { "defaults": { "unit": "reqps", "color": { "mode": "palette-classic" } }, "overrides": [] },
       "targets": [
-        { "expr": "sum by (horde_job_name) (rate(horde_job_failures_total[$__rate_interval]))", "legendFormat": "{{horde_job_name}}", "refId": "A" }
+        { "expr": "sum by (horde_job_name) (rate(horde_job_duration_count{horde_job_failed=\"true\"}[5m]))", "legendFormat": "{{horde_job_name}}", "refId": "A" }
       ]
     },
 
@@ -209,7 +209,7 @@
       "type": "timeseries",
       "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
       "targets": [
-        { "expr": "histogram_quantile(0.95, sum(rate(horde_countermeasures_ip_check_duration[$__rate_interval])))", "legendFormat": "p95", "refId": "A" }
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_countermeasures_ip_check_duration_bucket[5m])))", "legendFormat": "p95", "refId": "A" }
       ]
     },
     {
@@ -220,8 +220,8 @@
       "type": "timeseries",
       "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
       "targets": [
-        { "expr": "histogram_quantile(0.50, sum(rate(horde_submit_kudos[$__rate_interval])))", "legendFormat": "p50", "refId": "A" },
-        { "expr": "histogram_quantile(0.95, sum(rate(horde_submit_kudos[$__rate_interval])))", "legendFormat": "p95", "refId": "B" }
+        { "expr": "histogram_quantile(0.50, sum by (le) (rate(horde_submit_kudos_bucket[5m])))", "legendFormat": "p50", "refId": "A" },
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_kudos_bucket[5m])))", "legendFormat": "p95", "refId": "B" }
       ]
     },
     {

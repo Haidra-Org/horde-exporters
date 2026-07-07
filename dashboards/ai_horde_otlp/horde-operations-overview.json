@@ -135,7 +135,7 @@
         "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
-      "targets": [{ "expr": "histogram_quantile(0.95, sum by (le, horde_gentype) (rate(horde_generate_duration_bucket[$__rate_interval])))", "legendFormat": "{{horde_gentype}}", "refId": "A" }],
+      "targets": [{ "expr": "histogram_quantile(0.95, sum by (le, horde_gentype) (rate(horde_generate_duration_bucket[5m])))", "legendFormat": "{{horde_gentype}}", "refId": "A" }],
       "title": "/generate p95 Latency by gentype",
       "type": "timeseries"
     },
@@ -167,7 +167,7 @@
         "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
         "tooltip": { "mode": "single", "sort": "none" }
       },
-      "targets": [{ "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_pop_duration_bucket[$__rate_interval])))", "legendFormat": "p95", "refId": "A" }],
+      "targets": [{ "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_pop_duration_bucket[5m])))", "legendFormat": "p95", "refId": "A" }],
       "title": "/generate/pop p95 Latency",
       "type": "timeseries"
     },
@@ -210,7 +210,7 @@
         "legend": { "calcs": ["lastNotNull", "mean"], "displayMode": "table", "placement": "bottom", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
-      "targets": [{ "expr": "sum by (horde_outcome) (rate(horde_submit_outcomes_total[$__rate_interval]))", "legendFormat": "{{horde_outcome}}", "refId": "A" }],
+      "targets": [{ "expr": "sum by (horde_outcome) (rate(horde_submit_outcomes[5m]))", "legendFormat": "{{horde_outcome}}", "refId": "A" }],
       "title": "Submit Outcome Rate (stacked)",
       "type": "timeseries"
     },
@@ -285,7 +285,7 @@
         "legend": { "calcs": ["lastNotNull", "mean"], "displayMode": "table", "placement": "right", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
-      "targets": [{ "expr": "sum by (horde_skip_reason) (rate(horde_pop_skipped_total[$__rate_interval]))", "legendFormat": "{{horde_skip_reason}}", "refId": "A" }],
+      "targets": [{ "expr": "sum by (horde_skip_reason) (rate(horde_pop_skipped[5m]))", "legendFormat": "{{horde_skip_reason}}", "refId": "A" }],
       "title": "Skips per Second by Reason",
       "type": "timeseries"
     },
@@ -308,7 +308,7 @@
         "cellHeight": "sm",
         "footer": { "show": false }
       },
-      "targets": [{ "expr": "topk(10, sum by (horde_skip_reason) (increase(horde_pop_skipped_total[1h])))", "legendFormat": "", "refId": "A", "instant": true, "format": "table" }],
+      "targets": [{ "expr": "topk(10, sum by (horde_skip_reason) (increase(horde_pop_skipped[1h])))", "legendFormat": "", "refId": "A", "instant": true, "format": "table" }],
       "transformations": [
         {
           "id": "organize",

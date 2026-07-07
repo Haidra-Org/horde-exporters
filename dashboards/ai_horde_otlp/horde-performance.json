@@ -807,7 +807,7 @@
             "legend": { "calcs": ["lastNotNull", "mean"], "displayMode": "table", "placement": "right", "showLegend": true },
             "tooltip": { "mode": "multi", "sort": "desc" }
           },
-          "targets": [{ "expr": "sum by (horde_skip_reason) (rate(horde_pop_skipped_total[$__rate_interval]))", "legendFormat": "{{horde_skip_reason}}", "refId": "A" }],
+          "targets": [{ "expr": "sum by (horde_skip_reason) (rate(horde_pop_skipped[5m]))", "legendFormat": "{{horde_skip_reason}}", "refId": "A" }],
           "title": "Skips per Second by Reason",
           "type": "timeseries"
         },
@@ -818,7 +818,7 @@
           "gridPos": { "h": 8, "w": 8, "x": 16, "y": 65 },
           "id": 281,
           "options": { "showHeader": true, "sortBy": [{ "desc": true, "displayName": "Count" }], "cellHeight": "sm", "footer": { "show": false } },
-          "targets": [{ "expr": "topk(10, sum by (horde_skip_reason) (increase(horde_pop_skipped_total[1h])))", "legendFormat": "", "refId": "A", "instant": true, "format": "table" }],
+          "targets": [{ "expr": "topk(10, sum by (horde_skip_reason) (increase(horde_pop_skipped[1h])))", "legendFormat": "", "refId": "A", "instant": true, "format": "table" }],
           "transformations": [
             { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "instance": true, "job": true }, "renameByName": { "horde_skip_reason": "Skip Reason", "Value": "Count" } } }
           ],
@@ -853,8 +853,8 @@
             "tooltip": { "mode": "multi", "sort": "desc" }
           },
           "targets": [
-            { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_pop_candidates_evaluated_bucket[$__rate_interval])))", "legendFormat": "p95", "refId": "A" },
-            { "expr": "histogram_quantile(0.50, sum by (le) (rate(horde_pop_candidates_evaluated_bucket[$__rate_interval])))", "legendFormat": "p50", "refId": "B" }
+            { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_pop_candidates_evaluated_bucket[5m])))", "legendFormat": "p95", "refId": "A" },
+            { "expr": "histogram_quantile(0.50, sum by (le) (rate(horde_pop_candidates_evaluated_bucket[5m])))", "legendFormat": "p50", "refId": "B" }
           ],
           "title": "Pop Candidates Evaluated (p95/p50)",
           "type": "timeseries"
@@ -920,7 +920,7 @@
             "legend": { "calcs": ["lastNotNull", "mean"], "displayMode": "table", "placement": "right", "showLegend": true },
             "tooltip": { "mode": "multi", "sort": "desc" }
           },
-          "targets": [{ "expr": "sum by (horde_outcome) (rate(horde_submit_outcomes_total[$__rate_interval]))", "legendFormat": "{{horde_outcome}}", "refId": "A" }],
+          "targets": [{ "expr": "sum by (horde_outcome) (rate(horde_submit_outcomes[5m]))", "legendFormat": "{{horde_outcome}}", "refId": "A" }],
           "title": "Submit Outcome Rate (stacked)",
           "type": "timeseries"
         },
@@ -954,7 +954,7 @@
             "legend": { "calcs": ["lastNotNull"], "displayMode": "table", "placement": "bottom", "showLegend": true },
             "tooltip": { "mode": "single", "sort": "none" }
           },
-          "targets": [{ "expr": "sum(rate(horde_submit_outcomes_total{horde_outcome=\"faulted\"}[5m])) / clamp_min(sum(rate(horde_submit_outcomes_total[5m])), 1)", "legendFormat": "Faulted ratio", "refId": "A" }],
+          "targets": [{ "expr": "sum(rate(horde_submit_outcomes{horde_outcome=\"faulted\"}[5m])) / clamp_min(sum(rate(horde_submit_outcomes[5m])), 1)", "legendFormat": "Faulted ratio", "refId": "A" }],
           "title": "Faulted Ratio (5m)",
           "type": "timeseries"
         },
@@ -988,7 +988,7 @@
             "legend": { "calcs": ["lastNotNull"], "displayMode": "table", "placement": "bottom", "showLegend": true },
             "tooltip": { "mode": "single", "sort": "none" }
           },
-          "targets": [{ "expr": "sum(rate(horde_submit_outcomes_total{horde_outcome=\"censored\"}[5m])) / clamp_min(sum(rate(horde_submit_outcomes_total[5m])), 1)", "legendFormat": "Censored ratio", "refId": "A" }],
+          "targets": [{ "expr": "sum(rate(horde_submit_outcomes{horde_outcome=\"censored\"}[5m])) / clamp_min(sum(rate(horde_submit_outcomes[5m])), 1)", "legendFormat": "Censored ratio", "refId": "A" }],
           "title": "Censored Ratio (5m)",
           "type": "timeseries"
         }
