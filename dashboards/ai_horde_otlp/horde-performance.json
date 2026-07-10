@@ -1139,7 +1139,7 @@
   "templating": {
     "list": [
       {
-        "current": { "selected": false, "text": "", "value": "" },
+        "current": { "selected": false, "text": "AI Horde App", "value": "mimir-app" },
         "hide": 0,
         "includeAll": false,
         "label": "Data Source",

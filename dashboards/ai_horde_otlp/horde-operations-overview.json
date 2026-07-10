@@ -348,7 +348,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "mimir-app" },
+      "datasource": { "type": "prometheus", "uid": "mimir-infra" },
       "description": "Connection saturation as % of max_connections. Requires postgres_exporter (see horde_monitoring_install_postgres_alerts).",
       "fieldConfig": {
         "defaults": {
@@ -382,7 +382,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "mimir-app" },
+      "datasource": { "type": "prometheus", "uid": "mimir-infra" },
       "description": "Age of oldest open transaction from built-in postgres_exporter pg_stat_activity_max_tx_duration.",
       "fieldConfig": {
         "defaults": {
@@ -414,7 +414,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "mimir-app" },
+      "datasource": { "type": "prometheus", "uid": "mimir-infra" },
       "description": "Postgres deadlocks per 5 minutes.",
       "fieldConfig": {
         "defaults": {
@@ -616,7 +616,7 @@
       "links": [
         {
           "title": "Open in Loki Explore",
-          "url": "/explore?left=%7B%22datasource%22%3A%22loki-app%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22%7Bapp%3D%5C%22ai-horde%5C%22%7D%20%7C%20json%20%7C%20level%3D~%5C%22CRITICAL%7CERROR%5C%22%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22now-1h%22%2C%22to%22%3A%22now%22%7D%7D",
+          "url": "/explore?left=%7B%22datasource%22%3A%22loki-app%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22%7Bapp%3D%5C%22ai-horde%5C%22%2Clevel%3D~%5C%22%28%3Fi%29error%7Ccrit%28ical%29%3F%5C%22%7D%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22now-1h%22%2C%22to%22%3A%22now%22%7D%7D",
           "targetBlank": true
         }
       ],
@@ -624,7 +624,7 @@
         "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true },
         "tooltip": { "mode": "multi", "sort": "desc" }
       },
-      "targets": [{ "expr": "sum by (level) (count_over_time({app=\"ai-horde\"} | json | level=~\"CRITICAL|ERROR\" [5m]))", "legendFormat": "{{level}}", "refId": "A" }],
+      "targets": [{ "expr": "sum by (level) (count_over_time({app=\"ai-horde\",level=~\"(?i)error|crit(ical)?\"} [5m]))", "legendFormat": "{{level}}", "refId": "A" }],
       "title": "AI-Horde Critical/Error Log Rate (5m)",
       "type": "timeseries"
     },
@@ -643,7 +643,7 @@
         "dedupStrategy": "none",
         "sortOrder": "Descending"
       },
-      "targets": [{ "expr": "{app=\"ai-horde\"} | json | level=\"CRITICAL\"", "refId": "A" }],
+      "targets": [{ "expr": "{app=\"ai-horde\",level=~\"(?i)crit(ical)?\"}", "refId": "A" }],
       "title": "Recent CRITICAL Lines",
       "type": "logs"
     }
