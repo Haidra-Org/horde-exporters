@@ -349,7 +349,7 @@
     },
     {
       "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
-      "description": "p95 of each phase inside POST /generate, summed across gentypes. Read against the end-to-end p95 above: the phase whose line moves with the total is the one to investigate. validate covers request admission, initiate_wp builds the waiting prompt, activate_wp runs kudos calculation and dispatch.",
+      "description": "p95 of each phase inside POST /generate, summed across gentypes, from the horde_generate_* histograms in the Telemetry tenant. Read against the end-to-end p95 above: the phase whose line moves with the total is the one to investigate. validate covers request admission, initiate_wp builds the waiting prompt, activate_wp runs kudos calculation and dispatch. source_upload is the object-storage upload of img2img source images inside activate_wp, so an excursion that moves source_upload and activate_wp together is img2img-driven. The source_upload series appears only after the instrumented release deploys.",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -380,7 +380,8 @@
         { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_validate_wp_count_duration_bucket[5m])))", "legendFormat": "validate.wp_count", "refId": "C" },
         { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_validate_prompt_filter_duration_bucket[5m])))", "legendFormat": "validate.prompt_filter", "refId": "D" },
         { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_initiate_wp_duration_bucket[5m])))", "legendFormat": "initiate_wp", "refId": "E" },
-        { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_activate_wp_duration_bucket[5m])))", "legendFormat": "activate_wp", "refId": "F" }
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_activate_wp_duration_bucket[5m])))", "legendFormat": "activate_wp", "refId": "F" },
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_source_upload_duration_bucket[5m])))", "legendFormat": "activate_wp.source_upload", "refId": "G" }
       ],
       "title": "/generate Phase p95",
       "type": "timeseries"

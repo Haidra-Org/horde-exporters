@@ -1114,6 +1114,73 @@
           ],
           "title": "/generate Phase Mean",
           "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${telemetry}" },
+          "description": "End-to-end p95 of POST /generate for the image gentype only, split by the horde_img2img label on horde_generate_duration (Telemetry tenant). img2img requests upload their source image to object storage on the request path, so they carry a floor the txt2img series does not. Series appear only after the release carrying the horde.img2img attribute deploys; samples recorded before that carry an empty label value.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "unit": "s",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "off" }
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 75 },
+          "id": 323,
+          "options": {
+            "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+              { "expr": "histogram_quantile(0.95, sum by (le, horde_img2img) (rate(horde_generate_duration_bucket{horde_gentype=\"image\"}[$__rate_interval])))", "legendFormat": "{{horde_img2img}}", "refId": "A" }
+          ],
+          "title": "/generate Image p95 by img2img",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${telemetry}" },
+          "description": "p95 and mean of horde_generate_source_upload_duration (Telemetry tenant), the object-storage upload of source images, masks and extra source images during image activate_waiting_prompt. Recorded only for requests that carry a source image, so it is the img2img-specific component of the activate_wp phase. Series appear only after the instrumented release deploys.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "unit": "s",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "off" }
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 75 },
+          "id": 324,
+          "options": {
+            "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+              { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_source_upload_duration_bucket[$__rate_interval])))", "legendFormat": "source_upload p95", "refId": "A" },
+              { "expr": "sum(rate(horde_generate_source_upload_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_generate_source_upload_duration_count[$__rate_interval])), 1e-9)", "legendFormat": "source_upload mean", "refId": "B" }
+          ],
+          "title": "Source Image Upload p95/mean",
+          "type": "timeseries"
         }
       ]
     },
