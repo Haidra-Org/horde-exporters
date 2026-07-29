@@ -1,1145 +1,1145 @@
 {
-  "annotations": {
-    "list": [
-      {
-        "builtIn": 1,
-        "datasource": {
-          "type": "grafana",
-          "uid": "-- Grafana --"
-        },
-        "enable": true,
-        "hide": true,
-        "iconColor": "rgba(0, 211, 255, 1)",
-        "name": "Annotations & Alerts",
-        "type": "dashboard"
+ "annotations": {
+  "list": [
+   {
+    "builtIn": 1,
+    "datasource": {
+     "type": "grafana",
+     "uid": "-- Grafana --"
+    },
+    "enable": true,
+    "hide": true,
+    "iconColor": "rgba(0, 211, 255, 1)",
+    "name": "Annotations & Alerts",
+    "type": "dashboard"
+   }
+  ]
+ },
+ "description": "AI Horde kudos accounting subsystem: deferred-ledger projector (applier) health, admission holds/reservations, economy events (floor adjustments, idempotent replays) and Postgres context. Datasources: app OTLP metrics on mimir-telemetry (ai-horde-telemetry tenant), postgres_exporter on mimir-infra (infrastructure tenant), audit logs on loki-app (ai-horde-app tenant). The applier and reservation gauges are emitted only by the quorum node, so these panels read \"No data\" rather than zero when that node is not exporting telemetry. Org 1 infra dashboard.",
+ "editable": true,
+ "fiscalYearStartMonth": 0,
+ "graphTooltip": 1,
+ "id": null,
+ "links": [
+  {
+   "asDropdown": true,
+   "icon": "external link",
+   "includeVars": true,
+   "keepTime": true,
+   "tags": [
+    "horde"
+   ],
+   "targetBlank": false,
+   "title": "Horde Dashboards",
+   "type": "dashboards"
+  }
+ ],
+ "panels": [
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 0
+   },
+   "id": 100,
+   "title": "Projector Health",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Age of the oldest unfolded ledger row (per-tick histogram, avg over 2m). Green under 15s; amber 15-30s; red over 30s matches the heartbeat DEGRADED trip. On red, the projector is not draining pending rows: check applier lag and saturation below and confirm the applier task is alive. Reads \"No data\" when the quorum node is not exporting telemetry, which is not the same as a healthy zero.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "s",
+     "noValue": "No data",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 15
+       },
+       {
+        "color": "red",
+        "value": 30
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 6,
+    "x": 0,
+    "y": 1
+   },
+   "id": 1,
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "orientation": "auto",
+    "textMode": "auto",
+    "colorMode": "background",
+    "graphMode": "area"
+   },
+   "targets": [
+    {
+     "expr": "rate(horde_kudos_oldest_pending_sum[2m]) / rate(horde_kudos_oldest_pending_count[2m])",
+     "legendFormat": "oldest pending",
+     "refId": "A"
+    }
+   ],
+   "title": "Oldest Pending Age",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Count of ledger rows awaiting fold (per-tick histogram, avg over 2m). A steadily climbing backlog means the applier cannot keep pace with write volume: raise batch size or catch-up cycles, or investigate slow folds. Red at 10k rows matches HordeKudosBacklogHigh; amber at 2k is the early-warning band.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "short",
+     "noValue": "No data",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 2000
+       },
+       {
+        "color": "red",
+        "value": 10000
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 6,
+    "x": 6,
+    "y": 1
+   },
+   "id": 2,
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "orientation": "auto",
+    "textMode": "auto",
+    "colorMode": "background",
+    "graphMode": "area"
+   },
+   "targets": [
+    {
+     "expr": "rate(horde_kudos_pending_rows_sum[2m]) / rate(horde_kudos_pending_rows_count[2m])",
+     "legendFormat": "pending rows",
+     "refId": "A"
+    }
+   ],
+   "title": "Pending Rows",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Applier fold cycles completed per second. Zero while the app is up means the single-writer applier is not running and balances are frozen while postings accumulate; this is the panel form of HordeKudosApplierSilent. Reads \"No data\" when the quorum node is not exporting telemetry.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "ops",
+     "decimals": 3,
+     "noValue": "No data",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 0.0001
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 6,
+    "x": 12,
+    "y": 1
+   },
+   "id": 15,
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "orientation": "auto",
+    "textMode": "auto",
+    "colorMode": "background",
+    "graphMode": "area"
+   },
+   "targets": [
+    {
+     "expr": "sum(rate(horde_kudos_applier_cycles[$__rate_interval]))",
+     "legendFormat": "cycles/s",
+     "refId": "A"
+    }
+   ],
+   "title": "Applier Cycle Rate",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Increase of horde_kudos_applier_saturation over five minutes. The counter is created the first time an applier tick exhausts its catch-up bound with a full final batch, so the series is absent while the applier keeps up. Tenant ai-horde-telemetry (datasource uid mimir-telemetry).",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "short",
+     "noValue": "No data",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 6,
+    "x": 18,
+    "y": 1
+   },
+   "id": 3,
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "orientation": "auto",
+    "textMode": "auto",
+    "colorMode": "background",
+    "graphMode": "area"
+   },
+   "targets": [
+    {
+     "expr": "increase(horde_kudos_applier_saturation[5m])",
+     "legendFormat": "saturation",
+     "refId": "A"
+    }
+   ],
+   "title": "Catch-up Saturation (5m)",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Delay between the applier tick and the ledger rows it processed (per-tick histogram, avg over 2m). Amber over 9s (three missed 3s ticks); red over 60s matches HordeKudosApplierLagHigh, so a red panel and a firing alert agree. Sustained lag means the applier loop is stalling: check DB contention and the oldest-transaction panel.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "s",
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 10,
+      "gradientMode": "none",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      },
+      "thresholdsStyle": {
+       "mode": "line"
       }
-    ]
-  },
-  "description": "AI Horde kudos accounting subsystem: deferred-ledger projector (applier) health, admission holds/reservations, economy events (floor adjustments, idempotent replays) and Postgres context. Datasources: app OTLP metrics on mimir-telemetry (ai-horde-telemetry tenant), postgres_exporter on mimir-infra (infrastructure tenant), audit logs on loki-app (ai-horde-app tenant). The applier and reservation gauges are emitted only by the quorum node, so these panels read \"No data\" rather than zero when that node is not exporting telemetry. Org 1 infra dashboard.",
-  "editable": true,
-  "fiscalYearStartMonth": 0,
-  "graphTooltip": 1,
-  "id": null,
-  "links": [
-    {
-      "asDropdown": true,
-      "icon": "external link",
-      "includeVars": true,
-      "keepTime": true,
-      "tags": [
-        "horde"
-      ],
-      "targetBlank": false,
-      "title": "Horde Dashboards",
-      "type": "dashboards"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 9
+       },
+       {
+        "color": "red",
+        "value": 60
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 0,
+    "y": 6
+   },
+   "id": 4,
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "single",
+     "sort": "none"
     }
-  ],
-  "panels": [
+   },
+   "targets": [
     {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "id": 100,
-      "title": "Projector Health",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "mimir-telemetry"
-      },
-      "description": "Age of the oldest unfolded ledger row (per-tick histogram, avg over 2m). Green under 15s; amber 15-30s; red over 30s matches the heartbeat DEGRADED trip. On red, the projector is not draining pending rows: check applier lag and saturation below and confirm the applier task is alive. Reads \"No data\" when the quorum node is not exporting telemetry, which is not the same as a healthy zero.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "s",
-          "noValue": "No data",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 15
-              },
-              {
-                "color": "red",
-                "value": 30
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 0,
-        "y": 1
-      },
-      "id": 1,
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "auto",
-        "textMode": "auto",
-        "colorMode": "background",
-        "graphMode": "area"
-      },
-      "targets": [
-        {
-          "expr": "rate(horde_kudos_oldest_pending_sum[2m]) / rate(horde_kudos_oldest_pending_count[2m])",
-          "legendFormat": "oldest pending",
-          "refId": "A"
-        }
-      ],
-      "title": "Oldest Pending Age",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "mimir-telemetry"
-      },
-      "description": "Count of ledger rows awaiting fold (per-tick histogram, avg over 2m). A steadily climbing backlog means the applier cannot keep pace with write volume: raise batch size or catch-up cycles, or investigate slow folds. Red at 10k rows matches HordeKudosBacklogHigh; amber at 2k is the early-warning band.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "short",
-          "noValue": "No data",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 2000
-              },
-              {
-                "color": "red",
-                "value": 10000
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 6,
-        "y": 1
-      },
-      "id": 2,
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "auto",
-        "textMode": "auto",
-        "colorMode": "background",
-        "graphMode": "area"
-      },
-      "targets": [
-        {
-          "expr": "rate(horde_kudos_pending_rows_sum[2m]) / rate(horde_kudos_pending_rows_count[2m])",
-          "legendFormat": "pending rows",
-          "refId": "A"
-        }
-      ],
-      "title": "Pending Rows",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "mimir-telemetry"
-      },
-      "description": "Applier fold cycles completed per second. Zero while the app is up means the single-writer applier is not running and balances are frozen while postings accumulate; this is the panel form of HordeKudosApplierSilent. Reads \"No data\" when the quorum node is not exporting telemetry.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "ops",
-          "decimals": 3,
-          "noValue": "No data",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 0.0001
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 12,
-        "y": 1
-      },
-      "id": 15,
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "auto",
-        "textMode": "auto",
-        "colorMode": "background",
-        "graphMode": "area"
-      },
-      "targets": [
-        {
-          "expr": "sum(rate(horde_kudos_applier_cycles[$__rate_interval]))",
-          "legendFormat": "cycles/s",
-          "refId": "A"
-        }
-      ],
-      "title": "Applier Cycle Rate",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "mimir-telemetry"
-      },
-      "description": "Catch-up cycles fully consumed in the last 5m. Any nonzero value means the applier used every available catch-up cycle on some tick and fold throughput is capped: raise KUDOS_APPLIER_MAX_CATCHUP_CYCLES or the batch size.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "short",
-          "noValue": "No data",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 18,
-        "y": 1
-      },
-      "id": 3,
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "auto",
-        "textMode": "auto",
-        "colorMode": "background",
-        "graphMode": "area"
-      },
-      "targets": [
-        {
-          "expr": "increase(horde_kudos_applier_saturation[5m])",
-          "legendFormat": "saturation",
-          "refId": "A"
-        }
-      ],
-      "title": "Catch-up Saturation (5m)",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "mimir-telemetry"
-      },
-      "description": "Delay between the applier tick and the ledger rows it processed (per-tick histogram, avg over 2m). Amber over 9s (three missed 3s ticks); red over 60s matches HordeKudosApplierLagHigh, so a red panel and a firing alert agree. Sustained lag means the applier loop is stalling: check DB contention and the oldest-transaction panel.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "s",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "line"
-            }
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 9
-              },
-              {
-                "color": "red",
-                "value": 60
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 0,
-        "y": 6
-      },
-      "id": 4,
-      "options": {
-        "legend": {
-          "calcs": [
-            "lastNotNull",
-            "max"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "expr": "rate(horde_kudos_applier_lag_sum[2m]) / rate(horde_kudos_applier_lag_count[2m])",
-          "legendFormat": "applier lag",
-          "refId": "A"
-        }
-      ],
-      "title": "Applier Lag",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "mimir-telemetry"
-      },
-      "description": "Rows folded per second split by row type (currency vs stat). A collapse in currency-fold throughput while pending rows climb points to a stuck or throttled applier; balanced steady rates are healthy.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "short",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "fillOpacity": 20,
-            "gradientMode": "opacity",
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 12,
-        "y": 6
-      },
-      "id": 5,
-      "options": {
-        "legend": {
-          "calcs": [
-            "lastNotNull",
-            "mean"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "expr": "sum by (horde_kudos_row_type) (rate(horde_kudos_applier_folded[$__rate_interval]))",
-          "legendFormat": "{{horde_kudos_row_type}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Fold Throughput by Row Type",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 13
-      },
-      "id": 110,
-      "title": "Admission & Holds",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "mimir-telemetry"
-      },
-      "description": "Open kudos reservations holding balance for in-flight requests (per-tick histogram, avg over 2m). A rising floor that never drains suggests holds are not being released; cross-check the oldest-reservation age.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "short",
-          "noValue": "No data",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 0,
-        "y": 14
-      },
-      "id": 6,
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "auto",
-        "textMode": "auto",
-        "colorMode": "value",
-        "graphMode": "area"
-      },
-      "targets": [
-        {
-          "expr": "rate(horde_kudos_active_reservations_sum[2m]) / rate(horde_kudos_active_reservations_count[2m])",
-          "legendFormat": "active reservations",
-          "refId": "A"
-        }
-      ],
-      "title": "Active Reservations",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "mimir-telemetry"
-      },
-      "description": "Age of the oldest open reservation (per-tick histogram, avg over 2m). Amber over 1800s; red over 3600s matches HordeKudosReservationStuck. Holds older than any legitimate request lifetime indicate a reservation leak: find the stuck request and confirm release-on-completion is firing.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "s",
-          "noValue": "No data",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 1800
-              },
-              {
-                "color": "red",
-                "value": 3600
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 8,
-        "y": 14
-      },
-      "id": 7,
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "auto",
-        "textMode": "auto",
-        "colorMode": "background",
-        "graphMode": "area"
-      },
-      "targets": [
-        {
-          "expr": "rate(horde_kudos_oldest_reservation_sum[2m]) / rate(horde_kudos_oldest_reservation_count[2m])",
-          "legendFormat": "oldest reservation",
-          "refId": "A"
-        }
-      ],
-      "title": "Oldest Reservation Age",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "mimir-telemetry"
-      },
-      "description": "Rate of reservations refused because the user lacked sufficient uncommitted balance. Sustained rejections mean admission is running at the balance floor: expected under load, but a persistent nonzero baseline warrants checking for a hold leak.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "short",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "fillOpacity": 20,
-            "gradientMode": "opacity",
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 16,
-        "y": 14
-      },
-      "id": 8,
-      "options": {
-        "legend": {
-          "calcs": [
-            "lastNotNull",
-            "max"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "expr": "sum(rate(horde_kudos_reservations_rejected[$__rate_interval]))",
-          "legendFormat": "rejections/s",
-          "refId": "A"
-        }
-      ],
-      "title": "Reservation Rejection Rate",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 20
-      },
-      "id": 120,
-      "title": "Economy Events",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "mimir-telemetry"
-      },
-      "description": "Floor-adjustment postings emitted per second. Any sustained nonzero means admission over-committed balance and the floor is absorbing the shortfall (an admission leak): trace the offending path rather than treating flooring as normal. The kudos volume those postings create is charted separately because it runs orders of magnitude larger than the event count.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "ops",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "fillOpacity": 20,
-            "gradientMode": "opacity",
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "line"
-            }
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 0.0001
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 6,
-        "x": 0,
-        "y": 21
-      },
-      "id": 9,
-      "options": {
-        "legend": {
-          "calcs": [
-            "lastNotNull",
-            "max"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "expr": "sum(rate(horde_kudos_floor_adjustments[$__rate_interval]))",
-          "legendFormat": "adjustments/s",
-          "refId": "A"
-        }
-      ],
-      "title": "Floor Adjustment Rate",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "mimir-telemetry"
-      },
-      "description": "Currency minted by the compatibility balance floor, split by account class (horde_account_class on mimir-telemetry, via horde:kudos_floor_created:rate5m). Anon rides its floor continuously by design and forms a large structural baseline; the HordeKudosFloorCreationHigh alert watches only non-anon classes above 150/s. Series exported before the attribute existed appear with an empty class label.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "short",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "fillOpacity": 20,
-            "gradientMode": "opacity",
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "line"
-            }
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 60
-              },
-              {
-                "color": "red",
-                "value": 150
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 6,
-        "x": 6,
-        "y": 21
-      },
-      "id": 16,
-      "options": {
-        "legend": {
-          "calcs": [
-            "lastNotNull",
-            "max"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "expr": "horde:kudos_floor_created:rate5m",
-          "legendFormat": "{{horde_account_class}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Kudos Created by Floor (by account class)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "mimir-telemetry"
-      },
-      "description": "Total kudos minted by flooring over the dashboard time range. This is money created from nothing to cover an accounting shortfall; any nonzero total should be reconciled against the admission path that caused it.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "short",
-          "noValue": "0",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 4,
-        "x": 12,
-        "y": 21
-      },
-      "id": 10,
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "auto",
-        "textMode": "auto",
-        "colorMode": "background",
-        "graphMode": "area"
-      },
-      "targets": [
-        {
-          "expr": "sum(increase(horde_kudos_floor_adjustments_kudos[$__range]))",
-          "legendFormat": "kudos minted",
-          "refId": "A"
-        }
-      ],
-      "title": "Kudos Minted by Flooring (range)",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "mimir-telemetry"
-      },
-      "description": "Rate of transfers short-circuited as idempotent replays of an already-applied operation. A low steady rate is healthy retry behavior; a spike indicates clients or upstream retries hammering the same transfer and is worth correlating with error logs.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "short",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "fillOpacity": 20,
-            "gradientMode": "opacity",
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 16,
-        "y": 21
-      },
-      "id": 11,
-      "options": {
-        "legend": {
-          "calcs": [
-            "lastNotNull",
-            "max"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "expr": "sum(rate(horde_kudos_transfers_idempotent_replays[$__rate_interval]))",
-          "legendFormat": "replays/s",
-          "refId": "A"
-        }
-      ],
-      "title": "Transfer Idempotent Replay Rate",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "loki-app"
-      },
-      "description": "Accounting audit trail: ledger mode changes, floor adjustments, trust promotions and reconciliation lines. Use this to attribute an economy-event spike above to a specific user, request, or config change.",
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 28
-      },
-      "id": 12,
-      "options": {
-        "showTime": true,
-        "showLabels": false,
-        "showCommonLabels": false,
-        "wrapLogMessage": true,
-        "prettifyLogMessage": false,
-        "enableLogDetails": true,
-        "dedupStrategy": "none",
-        "sortOrder": "Descending"
-      },
-      "targets": [
-        {
-          "expr": "{app=\"ai-horde\"} |~ \"Kudos ledger mode changed|Kudos floor adjustment|promoted user .* to trusted|reconcil\"",
-          "refId": "A"
-        }
-      ],
-      "title": "Kudos Accounting Audit Log",
-      "type": "logs"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 36
-      },
-      "id": 130,
-      "title": "Database Context",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "mimir-infra"
-      },
-      "description": "Postgres deadlocks per 5 minutes on the horde DB. Deadlocks contend directly with the applier and reservation writes; a nonzero rate here often explains applier lag or rejection spikes above.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "short",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 1
-              },
-              {
-                "color": "red",
-                "value": 5
-              }
-            ]
-          },
-          "custom": {
-            "drawStyle": "bars",
-            "lineWidth": 1,
-            "fillOpacity": 50,
-            "gradientMode": "none",
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 0,
-        "y": 37
-      },
-      "id": 13,
-      "options": {
-        "legend": {
-          "calcs": [
-            "sum",
-            "max"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "expr": "increase(pg_stat_database_deadlocks{datname=~\"horde.*\"}[5m])",
-          "legendFormat": "{{datname}}",
-          "refId": "A"
-        }
-      ],
-      "title": "PG Deadlocks (5m)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "mimir-infra"
-      },
-      "description": "Age of the oldest open transaction on the horde DB. A long-running transaction blocks vacuum and can pin the ledger backlog; when applier lag climbs, check whether a transaction here is stuck open.",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "s",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 60
-              },
-              {
-                "color": "red",
-                "value": 600
-              }
-            ]
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "line"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 12,
-        "x": 12,
-        "y": 37
-      },
-      "id": 14,
-      "options": {
-        "legend": {
-          "calcs": [
-            "lastNotNull",
-            "max"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "expr": "max by (instance) (pg_stat_activity_max_tx_duration{datname=~\"horde.*\",state=~\"active|idle in transaction.*\"})",
-          "legendFormat": "{{instance}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Oldest Open Transaction",
-      "type": "timeseries"
+     "expr": "rate(horde_kudos_applier_lag_sum[2m]) / rate(horde_kudos_applier_lag_count[2m])",
+     "legendFormat": "applier lag",
+     "refId": "A"
     }
-  ],
-  "refresh": "30s",
-  "schemaVersion": 39,
-  "tags": [
-    "horde",
-    "ai-horde",
-    "kudos",
-    "accounting"
-  ],
-  "templating": {
-    "list": []
+   ],
+   "title": "Applier Lag",
+   "type": "timeseries"
   },
-  "time": {
-    "from": "now-3h",
-    "to": "now"
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Rows folded per second split by row type (currency vs stat). A collapse in currency-fold throughput while pending rows climb points to a stuck or throttled applier; balanced steady rates are healthy.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "short",
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 20,
+      "gradientMode": "opacity",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 12,
+    "y": 6
+   },
+   "id": 5,
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "mean"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "sum by (horde_kudos_row_type) (rate(horde_kudos_applier_folded[$__rate_interval]))",
+     "legendFormat": "{{horde_kudos_row_type}}",
+     "refId": "A"
+    }
+   ],
+   "title": "Fold Throughput by Row Type",
+   "type": "timeseries"
   },
-  "timepicker": {},
-  "timezone": "browser",
-  "title": "Horde Kudos Accounting",
-  "uid": "horde-kudos-accounting",
-  "version": 2
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 13
+   },
+   "id": 110,
+   "title": "Admission & Holds",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Open kudos reservations holding balance for in-flight requests (per-tick histogram, avg over 2m). A rising floor that never drains suggests holds are not being released; cross-check the oldest-reservation age.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "short",
+     "noValue": "No data",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 8,
+    "x": 0,
+    "y": 14
+   },
+   "id": 6,
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "orientation": "auto",
+    "textMode": "auto",
+    "colorMode": "value",
+    "graphMode": "area"
+   },
+   "targets": [
+    {
+     "expr": "rate(horde_kudos_active_reservations_sum[2m]) / rate(horde_kudos_active_reservations_count[2m])",
+     "legendFormat": "active reservations",
+     "refId": "A"
+    }
+   ],
+   "title": "Active Reservations",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Age of the oldest open reservation (per-tick histogram, avg over 2m). Amber over 1800s; red over 3600s matches HordeKudosReservationStuck. Holds older than any legitimate request lifetime indicate a reservation leak: find the stuck request and confirm release-on-completion is firing.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "s",
+     "noValue": "No data",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1800
+       },
+       {
+        "color": "red",
+        "value": 3600
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 8,
+    "x": 8,
+    "y": 14
+   },
+   "id": 7,
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "orientation": "auto",
+    "textMode": "auto",
+    "colorMode": "background",
+    "graphMode": "area"
+   },
+   "targets": [
+    {
+     "expr": "rate(horde_kudos_oldest_reservation_sum[2m]) / rate(horde_kudos_oldest_reservation_count[2m])",
+     "legendFormat": "oldest reservation",
+     "refId": "A"
+    }
+   ],
+   "title": "Oldest Reservation Age",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Rate of reservations refused because the user lacked sufficient uncommitted balance. Sustained rejections mean admission is running at the balance floor: expected under load, but a persistent nonzero baseline warrants checking for a hold leak.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "short",
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 20,
+      "gradientMode": "opacity",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 8,
+    "x": 16,
+    "y": 14
+   },
+   "id": 8,
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "single",
+     "sort": "none"
+    }
+   },
+   "targets": [
+    {
+     "expr": "sum(rate(horde_kudos_reservations_rejected[$__rate_interval]))",
+     "legendFormat": "rejections/s",
+     "refId": "A"
+    }
+   ],
+   "title": "Reservation Rejection Rate",
+   "type": "timeseries"
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 20
+   },
+   "id": 120,
+   "title": "Economy Events",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Floor-adjustment postings emitted per second. Any sustained nonzero means admission over-committed balance and the floor is absorbing the shortfall (an admission leak): trace the offending path rather than treating flooring as normal. The kudos volume those postings create is charted separately because it runs orders of magnitude larger than the event count.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "ops",
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 20,
+      "gradientMode": "opacity",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      },
+      "thresholdsStyle": {
+       "mode": "line"
+      }
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 0.0001
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 6,
+    "x": 0,
+    "y": 21
+   },
+   "id": 9,
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "single",
+     "sort": "none"
+    }
+   },
+   "targets": [
+    {
+     "expr": "sum(rate(horde_kudos_floor_adjustments[$__rate_interval]))",
+     "legendFormat": "adjustments/s",
+     "refId": "A"
+    }
+   ],
+   "title": "Floor Adjustment Rate",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Currency minted by the compatibility balance floor, split by account class (horde_account_class on mimir-telemetry, via horde:kudos_floor_created:rate5m). Anon rides its floor continuously by design and forms a large structural baseline; the HordeKudosFloorCreationHigh alert watches only non-anon classes above 150/s. Series exported before the attribute existed appear with an empty class label.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "short",
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 20,
+      "gradientMode": "opacity",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      },
+      "thresholdsStyle": {
+       "mode": "line"
+      }
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 60
+       },
+       {
+        "color": "red",
+        "value": 150
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 6,
+    "x": 6,
+    "y": 21
+   },
+   "id": 16,
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "single",
+     "sort": "none"
+    }
+   },
+   "targets": [
+    {
+     "expr": "horde:kudos_floor_created:rate5m",
+     "legendFormat": "{{horde_account_class}}",
+     "refId": "A"
+    }
+   ],
+   "title": "Kudos Created by Floor (by account class)",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Total kudos minted by flooring over the dashboard time range. This is money created from nothing to cover an accounting shortfall; any nonzero total should be reconciled against the admission path that caused it.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "short",
+     "noValue": "0",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 4,
+    "x": 12,
+    "y": 21
+   },
+   "id": 10,
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "orientation": "auto",
+    "textMode": "auto",
+    "colorMode": "background",
+    "graphMode": "area"
+   },
+   "targets": [
+    {
+     "expr": "sum(increase(horde_kudos_floor_adjustments_kudos[$__range]))",
+     "legendFormat": "kudos minted",
+     "refId": "A"
+    }
+   ],
+   "title": "Kudos Minted by Flooring (range)",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Per-second rate of horde_kudos_transfers_idempotent_replays. The counter is created on the first transfer_kudos call that short-circuits as a replay. Tenant ai-horde-telemetry (datasource uid mimir-telemetry).",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "short",
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 20,
+      "gradientMode": "opacity",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 8,
+    "x": 16,
+    "y": 21
+   },
+   "id": 11,
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "single",
+     "sort": "none"
+    }
+   },
+   "targets": [
+    {
+     "expr": "sum(rate(horde_kudos_transfers_idempotent_replays[$__rate_interval]))",
+     "legendFormat": "replays/s",
+     "refId": "A"
+    }
+   ],
+   "title": "Transfer Idempotent Replay Rate",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-app"
+   },
+   "description": "Accounting audit trail: ledger mode changes, floor adjustments, trust promotions and reconciliation lines. Use this to attribute an economy-event spike above to a specific user, request, or config change.",
+   "gridPos": {
+    "h": 8,
+    "w": 24,
+    "x": 0,
+    "y": 28
+   },
+   "id": 12,
+   "options": {
+    "showTime": true,
+    "showLabels": false,
+    "showCommonLabels": false,
+    "wrapLogMessage": true,
+    "prettifyLogMessage": false,
+    "enableLogDetails": true,
+    "dedupStrategy": "none",
+    "sortOrder": "Descending"
+   },
+   "targets": [
+    {
+     "expr": "{app=\"ai-horde\"} |~ \"Kudos ledger mode changed|Kudos floor adjustment|promoted user .* to trusted|reconcil\"",
+     "refId": "A"
+    }
+   ],
+   "title": "Kudos Accounting Audit Log",
+   "type": "logs"
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 36
+   },
+   "id": 130,
+   "title": "Database Context",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-infra"
+   },
+   "description": "pg_stat_database_deadlocks for the horde database. The AI Horde schema lives in the postgres database on the cluster the postgres_exporter scrapes; there is no database whose name begins with horde, so a datname filter must select datname=postgres. Tenant infrastructure (datasource uid mimir-infra).",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "short",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1
+       },
+       {
+        "color": "red",
+        "value": 5
+       }
+      ]
+     },
+     "custom": {
+      "drawStyle": "bars",
+      "lineWidth": 1,
+      "fillOpacity": 50,
+      "gradientMode": "none",
+      "showPoints": "never",
+      "spanNulls": false,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 0,
+    "y": 37
+   },
+   "id": 13,
+   "options": {
+    "legend": {
+     "calcs": [
+      "sum",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "increase(pg_stat_database_deadlocks{datname=\"postgres\"}[5m])",
+     "legendFormat": "{{datname}}",
+     "refId": "A"
+    }
+   ],
+   "title": "PG Deadlocks (5m)",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-infra"
+   },
+   "description": "pg_stat_activity_max_tx_duration for the horde database. The AI Horde schema lives in the postgres database on the cluster the postgres_exporter scrapes; there is no database whose name begins with horde, so a datname filter must select datname=postgres. Tenant infrastructure (datasource uid mimir-infra).",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "s",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 60
+       },
+       {
+        "color": "red",
+        "value": 600
+       }
+      ]
+     },
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 10,
+      "gradientMode": "none",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      },
+      "thresholdsStyle": {
+       "mode": "line"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 12,
+    "y": 37
+   },
+   "id": 14,
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "single",
+     "sort": "none"
+    }
+   },
+   "targets": [
+    {
+     "expr": "max by (instance) (pg_stat_activity_max_tx_duration{datname=\"postgres\",state=~\"active|idle in transaction.*\"})",
+     "legendFormat": "{{instance}}",
+     "refId": "A"
+    }
+   ],
+   "title": "Oldest Open Transaction",
+   "type": "timeseries"
+  }
+ ],
+ "refresh": "30s",
+ "schemaVersion": 39,
+ "tags": [
+  "horde",
+  "ai-horde",
+  "kudos",
+  "accounting"
+ ],
+ "templating": {
+  "list": []
+ },
+ "time": {
+  "from": "now-3h",
+  "to": "now"
+ },
+ "timepicker": {},
+ "timezone": "browser",
+ "title": "Horde Kudos Accounting",
+ "uid": "horde-kudos-accounting",
+ "version": 2
 }

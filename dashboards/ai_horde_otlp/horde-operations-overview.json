@@ -1,982 +1,2403 @@
 {
-  "annotations": {
-    "list": [
-      {
-        "builtIn": 1,
-        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
-        "enable": true,
-        "hide": true,
-        "iconColor": "rgba(0, 211, 255, 1)",
-        "name": "Annotations & Alerts",
-        "type": "dashboard"
-      }
-    ]
+ "annotations": {
+  "list": [
+   {
+    "builtIn": 1,
+    "datasource": {
+     "type": "grafana",
+     "uid": "-- Grafana --"
+    },
+    "enable": true,
+    "hide": true,
+    "iconColor": "rgba(0, 211, 255, 1)",
+    "name": "Annotations & Alerts",
+    "type": "dashboard"
+   }
+  ]
+ },
+ "description": "AI Horde incident surface. Read top to bottom: firing alerts, then the health tiles that answer whether something is wrong right now and where, then the phase breakdowns that answer why, then outcome, database, host and log context. Threshold colours on the health tiles are set to the deployed alert thresholds, so a red tile and a firing alert agree. Datasources: app OTLP metrics and recording rules on mimir-telemetry (ai-horde-telemetry tenant), horde exporter metrics on mimir-app (ai-horde-app tenant), node and postgres exporters on mimir-infra (infrastructure tenant), application logs on loki-app (ai-horde-app tenant). App telemetry is exported by a subset of hosts, so these panels are deliberately aggregated rather than split per instance. Org 1 only (no public variant).",
+ "editable": true,
+ "fiscalYearStartMonth": 0,
+ "graphTooltip": 1,
+ "id": null,
+ "links": [
+  {
+   "asDropdown": true,
+   "icon": "external link",
+   "includeVars": true,
+   "keepTime": true,
+   "tags": [
+    "horde"
+   ],
+   "targetBlank": false,
+   "title": "Horde Dashboards",
+   "type": "dashboards"
+  }
+ ],
+ "panels": [
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 0
+   },
+   "id": 100,
+   "title": "Active Alerts",
+   "type": "row"
   },
-  "description": "AI Horde incident surface. Read top to bottom: firing alerts, then the health tiles that answer whether something is wrong right now and where, then the phase breakdowns that answer why, then outcome, database, host and log context. Threshold colours on the health tiles are set to the deployed alert thresholds, so a red tile and a firing alert agree. Datasources: app OTLP metrics and recording rules on mimir-telemetry (ai-horde-telemetry tenant), horde exporter metrics on mimir-app (ai-horde-app tenant), node and postgres exporters on mimir-infra (infrastructure tenant), application logs on loki-app (ai-horde-app tenant). App telemetry is exported by a subset of hosts, so these panels are deliberately aggregated rather than split per instance. Org 1 only (no public variant).",
-  "editable": true,
-  "fiscalYearStartMonth": 0,
-  "graphTooltip": 1,
-  "id": null,
-  "links": [
-    {
-      "asDropdown": true,
-      "icon": "external link",
-      "includeVars": true,
-      "keepTime": true,
-      "tags": ["horde"],
-      "targetBlank": false,
-      "title": "Horde Dashboards",
-      "type": "dashboards"
-    }
-  ],
-  "panels": [
-    {
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
-      "id": 100,
-      "title": "Active Alerts",
-      "type": "row"
+  {
+   "datasource": {
+    "type": "alertmanager",
+    "uid": "alertmanager"
+   },
+   "description": "All firing/pending alerts at warning or critical severity. Single-pane source of truth for current incidents.",
+   "gridPos": {
+    "h": 8,
+    "w": 24,
+    "x": 0,
+    "y": 1
+   },
+   "id": 1,
+   "options": {
+    "alertInstanceLabelFilter": "{severity=~\"critical|warning\"}",
+    "alertName": "",
+    "dashboardAlerts": false,
+    "groupBy": [
+     "alertname"
+    ],
+    "groupMode": "custom",
+    "maxItems": 50,
+    "showInactiveAlerts": false,
+    "sortOrder": 3,
+    "stateFilter": {
+     "firing": true,
+     "pending": true,
+     "noData": false,
+     "normal": false,
+     "error": true
     },
-    {
-      "datasource": { "type": "alertmanager", "uid": "alertmanager" },
-      "description": "All firing/pending alerts at warning or critical severity. Single-pane source of truth for current incidents.",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 1 },
-      "id": 1,
-      "options": {
-        "alertInstanceLabelFilter": "{severity=~\"critical|warning\"}",
-        "alertName": "",
-        "dashboardAlerts": false,
-        "groupBy": ["alertname"],
-        "groupMode": "custom",
-        "maxItems": 50,
-        "showInactiveAlerts": false,
-        "sortOrder": 3,
-        "stateFilter": {
-          "firing": true,
-          "pending": true,
-          "noData": false,
-          "normal": false,
-          "error": true
+    "viewMode": "list"
+   },
+   "title": "Firing & Pending Alerts",
+   "type": "alertlist"
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 9
+   },
+   "id": 110,
+   "title": "Health at a Glance",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-app"
+   },
+   "description": "Liveness of the public API as seen by the horde exporter. Sourced from the ai-horde-app tenant (mimir-app), not the OTLP telemetry tenant.",
+   "fieldConfig": {
+    "defaults": {
+     "mappings": [
+      {
+       "options": {
+        "0": {
+         "color": "red",
+         "text": "DOWN"
         },
-        "viewMode": "list"
-      },
-      "title": "Firing & Pending Alerts",
-      "type": "alertlist"
-    },
-    {
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 },
-      "id": 110,
-      "title": "Health at a Glance",
-      "type": "row"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "mimir-app" },
-      "description": "Liveness of the public API as seen by the horde exporter. Sourced from the ai-horde-app tenant (mimir-app), not the OTLP telemetry tenant.",
-      "fieldConfig": {
-        "defaults": {
-          "mappings": [
-            { "options": { "0": { "color": "red", "text": "DOWN" }, "1": { "color": "green", "text": "UP" } }, "type": "value" }
-          ],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] },
-          "color": { "mode": "thresholds" },
-          "noValue": "No data"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 4, "w": 3, "x": 0, "y": 10 },
-      "id": 111,
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "none" },
-      "targets": [{ "expr": "horde_api_up", "legendFormat": "", "refId": "A", "instant": true }],
-      "title": "API Up",
-      "type": "stat"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
-      "description": "Worst /generate p95 across gentypes, from the horde:generate_duration:p95_seconds recording rule. Red at 2s matches HordeGenerateLatencyHigh, so this tile and the alert agree.",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "unit": "s",
-          "noValue": "No data",
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 1 }, { "color": "red", "value": 2 }] }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 4, "w": 3, "x": 3, "y": 10 },
-      "id": 170,
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "area" },
-      "targets": [{ "expr": "max(horde:generate_duration:p95_seconds)", "legendFormat": "generate p95", "refId": "A" }],
-      "title": "/generate p95",
-      "type": "stat"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
-      "description": "Worker pop p95, from the horde:pop_duration:p95_seconds recording rule. Red at 1s matches HordePopLatencyHigh.",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "unit": "s",
-          "noValue": "No data",
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 0.5 }, { "color": "red", "value": 1 }] }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 4, "w": 3, "x": 6, "y": 10 },
-      "id": 171,
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "area" },
-      "targets": [{ "expr": "max(horde:pop_duration:p95_seconds)", "legendFormat": "pop p95", "refId": "A" }],
-      "title": "/generate/pop p95",
-      "type": "stat"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
-      "description": "Worst worker submit p95 across gentypes, from the horde:submit_duration:p95_seconds recording rule. Red at 2s matches HordeSubmitLatencyHigh.",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "unit": "s",
-          "noValue": "No data",
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 1 }, { "color": "red", "value": 2 }] }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 4, "w": 3, "x": 9, "y": 10 },
-      "id": 172,
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "area" },
-      "targets": [{ "expr": "max(horde:submit_duration:p95_seconds)", "legendFormat": "submit p95", "refId": "A" }],
-      "title": "/generate/submit p95",
-      "type": "stat"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
-      "description": "Share of submissions returning faulted, derived from the horde:submit_outcomes:rate5m recording rule. Red at 5% matches HordeSubmitFaultRate, which evaluates the same ratio over a 10m window.",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "unit": "percentunit",
-          "noValue": "No data",
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 0.02 }, { "color": "red", "value": 0.05 }] }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 4, "w": 3, "x": 12, "y": 10 },
-      "id": 173,
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "area" },
-      "targets": [{ "expr": "sum(horde:submit_outcomes:rate5m{horde_outcome=\"faulted\"}) / clamp_min(sum(horde:submit_outcomes:rate5m), 1e-9)", "legendFormat": "faulted share", "refId": "A" }],
-      "title": "Submit Faulted Share",
-      "type": "stat"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
-      "description": "Combined failure rate of PrimaryTimedFunction background jobs, from horde:job_failures:rate5m. Any nonzero value is red because HordeBackgroundJobFailures fires above zero. Break the total down in the background-jobs panel below.",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "unit": "ops",
-          "decimals": 3,
-          "noValue": "No data",
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 0.0001 }] }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 4, "w": 3, "x": 15, "y": 10 },
-      "id": 174,
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "area" },
-      "targets": [{ "expr": "sum(horde:job_failures:rate5m)", "legendFormat": "job failures", "refId": "A" }],
-      "title": "Job Failure Rate",
-      "type": "stat"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
-      "description": "Kudos applier fold lag, from horde:kudos_applier_lag:avg_seconds. Red at 60s matches HordeKudosApplierLagHigh. Emitted only by the quorum node, so this reads \"No data\" rather than zero when that node is not exporting telemetry.",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "unit": "s",
-          "noValue": "No data",
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 9 }, { "color": "red", "value": 60 }] }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 4, "w": 3, "x": 18, "y": 10 },
-      "id": 175,
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "area" },
-      "targets": [{ "expr": "horde:kudos_applier_lag:avg_seconds", "legendFormat": "applier lag", "refId": "A" }],
-      "title": "Kudos Applier Lag",
-      "type": "stat"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
-      "description": "Unapplied kudos ledger rows, from horde:kudos_pending_rows:avg. Red at 10k matches HordeKudosBacklogHigh. Emitted only by the quorum node, so this reads \"No data\" rather than zero when that node is not exporting telemetry.",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "unit": "short",
-          "noValue": "No data",
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 2000 }, { "color": "red", "value": 10000 }] }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 4, "w": 3, "x": 21, "y": 10 },
-      "id": 176,
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "area" },
-      "targets": [{ "expr": "horde:kudos_pending_rows:avg", "legendFormat": "pending rows", "refId": "A" }],
-      "title": "Kudos Fold Backlog",
-      "type": "stat"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
-      "description": "p95 latency of POST /generate by gentype, from the horde:generate_duration:p95_seconds recording rule. Threshold matches HordeGenerateLatencyHigh (>2s).",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "palette-classic" },
-          "unit": "s",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": { "group": "A", "mode": "none" },
-            "thresholdsStyle": { "mode": "line" }
-          },
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 2.0 }] }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 7, "w": 7, "x": 0, "y": 14 },
-      "id": 113,
-      "options": {
-        "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "desc" }
-      },
-      "targets": [{ "expr": "horde:generate_duration:p95_seconds", "legendFormat": "{{horde_gentype}}", "refId": "A" }],
-      "title": "/generate p95 Latency by gentype",
-      "type": "timeseries"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
-      "description": "p95 latency of /generate/pop, from the horde:pop_duration:p95_seconds recording rule. Threshold matches HordePopLatencyHigh (>1s).",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "palette-classic" },
-          "unit": "s",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": { "group": "A", "mode": "none" },
-            "thresholdsStyle": { "mode": "line" }
-          },
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1.0 }] }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 7, "w": 6, "x": 7, "y": 14 },
-      "id": 114,
-      "options": {
-        "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "single", "sort": "none" }
-      },
-      "targets": [{ "expr": "horde:pop_duration:p95_seconds", "legendFormat": "p95", "refId": "A" }],
-      "title": "/generate/pop p95 Latency",
-      "type": "timeseries"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
-      "description": "p95 latency of worker /generate/submit by gentype, from the horde:submit_duration:p95_seconds recording rule. Threshold matches HordeSubmitLatencyHigh (>2s). A regression here delays worker turnaround and inflates apparent queue depth.",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "palette-classic" },
-          "unit": "s",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": { "group": "A", "mode": "none" },
-            "thresholdsStyle": { "mode": "line" }
-          },
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 2.0 }] }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 7, "w": 7, "x": 13, "y": 14 },
-      "id": 177,
-      "options": {
-        "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "desc" }
-      },
-      "targets": [{ "expr": "horde:submit_duration:p95_seconds", "legendFormat": "{{horde_gentype}}", "refId": "A" }],
-      "title": "/generate/submit p95 Latency by gentype",
-      "type": "timeseries"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "mimir-app" },
-      "description": "Estimated time to drain the image queue at current throughput. Sourced from the horde exporter on the ai-horde-app tenant (mimir-app).",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 300 }, { "color": "red", "value": 1800 }] },
-          "unit": "s",
-          "noValue": "No data"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 7, "w": 4, "x": 20, "y": 14 },
-      "id": 112,
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "area" },
-      "targets": [{ "expr": "horde_performance_estimated_queue_drain_seconds{type=\"image\"}", "legendFormat": "", "refId": "A" }],
-      "title": "Image Queue Drain",
-      "type": "stat"
-    },
-    {
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 21 },
-      "id": 180,
-      "title": "Which Phase Is Slow",
-      "type": "row"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
-      "description": "p95 of each phase inside POST /generate, summed across gentypes, from the horde_generate_* histograms in the Telemetry tenant. Read against the end-to-end p95 above: the phase whose line moves with the total is the one to investigate. validate covers request admission, initiate_wp builds the waiting prompt, activate_wp runs kudos calculation and dispatch. source_upload is the object-storage upload of img2img source images inside activate_wp, so an excursion that moves source_upload and activate_wp together is img2img-driven. The source_upload series appears only after the instrumented release deploys.",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "palette-classic" },
-          "unit": "s",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": { "group": "A", "mode": "none" },
-            "thresholdsStyle": { "mode": "off" }
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 22 },
-      "id": 181,
-      "options": {
-        "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "desc" }
-      },
-      "targets": [
-        { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_validate_duration_bucket[5m])))", "legendFormat": "validate", "refId": "A" },
-        { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_validate_find_user_duration_bucket[5m])))", "legendFormat": "validate.find_user", "refId": "B" },
-        { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_validate_wp_count_duration_bucket[5m])))", "legendFormat": "validate.wp_count", "refId": "C" },
-        { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_validate_prompt_filter_duration_bucket[5m])))", "legendFormat": "validate.prompt_filter", "refId": "D" },
-        { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_initiate_wp_duration_bucket[5m])))", "legendFormat": "initiate_wp", "refId": "E" },
-        { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_activate_wp_duration_bucket[5m])))", "legendFormat": "activate_wp", "refId": "F" },
-        { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_source_upload_duration_bucket[5m])))", "legendFormat": "activate_wp.source_upload", "refId": "G" }
-      ],
-      "title": "/generate Phase p95",
-      "type": "timeseries"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
-      "description": "p95 of each phase inside /generate/pop, summed across gentypes. wp_query is the candidate-selection database query and is the usual cause of pop regressions; eval_loop is the in-process candidate scan.",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "palette-classic" },
-          "unit": "s",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": { "group": "A", "mode": "none" },
-            "thresholdsStyle": { "mode": "off" }
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 22 },
-      "id": 182,
-      "options": {
-        "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "desc" }
-      },
-      "targets": [
-        { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_pop_pre_eval_duration_bucket[5m])))", "legendFormat": "pre_eval", "refId": "A" },
-        { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_pop_validate_duration_bucket[5m])))", "legendFormat": "validate", "refId": "B" },
-        { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_pop_check_in_duration_bucket[5m])))", "legendFormat": "check_in", "refId": "C" },
-        { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_pop_wp_query_duration_bucket[5m])))", "legendFormat": "wp_query", "refId": "D" },
-        { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_pop_eval_loop_duration_bucket[5m])))", "legendFormat": "eval_loop", "refId": "E" },
-        { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_pop_start_generation_duration_bucket[5m])))", "legendFormat": "start_generation", "refId": "F" }
-      ],
-      "title": "/generate/pop Phase p95",
-      "type": "timeseries"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
-      "description": "p95 of the top-level phases inside /generate/submit, summed across gentypes. set_generation dominates a healthy submit; a jump in claim or commit points at row-lock contention, and server_upload at object storage. The full sub-phase set is on the Horde Performance dashboard.",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "palette-classic" },
-          "unit": "s",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": { "group": "A", "mode": "none" },
-            "thresholdsStyle": { "mode": "off" }
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 22 },
-      "id": 183,
-      "options": {
-        "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "desc" }
-      },
-      "targets": [
-        { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_set_generation_duration_bucket[5m])))", "legendFormat": "set_generation", "refId": "A" },
-        { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_claim_duration_bucket[5m])))", "legendFormat": "claim", "refId": "B" },
-        { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_record_duration_bucket[5m])))", "legendFormat": "record", "refId": "C" },
-        { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_commit_duration_bucket[5m])))", "legendFormat": "commit", "refId": "D" },
-        { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_server_upload_duration_bucket[5m])))", "legendFormat": "server_upload", "refId": "E" },
-        { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_wp_completion_duration_bucket[5m])))", "legendFormat": "wp_completion", "refId": "F" }
-      ],
-      "title": "/generate/submit Phase p95",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 30 },
-      "id": 120,
-      "title": "Submit Outcomes, Worker Drop & Background Jobs",
-      "type": "row"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
-      "description": "Submit outcome rate by category. Sustained censored/faulted indicates abuse, worker quality, or model failures.",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "palette-classic" },
-          "unit": "short",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "lineWidth": 1,
-            "fillOpacity": 25,
-            "gradientMode": "opacity",
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": { "group": "A", "mode": "normal" },
-            "thresholdsStyle": { "mode": "off" }
-          }
-        },
-        "overrides": [
-          { "matcher": { "id": "byName", "options": "accepted" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }] },
-          { "matcher": { "id": "byName", "options": "censored" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }] },
-          { "matcher": { "id": "byName", "options": "faulted" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] },
-          { "matcher": { "id": "byName", "options": "error" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "dark-red" } }] }
-        ]
-      },
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 31 },
-      "id": 121,
-      "options": {
-        "legend": { "calcs": ["lastNotNull", "mean"], "displayMode": "table", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "desc" }
-      },
-      "targets": [{ "expr": "horde:submit_outcomes:rate5m", "legendFormat": "{{horde_outcome}}", "refId": "A" }],
-      "title": "Submit Outcome Rate (stacked)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "mimir-app" },
-      "description": "Worker count vs 30 minutes ago. Below 0.5 matches HordeImageWorkerCountDrop alert.",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "palette-classic" },
-          "unit": "percentunit",
-          "min": 0,
-          "max": 1.5,
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": { "group": "A", "mode": "none" },
-            "thresholdsStyle": { "mode": "line" }
-          },
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 0.5 }] }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 31 },
-      "id": 122,
-      "options": {
-        "legend": { "calcs": ["lastNotNull"], "displayMode": "table", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "desc" }
-      },
-      "targets": [
-        { "expr": "horde_performance_worker_count{type=\"image\"} / clamp_min(horde_performance_worker_count{type=\"image\"} offset 30m, 1)", "legendFormat": "Image (vs 30m ago)", "refId": "A" },
-        { "expr": "horde_performance_worker_count{type=\"text\"} / clamp_min(horde_performance_worker_count{type=\"text\"} offset 30m, 1)", "legendFormat": "Text (vs 30m ago)", "refId": "B" }
-      ],
-      "title": "Worker Count vs 30m Ago",
-      "type": "timeseries"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
-      "description": "Failure rate of each PrimaryTimedFunction background job, from the horde:job_failures:rate5m recording rule. HordeBackgroundJobFailures fires above zero, so any visible series names the failing job directly.",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "palette-classic" },
-          "unit": "ops",
-          "custom": {
-            "drawStyle": "bars",
-            "lineWidth": 1,
-            "fillOpacity": 60,
-            "gradientMode": "none",
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": { "group": "A", "mode": "normal" },
-            "thresholdsStyle": { "mode": "off" }
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 31 },
-      "id": 178,
-      "options": {
-        "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "desc" }
-      },
-      "targets": [{ "expr": "horde:job_failures:rate5m", "legendFormat": "{{horde_job_name}}", "refId": "A" }],
-      "title": "Background Job Failure Rate by Job",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 39 },
-      "id": 160,
-      "title": "Pop Diagnostics & Suspicion Logs",
-      "type": "row"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
-      "description": "Job-pop skip rate by reason. Domain-wide (not filtered by worker).",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "palette-classic" },
-          "unit": "short",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "lineWidth": 1,
-            "fillOpacity": 25,
-            "gradientMode": "opacity",
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": { "group": "A", "mode": "normal" },
-            "thresholdsStyle": { "mode": "off" }
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 8, "w": 16, "x": 0, "y": 40 },
-      "id": 161,
-      "options": {
-        "legend": { "calcs": ["lastNotNull", "mean"], "displayMode": "table", "placement": "right", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "desc" }
-      },
-      "targets": [{ "expr": "horde:pop_skipped:rate5m", "legendFormat": "{{horde_skip_reason}}", "refId": "A" }],
-      "title": "Skips per Second by Reason",
-      "type": "timeseries"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
-      "description": "Top 10 skip reasons over the last hour.",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "unit": "short",
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 40 },
-      "id": 162,
-      "options": {
-        "showHeader": true,
-        "sortBy": [{ "desc": true, "displayName": "Count" }],
-        "cellHeight": "sm",
-        "footer": { "show": false }
-      },
-      "targets": [{ "expr": "topk(10, sum by (horde_skip_reason) (increase(horde_pop_skipped[1h])))", "legendFormat": "", "refId": "A", "instant": true, "format": "table" }],
-      "transformations": [
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": { "Time": true, "__name__": true, "instance": true, "job": true },
-            "renameByName": { "horde_skip_reason": "Skip Reason", "Value": "Count" }
-          }
+        "1": {
+         "color": "green",
+         "text": "UP"
         }
-      ],
-      "title": "Top Skip Reasons (1h)",
-      "type": "table"
+       },
+       "type": "value"
+      }
+     ],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 1
+       }
+      ]
+     },
+     "color": {
+      "mode": "thresholds"
+     },
+     "noValue": "No data"
     },
-    {
-      "datasource": { "type": "loki", "uid": "loki-app" },
-      "description": "Recent worker auto-pause / suspicion log lines from the AI-Horde app.",
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 48 },
-      "id": 163,
-      "options": {
-        "showTime": true,
-        "showLabels": false,
-        "showCommonLabels": false,
-        "wrapLogMessage": true,
-        "prettifyLogMessage": false,
-        "enableLogDetails": true,
-        "dedupStrategy": "none",
-        "sortOrder": "Descending"
-      },
-      "targets": [{ "expr": "{app=\"ai-horde\"} |= \"suspicion increased\"", "refId": "A" }],
-      "title": "Recent Worker Suspicion Lines",
-      "type": "logs"
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 3,
+    "x": 0,
+    "y": 10
+   },
+   "id": 111,
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
     },
+    "orientation": "auto",
+    "textMode": "auto",
+    "colorMode": "background",
+    "graphMode": "none"
+   },
+   "targets": [
     {
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 58 },
-      "id": 130,
-      "title": "Postgres Saturation",
-      "type": "row"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "mimir-infra" },
-      "description": "Connection saturation as % of max_connections. Requires postgres_exporter (see horde_monitoring_install_postgres_alerts).",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "unit": "percent",
-          "min": 0,
-          "max": 100,
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 60 }, { "color": "red", "value": 90 }] },
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "fillOpacity": 25,
-            "gradientMode": "scheme",
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": { "group": "A", "mode": "none" },
-            "thresholdsStyle": { "mode": "line+area" }
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 59 },
-      "id": 131,
-      "options": {
-        "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "desc" }
-      },
-      "targets": [{ "expr": "100 * sum by (instance) (pg_stat_activity_count) / clamp_min(sum by (instance) (pg_settings_max_connections), 1)", "legendFormat": "{{instance}}", "refId": "A" }],
-      "title": "PG Connection Saturation %",
-      "type": "timeseries"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "mimir-infra" },
-      "description": "Age of oldest open transaction from built-in postgres_exporter pg_stat_activity_max_tx_duration.",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "unit": "s",
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 60 }, { "color": "red", "value": 600 }] },
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": { "group": "A", "mode": "none" },
-            "thresholdsStyle": { "mode": "line" }
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 59 },
-      "id": 132,
-      "options": {
-        "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "single", "sort": "none" }
-      },
-      "targets": [{ "expr": "max by (instance) (pg_stat_activity_max_tx_duration{datname=~\"horde.*\",state=~\"active|idle in transaction.*\"})", "legendFormat": "{{instance}}", "refId": "A" }],
-      "title": "Oldest Open Transaction",
-      "type": "timeseries"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "mimir-infra" },
-      "description": "Postgres deadlocks per 5 minutes.",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "unit": "short",
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 1 }, { "color": "red", "value": 5 }] },
-          "custom": {
-            "drawStyle": "bars",
-            "lineWidth": 1,
-            "fillOpacity": 50,
-            "gradientMode": "none",
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": { "group": "A", "mode": "none" },
-            "thresholdsStyle": { "mode": "off" }
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 59 },
-      "id": 133,
-      "options": {
-        "legend": { "calcs": ["sum", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "desc" }
-      },
-      "targets": [{ "expr": "increase(pg_stat_database_deadlocks{datname=~\"horde.*\"}[5m])", "legendFormat": "{{datname}}", "refId": "A" }],
-      "title": "PG Deadlocks (5m)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
-      "description": "Rate of SQLAlchemy QueuePool TimeoutError occurrences. Requires AI-Horde with horde.db.pool.timeout counter.",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "unit": "ops",
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 0.01 }, { "color": "red", "value": 0.1 }] },
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "fillOpacity": 25,
-            "gradientMode": "scheme",
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": { "group": "A", "mode": "none" },
-            "thresholdsStyle": { "mode": "line+area" }
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 65 },
-      "id": 134,
-      "options": {
-        "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "single", "sort": "none" }
-      },
-      "targets": [{ "expr": "sum(rate(horde_db_pool_timeout[$__rate_interval]))", "legendFormat": "pool timeouts/s", "refId": "A" }],
-      "title": "DB Pool Timeouts (rate)",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 71 },
-      "id": 140,
-      "title": "Host Top-N",
-      "type": "row"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "mimir-infra" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "palette-classic" },
-          "unit": "percent",
-          "min": 0,
-          "max": 100,
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": { "group": "A", "mode": "none" },
-            "thresholdsStyle": { "mode": "off" }
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 72 },
-      "id": 141,
-      "options": {
-        "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "desc" }
-      },
-      "targets": [{ "expr": "topk(5, 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100))", "legendFormat": "{{instance}}", "refId": "A" }],
-      "title": "CPU % — top 5",
-      "type": "timeseries"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "mimir-infra" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "palette-classic" },
-          "unit": "percent",
-          "min": 0,
-          "max": 100,
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": { "group": "A", "mode": "none" },
-            "thresholdsStyle": { "mode": "off" }
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 72 },
-      "id": 142,
-      "options": {
-        "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "desc" }
-      },
-      "targets": [{ "expr": "topk(5, (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100)", "legendFormat": "{{instance}}", "refId": "A" }],
-      "title": "Memory % — top 5",
-      "type": "timeseries"
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "mimir-infra" },
-      "description": "Disk free %. Threshold line at 15% matches HostDiskUsageHigh.",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "palette-classic" },
-          "unit": "percent",
-          "min": 0,
-          "max": 100,
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": { "group": "A", "mode": "none" },
-            "thresholdsStyle": { "mode": "line" }
-          },
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "orange", "value": 15 }, { "color": "green", "value": 25 }] }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 72 },
-      "id": 143,
-      "options": {
-        "legend": { "calcs": ["lastNotNull", "min"], "displayMode": "table", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "asc" }
-      },
-      "targets": [{ "expr": "bottomk(5, node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay\"} / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay\"} * 100)", "legendFormat": "{{instance}}:{{mountpoint}}", "refId": "A" }],
-      "title": "Disk Free % — most-full 5",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 80 },
-      "id": 150,
-      "title": "Logs (Loki)",
-      "type": "row"
-    },
-    {
-      "datasource": { "type": "loki", "uid": "loki-app" },
-      "description": "Critical/error log line rate from the AI-Horde app. Click any series to deep-link into Loki Explore.",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "palette-classic" },
-          "unit": "short",
-          "custom": {
-            "drawStyle": "bars",
-            "lineWidth": 1,
-            "fillOpacity": 80,
-            "gradientMode": "none",
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": { "group": "A", "mode": "normal" },
-            "thresholdsStyle": { "mode": "off" }
-          }
-        },
-        "overrides": [
-          { "matcher": { "id": "byName", "options": "CRITICAL" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "dark-red" } }] },
-          { "matcher": { "id": "byName", "options": "ERROR" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] }
-        ]
-      },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 81 },
-      "id": 151,
-      "links": [
-        {
-          "title": "Open in Loki Explore",
-          "url": "/explore?left=%7B%22datasource%22%3A%22loki-app%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22%7Bapp%3D%5C%22ai-horde%5C%22%2Clevel%3D~%5C%22%28%3Fi%29error%7Ccrit%28ical%29%3F%5C%22%7D%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22now-1h%22%2C%22to%22%3A%22now%22%7D%7D",
-          "targetBlank": true
-        }
-      ],
-      "options": {
-        "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "desc" }
-      },
-      "targets": [{ "expr": "sum by (level) (count_over_time({app=\"ai-horde\",level=~\"(?i)error|crit(ical)?\"} [5m]))", "legendFormat": "{{level}}", "refId": "A" }],
-      "title": "AI-Horde Critical/Error Log Rate (5m)",
-      "type": "timeseries"
-    },
-    {
-      "datasource": { "type": "loki", "uid": "loki-app" },
-      "description": "Most recent CRITICAL log lines from the AI-Horde app.",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 81 },
-      "id": 152,
-      "options": {
-        "showTime": true,
-        "showLabels": false,
-        "showCommonLabels": false,
-        "wrapLogMessage": true,
-        "prettifyLogMessage": false,
-        "enableLogDetails": true,
-        "dedupStrategy": "none",
-        "sortOrder": "Descending"
-      },
-      "targets": [{ "expr": "{app=\"ai-horde\",level=~\"(?i)crit(ical)?\"}", "refId": "A" }],
-      "title": "Recent CRITICAL Lines",
-      "type": "logs"
+     "expr": "horde_api_up",
+     "legendFormat": "",
+     "refId": "A",
+     "instant": true
     }
-  ],
-  "refresh": "30s",
-  "schemaVersion": 39,
-  "tags": ["horde", "ai-horde", "operations"],
-  "templating": { "list": [] },
-  "time": { "from": "now-1h", "to": "now" },
-  "timepicker": {},
-  "timezone": "browser",
-  "title": "Horde Operations Overview",
-  "uid": "horde-operations",
-  "version": 3
+   ],
+   "title": "API Up",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Worst /generate p95 across gentypes, from the horde:generate_duration:p95_seconds recording rule. Red at 2s matches HordeGenerateLatencyHigh, so this tile and the alert agree.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "s",
+     "noValue": "No data",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1
+       },
+       {
+        "color": "red",
+        "value": 2
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 3,
+    "x": 3,
+    "y": 10
+   },
+   "id": 170,
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "orientation": "auto",
+    "textMode": "auto",
+    "colorMode": "background",
+    "graphMode": "area"
+   },
+   "targets": [
+    {
+     "expr": "max(horde:generate_duration:p95_seconds)",
+     "legendFormat": "generate p95",
+     "refId": "A"
+    }
+   ],
+   "title": "/generate p95",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Worker pop p95, from the horde:pop_duration:p95_seconds recording rule. Red at 1s matches HordePopLatencyHigh.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "s",
+     "noValue": "No data",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 0.5
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 3,
+    "x": 6,
+    "y": 10
+   },
+   "id": 171,
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "orientation": "auto",
+    "textMode": "auto",
+    "colorMode": "background",
+    "graphMode": "area"
+   },
+   "targets": [
+    {
+     "expr": "max(horde:pop_duration:p95_seconds)",
+     "legendFormat": "pop p95",
+     "refId": "A"
+    }
+   ],
+   "title": "/generate/pop p95",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Worst worker submit p95 across gentypes, from the horde:submit_duration:p95_seconds recording rule. Red at 2s matches HordeSubmitLatencyHigh.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "s",
+     "noValue": "No data",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1
+       },
+       {
+        "color": "red",
+        "value": 2
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 3,
+    "x": 9,
+    "y": 10
+   },
+   "id": 172,
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "orientation": "auto",
+    "textMode": "auto",
+    "colorMode": "background",
+    "graphMode": "area"
+   },
+   "targets": [
+    {
+     "expr": "max(horde:submit_duration:p95_seconds)",
+     "legendFormat": "submit p95",
+     "refId": "A"
+    }
+   ],
+   "title": "/generate/submit p95",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Share of submissions returning faulted, derived from the horde:submit_outcomes:rate5m recording rule. Red at 5% matches HordeSubmitFaultRate, which evaluates the same ratio over a 10m window.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "percentunit",
+     "noValue": "No data",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 0.02
+       },
+       {
+        "color": "red",
+        "value": 0.05
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 3,
+    "x": 12,
+    "y": 10
+   },
+   "id": 173,
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "orientation": "auto",
+    "textMode": "auto",
+    "colorMode": "background",
+    "graphMode": "area"
+   },
+   "targets": [
+    {
+     "expr": "sum(horde:submit_outcomes:rate5m{horde_outcome=\"faulted\"}) / clamp_min(sum(horde:submit_outcomes:rate5m), 1e-9)",
+     "legendFormat": "faulted share",
+     "refId": "A"
+    }
+   ],
+   "title": "Submit Faulted Share",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "horde:job_failures:rate5m, recorded from horde_job_failures. The source counter is created on the first PrimaryTimedFunction exception, so both it and the recording rule are absent while every scheduled job is succeeding. Tenant ai-horde-telemetry (datasource uid mimir-telemetry).",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "ops",
+     "decimals": 3,
+     "noValue": "No data",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 0.0001
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 3,
+    "x": 15,
+    "y": 10
+   },
+   "id": 174,
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "orientation": "auto",
+    "textMode": "auto",
+    "colorMode": "background",
+    "graphMode": "area"
+   },
+   "targets": [
+    {
+     "expr": "sum(horde:job_failures:rate5m)",
+     "legendFormat": "job failures",
+     "refId": "A"
+    }
+   ],
+   "title": "Job Failure Rate",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Kudos applier fold lag, from horde:kudos_applier_lag:avg_seconds. Red at 60s matches HordeKudosApplierLagHigh. Emitted only by the quorum node, so this reads \"No data\" rather than zero when that node is not exporting telemetry.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "s",
+     "noValue": "No data",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 9
+       },
+       {
+        "color": "red",
+        "value": 60
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 3,
+    "x": 18,
+    "y": 10
+   },
+   "id": 175,
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "orientation": "auto",
+    "textMode": "auto",
+    "colorMode": "background",
+    "graphMode": "area"
+   },
+   "targets": [
+    {
+     "expr": "horde:kudos_applier_lag:avg_seconds",
+     "legendFormat": "applier lag",
+     "refId": "A"
+    }
+   ],
+   "title": "Kudos Applier Lag",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Unapplied kudos ledger rows, from horde:kudos_pending_rows:avg. Red at 10k matches HordeKudosBacklogHigh. Emitted only by the quorum node, so this reads \"No data\" rather than zero when that node is not exporting telemetry.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "short",
+     "noValue": "No data",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 2000
+       },
+       {
+        "color": "red",
+        "value": 10000
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 3,
+    "x": 21,
+    "y": 10
+   },
+   "id": 176,
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "orientation": "auto",
+    "textMode": "auto",
+    "colorMode": "background",
+    "graphMode": "area"
+   },
+   "targets": [
+    {
+     "expr": "horde:kudos_pending_rows:avg",
+     "legendFormat": "pending rows",
+     "refId": "A"
+    }
+   ],
+   "title": "Kudos Fold Backlog",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "p95 latency of POST /generate by gentype, from the horde:generate_duration:p95_seconds recording rule. Threshold matches HordeGenerateLatencyHigh (>2s).",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "s",
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 10,
+      "gradientMode": "none",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      },
+      "thresholdsStyle": {
+       "mode": "line"
+      }
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 2.0
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 7,
+    "x": 0,
+    "y": 14
+   },
+   "id": 113,
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "horde:generate_duration:p95_seconds",
+     "legendFormat": "{{horde_gentype}}",
+     "refId": "A"
+    }
+   ],
+   "title": "/generate p95 Latency by gentype",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "p95 latency of /generate/pop, from the horde:pop_duration:p95_seconds recording rule. Threshold matches HordePopLatencyHigh (>1s).",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "s",
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 10,
+      "gradientMode": "none",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      },
+      "thresholdsStyle": {
+       "mode": "line"
+      }
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1.0
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 6,
+    "x": 7,
+    "y": 14
+   },
+   "id": 114,
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "single",
+     "sort": "none"
+    }
+   },
+   "targets": [
+    {
+     "expr": "horde:pop_duration:p95_seconds",
+     "legendFormat": "p95",
+     "refId": "A"
+    }
+   ],
+   "title": "/generate/pop p95 Latency",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "p95 latency of worker /generate/submit by gentype, from the horde:submit_duration:p95_seconds recording rule. Threshold matches HordeSubmitLatencyHigh (>2s). A regression here delays worker turnaround and inflates apparent queue depth.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "s",
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 10,
+      "gradientMode": "none",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      },
+      "thresholdsStyle": {
+       "mode": "line"
+      }
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 2.0
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 7,
+    "x": 13,
+    "y": 14
+   },
+   "id": 177,
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "horde:submit_duration:p95_seconds",
+     "legendFormat": "{{horde_gentype}}",
+     "refId": "A"
+    }
+   ],
+   "title": "/generate/submit p95 Latency by gentype",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-app"
+   },
+   "description": "Estimated time to drain the image queue at current throughput. Sourced from the horde exporter on the ai-horde-app tenant (mimir-app).",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 300
+       },
+       {
+        "color": "red",
+        "value": 1800
+       }
+      ]
+     },
+     "unit": "s",
+     "noValue": "No data"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 4,
+    "x": 20,
+    "y": 14
+   },
+   "id": 112,
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "orientation": "auto",
+    "textMode": "auto",
+    "colorMode": "background",
+    "graphMode": "area"
+   },
+   "targets": [
+    {
+     "expr": "horde_performance_estimated_queue_drain_seconds{type=\"image\"}",
+     "legendFormat": "",
+     "refId": "A"
+    }
+   ],
+   "title": "Image Queue Drain",
+   "type": "stat"
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 21
+   },
+   "id": 180,
+   "title": "Which Phase Is Slow",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "p95 of the /generate sub-phase histograms, aggregated across horde_gentype. The Horde Performance dashboard carries the same phases with a gentype selector. Tenant ai-horde-telemetry (datasource uid mimir-telemetry).",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "s",
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 0,
+      "gradientMode": "none",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 0,
+    "y": 22
+   },
+   "id": 181,
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_validate_duration_bucket[5m])))",
+     "legendFormat": "validate",
+     "refId": "A"
+    },
+    {
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_validate_find_user_duration_bucket[5m])))",
+     "legendFormat": "validate.find_user",
+     "refId": "B"
+    },
+    {
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_validate_wp_count_duration_bucket[5m])))",
+     "legendFormat": "validate.wp_count",
+     "refId": "C"
+    },
+    {
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_validate_prompt_filter_duration_bucket[5m])))",
+     "legendFormat": "validate.prompt_filter",
+     "refId": "D"
+    },
+    {
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_initiate_wp_duration_bucket[5m])))",
+     "legendFormat": "initiate_wp",
+     "refId": "E"
+    },
+    {
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_activate_wp_duration_bucket[5m])))",
+     "legendFormat": "activate_wp",
+     "refId": "F"
+    },
+    {
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_source_upload_duration_bucket[5m])))",
+     "legendFormat": "activate_wp.source_upload",
+     "refId": "G"
+    }
+   ],
+   "title": "/generate Phase p95",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "p95 of the /generate/pop sub-phase histograms, aggregated across horde_gentype. Tenant ai-horde-telemetry (datasource uid mimir-telemetry).",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "s",
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 0,
+      "gradientMode": "none",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 8,
+    "y": 22
+   },
+   "id": 182,
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_pop_pre_eval_duration_bucket[5m])))",
+     "legendFormat": "pre_eval",
+     "refId": "A"
+    },
+    {
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_pop_validate_duration_bucket[5m])))",
+     "legendFormat": "validate",
+     "refId": "B"
+    },
+    {
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_pop_check_in_duration_bucket[5m])))",
+     "legendFormat": "check_in",
+     "refId": "C"
+    },
+    {
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_pop_wp_query_duration_bucket[5m])))",
+     "legendFormat": "wp_query",
+     "refId": "D"
+    },
+    {
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_pop_eval_loop_duration_bucket[5m])))",
+     "legendFormat": "eval_loop",
+     "refId": "E"
+    },
+    {
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_pop_start_generation_duration_bucket[5m])))",
+     "legendFormat": "start_generation",
+     "refId": "F"
+    }
+   ],
+   "title": "/generate/pop Phase p95",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "p95 of the /generate/submit sub-phase histograms, aggregated across horde_gentype. horde_submit_server_upload_duration covers the b64 fallback image and shared-metadata uploads and only appears once that path is taken. Tenant ai-horde-telemetry (datasource uid mimir-telemetry).",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "s",
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 0,
+      "gradientMode": "none",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 16,
+    "y": 22
+   },
+   "id": 183,
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_set_generation_duration_bucket[5m])))",
+     "legendFormat": "set_generation",
+     "refId": "A"
+    },
+    {
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_claim_duration_bucket[5m])))",
+     "legendFormat": "claim",
+     "refId": "B"
+    },
+    {
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_record_duration_bucket[5m])))",
+     "legendFormat": "record",
+     "refId": "C"
+    },
+    {
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_commit_duration_bucket[5m])))",
+     "legendFormat": "commit",
+     "refId": "D"
+    },
+    {
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_server_upload_duration_bucket[5m])))",
+     "legendFormat": "server_upload",
+     "refId": "E"
+    },
+    {
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_wp_completion_duration_bucket[5m])))",
+     "legendFormat": "wp_completion",
+     "refId": "F"
+    }
+   ],
+   "title": "/generate/submit Phase p95",
+   "type": "timeseries"
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 30
+   },
+   "id": 120,
+   "title": "Submit Outcomes, Worker Drop & Background Jobs",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Submit outcome rate by category. Sustained censored/faulted indicates abuse, worker quality, or model failures.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "short",
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 1,
+      "fillOpacity": 25,
+      "gradientMode": "opacity",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "normal"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "accepted"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "green"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "censored"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "orange"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "faulted"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "red"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "error"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "dark-red"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 0,
+    "y": 31
+   },
+   "id": 121,
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "mean"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "horde:submit_outcomes:rate5m",
+     "legendFormat": "{{horde_outcome}}",
+     "refId": "A"
+    }
+   ],
+   "title": "Submit Outcome Rate (stacked)",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-app"
+   },
+   "description": "Worker count vs 30 minutes ago. Below 0.5 matches HordeImageWorkerCountDrop alert.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "percentunit",
+     "min": 0,
+     "max": 1.5,
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 10,
+      "gradientMode": "none",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      },
+      "thresholdsStyle": {
+       "mode": "line"
+      }
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "green",
+        "value": 0.5
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 8,
+    "y": 31
+   },
+   "id": 122,
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "horde_performance_worker_count{type=\"image\"} / clamp_min(horde_performance_worker_count{type=\"image\"} offset 30m, 1)",
+     "legendFormat": "Image (vs 30m ago)",
+     "refId": "A"
+    },
+    {
+     "expr": "horde_performance_worker_count{type=\"text\"} / clamp_min(horde_performance_worker_count{type=\"text\"} offset 30m, 1)",
+     "legendFormat": "Text (vs 30m ago)",
+     "refId": "B"
+    }
+   ],
+   "title": "Worker Count vs 30m Ago",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "horde:job_failures:rate5m by horde_job_name. Absent until a PrimaryTimedFunction raises for the first time. Tenant ai-horde-telemetry (datasource uid mimir-telemetry).",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "ops",
+     "custom": {
+      "drawStyle": "bars",
+      "lineWidth": 1,
+      "fillOpacity": 60,
+      "gradientMode": "none",
+      "showPoints": "never",
+      "spanNulls": false,
+      "stacking": {
+       "group": "A",
+       "mode": "normal"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 16,
+    "y": 31
+   },
+   "id": 178,
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "horde:job_failures:rate5m",
+     "legendFormat": "{{horde_job_name}}",
+     "refId": "A"
+    }
+   ],
+   "title": "Background Job Failure Rate by Job",
+   "type": "timeseries"
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 39
+   },
+   "id": 160,
+   "title": "Pop Diagnostics & Suspicion Logs",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Job-pop skip rate by reason. Domain-wide (not filtered by worker).",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "short",
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 1,
+      "fillOpacity": 25,
+      "gradientMode": "opacity",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "normal"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 16,
+    "x": 0,
+    "y": 40
+   },
+   "id": 161,
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "mean"
+     ],
+     "displayMode": "table",
+     "placement": "right",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "horde:pop_skipped:rate5m",
+     "legendFormat": "{{horde_skip_reason}}",
+     "refId": "A"
+    }
+   ],
+   "title": "Skips per Second by Reason",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Top 10 skip reasons over the last hour.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "short",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 16,
+    "y": 40
+   },
+   "id": 162,
+   "options": {
+    "showHeader": true,
+    "sortBy": [
+     {
+      "desc": true,
+      "displayName": "Count"
+     }
+    ],
+    "cellHeight": "sm",
+    "footer": {
+     "show": false
+    }
+   },
+   "targets": [
+    {
+     "expr": "topk(10, sum by (horde_skip_reason) (increase(horde_pop_skipped[1h])))",
+     "legendFormat": "",
+     "refId": "A",
+     "instant": true,
+     "format": "table"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true,
+       "__name__": true,
+       "instance": true,
+       "job": true
+      },
+      "renameByName": {
+       "horde_skip_reason": "Skip Reason",
+       "Value": "Count"
+      }
+     }
+    }
+   ],
+   "title": "Top Skip Reasons (1h)",
+   "type": "table"
+  },
+  {
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-app"
+   },
+   "description": "Recent worker auto-pause / suspicion log lines from the AI-Horde app.",
+   "gridPos": {
+    "h": 10,
+    "w": 24,
+    "x": 0,
+    "y": 48
+   },
+   "id": 163,
+   "options": {
+    "showTime": true,
+    "showLabels": false,
+    "showCommonLabels": false,
+    "wrapLogMessage": true,
+    "prettifyLogMessage": false,
+    "enableLogDetails": true,
+    "dedupStrategy": "none",
+    "sortOrder": "Descending"
+   },
+   "targets": [
+    {
+     "expr": "{app=\"ai-horde\"} |= \"suspicion increased\"",
+     "refId": "A"
+    }
+   ],
+   "title": "Recent Worker Suspicion Lines",
+   "type": "logs"
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 58
+   },
+   "id": 130,
+   "title": "Postgres Saturation",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-infra"
+   },
+   "description": "pg_stat_activity_count summed across the cluster against pg_settings_max_connections, which is a cluster-wide setting. Tenant infrastructure (datasource uid mimir-infra).",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "percent",
+     "min": 0,
+     "max": 100,
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 60
+       },
+       {
+        "color": "red",
+        "value": 90
+       }
+      ]
+     },
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 25,
+      "gradientMode": "scheme",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      },
+      "thresholdsStyle": {
+       "mode": "line+area"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 8,
+    "x": 0,
+    "y": 59
+   },
+   "id": 131,
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "100 * sum by (instance) (pg_stat_activity_count) / clamp_min(sum by (instance) (pg_settings_max_connections), 1)",
+     "legendFormat": "{{instance}}",
+     "refId": "A"
+    }
+   ],
+   "title": "PG Connection Saturation %",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-infra"
+   },
+   "description": "pg_stat_activity_max_tx_duration for the horde database. The AI Horde schema lives in the postgres database on the cluster the postgres_exporter scrapes; there is no database whose name begins with horde, so a datname filter must select datname=postgres. Tenant infrastructure (datasource uid mimir-infra).",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "s",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 60
+       },
+       {
+        "color": "red",
+        "value": 600
+       }
+      ]
+     },
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 10,
+      "gradientMode": "none",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      },
+      "thresholdsStyle": {
+       "mode": "line"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 8,
+    "x": 8,
+    "y": 59
+   },
+   "id": 132,
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "single",
+     "sort": "none"
+    }
+   },
+   "targets": [
+    {
+     "expr": "max by (instance) (pg_stat_activity_max_tx_duration{datname=\"postgres\",state=~\"active|idle in transaction.*\"})",
+     "legendFormat": "{{instance}}",
+     "refId": "A"
+    }
+   ],
+   "title": "Oldest Open Transaction",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-infra"
+   },
+   "description": "pg_stat_database_deadlocks for the horde database. The AI Horde schema lives in the postgres database on the cluster the postgres_exporter scrapes; there is no database whose name begins with horde, so a datname filter must select datname=postgres. Tenant infrastructure (datasource uid mimir-infra).",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "short",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1
+       },
+       {
+        "color": "red",
+        "value": 5
+       }
+      ]
+     },
+     "custom": {
+      "drawStyle": "bars",
+      "lineWidth": 1,
+      "fillOpacity": 50,
+      "gradientMode": "none",
+      "showPoints": "never",
+      "spanNulls": false,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 8,
+    "x": 16,
+    "y": 59
+   },
+   "id": 133,
+   "options": {
+    "legend": {
+     "calcs": [
+      "sum",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "increase(pg_stat_database_deadlocks{datname=\"postgres\"}[5m])",
+     "legendFormat": "{{datname}}",
+     "refId": "A"
+    }
+   ],
+   "title": "PG Deadlocks (5m)",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Per-second rate of horde_db_pool_timeout. The counter is created on the first SQLAlchemy QueuePool TimeoutError, so the series is absent while the pool is never exhausted. Tenant ai-horde-telemetry (datasource uid mimir-telemetry).",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "ops",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 0.01
+       },
+       {
+        "color": "red",
+        "value": 0.1
+       }
+      ]
+     },
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 25,
+      "gradientMode": "scheme",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      },
+      "thresholdsStyle": {
+       "mode": "line+area"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 12,
+    "x": 0,
+    "y": 65
+   },
+   "id": 134,
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "single",
+     "sort": "none"
+    }
+   },
+   "targets": [
+    {
+     "expr": "sum(rate(horde_db_pool_timeout[$__rate_interval]))",
+     "legendFormat": "pool timeouts/s",
+     "refId": "A"
+    }
+   ],
+   "title": "DB Pool Timeouts (rate)",
+   "type": "timeseries"
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 71
+   },
+   "id": 140,
+   "title": "Host Top-N",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-infra"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "percent",
+     "min": 0,
+     "max": 100,
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 10,
+      "gradientMode": "none",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 0,
+    "y": 72
+   },
+   "id": 141,
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "topk(5, 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100))",
+     "legendFormat": "{{instance}}",
+     "refId": "A"
+    }
+   ],
+   "title": "CPU % \u2014 top 5",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-infra"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "percent",
+     "min": 0,
+     "max": 100,
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 10,
+      "gradientMode": "none",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 8,
+    "y": 72
+   },
+   "id": 142,
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "topk(5, (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100)",
+     "legendFormat": "{{instance}}",
+     "refId": "A"
+    }
+   ],
+   "title": "Memory % \u2014 top 5",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-infra"
+   },
+   "description": "Disk free %. Threshold line at 15% matches HostDiskUsageHigh.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "percent",
+     "min": 0,
+     "max": 100,
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 10,
+      "gradientMode": "none",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      },
+      "thresholdsStyle": {
+       "mode": "line"
+      }
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "red",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 15
+       },
+       {
+        "color": "green",
+        "value": 25
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 16,
+    "y": 72
+   },
+   "id": 143,
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "min"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "asc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "bottomk(5, node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay\"} / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay\"} * 100)",
+     "legendFormat": "{{instance}}:{{mountpoint}}",
+     "refId": "A"
+    }
+   ],
+   "title": "Disk Free % \u2014 most-full 5",
+   "type": "timeseries"
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 80
+   },
+   "id": 150,
+   "title": "Logs (Loki)",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-app"
+   },
+   "description": "Critical/error log line rate from the AI-Horde app. Click any series to deep-link into Loki Explore.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "short",
+     "custom": {
+      "drawStyle": "bars",
+      "lineWidth": 1,
+      "fillOpacity": 80,
+      "gradientMode": "none",
+      "showPoints": "never",
+      "spanNulls": false,
+      "stacking": {
+       "group": "A",
+       "mode": "normal"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "CRITICAL"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "dark-red"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "ERROR"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "red"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 81
+   },
+   "id": 151,
+   "links": [
+    {
+     "title": "Open in Loki Explore",
+     "url": "/explore?left=%7B%22datasource%22%3A%22loki-app%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22%7Bapp%3D%5C%22ai-horde%5C%22%2Clevel%3D~%5C%22%28%3Fi%29error%7Ccrit%28ical%29%3F%5C%22%7D%22%7D%5D%2C%22range%22%3A%7B%22from%22%3A%22now-1h%22%2C%22to%22%3A%22now%22%7D%7D",
+     "targetBlank": true
+    }
+   ],
+   "options": {
+    "legend": {
+     "calcs": [
+      "sum"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "sum by (level) (count_over_time({app=\"ai-horde\",level=~\"(?i)error|crit(ical)?\"} [5m]))",
+     "legendFormat": "{{level}}",
+     "refId": "A"
+    }
+   ],
+   "title": "AI-Horde Critical/Error Log Rate (5m)",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-app"
+   },
+   "description": "Most recent CRITICAL log lines from the AI-Horde app.",
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 81
+   },
+   "id": 152,
+   "options": {
+    "showTime": true,
+    "showLabels": false,
+    "showCommonLabels": false,
+    "wrapLogMessage": true,
+    "prettifyLogMessage": false,
+    "enableLogDetails": true,
+    "dedupStrategy": "none",
+    "sortOrder": "Descending"
+   },
+   "targets": [
+    {
+     "expr": "{app=\"ai-horde\",level=~\"(?i)crit(ical)?\"}",
+     "refId": "A"
+    }
+   ],
+   "title": "Recent CRITICAL Lines",
+   "type": "logs"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 12,
+    "x": 12,
+    "y": 65
+   },
+   "id": 135,
+   "title": "SQLAlchemy Pool Connections by State",
+   "description": "db_client_connections_usage, the OpenTelemetry SQLAlchemy pool gauge, summed by state across every application process. Reads alongside the pool timeout rate to the left. Tenant ai-horde-telemetry (datasource uid mimir-telemetry).",
+   "type": "timeseries",
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "color": {
+      "mode": "palette-classic"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    }
+   },
+   "targets": [
+    {
+     "expr": "sum by (state) (db_client_connections_usage)",
+     "legendFormat": "{{state}}",
+     "refId": "A"
+    }
+   ]
+  }
+ ],
+ "refresh": "30s",
+ "schemaVersion": 39,
+ "tags": [
+  "horde",
+  "ai-horde",
+  "operations"
+ ],
+ "templating": {
+  "list": []
+ },
+ "time": {
+  "from": "now-1h",
+  "to": "now"
+ },
+ "timepicker": {},
+ "timezone": "browser",
+ "title": "Horde Operations Overview",
+ "uid": "horde-operations",
+ "version": 3
 }
