@@ -12,7 +12,7 @@
       }
     ]
   },
-  "description": "RED metrics (Rate, Errors, Duration) for AI Horde hot paths, sourced from OTLP histograms emitted by horde/telemetry.py and the webhook / background-job counters.",
+  "description": "RED view of the AI Horde application built from OTLP metrics and Tempo-derived span metrics, both of which live in the ai-horde-telemetry Mimir tenant (Telemetry datasource, uid mimir-telemetry). The Service Graph panel reads Tempo directly (uid tempo). Telemetry is exported by a subset of hosts, so the panels aggregate rather than split per instance.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -226,7 +226,7 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 60 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 42 },
       "id": 105,
       "title": "Service Graph & Request Funnel (Tempo metrics-generator)",
       "type": "row"
@@ -234,8 +234,8 @@
     {
       "datasource": { "type": "tempo", "uid": "tempo" },
       "description": "Service graph derived from traces. Cap query interval to ≤24h — the ai-horde-telemetry tenant has 3-day retention.",
-      "gridPos": { "h": 12, "w": 12, "x": 0, "y": 61 },
-      "id": 30,
+      "gridPos": { "h": 12, "w": 12, "x": 0, "y": 43 },
+      "id": 300,
       "options": { "edges": { "mainStatUnit": "ms" }, "nodes": { "mainStatUnit": "short" } },
       "targets": [{ "queryType": "serviceMap", "serviceMapQuery": "{}", "refId": "A" }],
       "title": "Service Graph",
@@ -244,8 +244,8 @@
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "description": "Request funnel via Tempo span-metrics generator: generate → pop → submit. Compare rates to spot stage-level bottlenecks.",
-      "gridPos": { "h": 6, "w": 4, "x": 12, "y": 61 },
-      "id": 31,
+      "gridPos": { "h": 6, "w": 4, "x": 12, "y": 43 },
+      "id": 301,
       "fieldConfig": { "defaults": { "color": { "fixedColor": "blue", "mode": "fixed" }, "unit": "ops" }, "overrides": [] },
       "options": { "reduceOptions": { "calcs": ["mean"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "area" },
       "targets": [{ "expr": "sum(rate(traces_spanmetrics_calls_total{service=\"ai-horde\", span_name=~\".*generate.*\"}[5m]))", "legendFormat": "/generate", "refId": "A" }],
@@ -254,8 +254,8 @@
     },
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 6, "w": 4, "x": 16, "y": 61 },
-      "id": 32,
+      "gridPos": { "h": 6, "w": 4, "x": 16, "y": 43 },
+      "id": 302,
       "fieldConfig": { "defaults": { "color": { "fixedColor": "purple", "mode": "fixed" }, "unit": "ops" }, "overrides": [] },
       "options": { "reduceOptions": { "calcs": ["mean"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "area" },
       "targets": [{ "expr": "sum(rate(traces_spanmetrics_calls_total{service=\"ai-horde\", span_name=~\".*pop.*\"}[5m]))", "legendFormat": "/pop", "refId": "A" }],
@@ -264,8 +264,8 @@
     },
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "gridPos": { "h": 6, "w": 4, "x": 20, "y": 61 },
-      "id": 33,
+      "gridPos": { "h": 6, "w": 4, "x": 20, "y": 43 },
+      "id": 303,
       "fieldConfig": { "defaults": { "color": { "fixedColor": "green", "mode": "fixed" }, "unit": "ops" }, "overrides": [] },
       "options": { "reduceOptions": { "calcs": ["mean"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto", "colorMode": "background", "graphMode": "area" },
       "targets": [{ "expr": "sum(rate(traces_spanmetrics_calls_total{service=\"ai-horde\", span_name=~\".*submit.*\"}[5m]))", "legendFormat": "/submit", "refId": "A" }],
@@ -275,8 +275,8 @@
     {
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "description": "Combined funnel trend over time. Prefer time ranges ≤ 24h (telemetry tenant retention is 3d).",
-      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 67 },
-      "id": 34,
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 49 },
+      "id": 304,
       "type": "timeseries",
       "fieldConfig": {
         "defaults": {
@@ -309,10 +309,10 @@
         "type": "datasource",
         "query": "prometheus",
         "refresh": 1,
-        "regex": "",
+        "regex": "/Telemetry/",
         "multi": false,
         "includeAll": false,
-        "description": "Defaults to the Telemetry tenant where OTLP-sourced histograms (horde_*_duration, http_server_duration) and Tempo-derived span metrics live; switch to AI Horde App if you've routed OTLP exports to a different tenant.",
+        "description": "Every panel on this dashboard reads the ai-horde-telemetry Mimir tenant, served by the Telemetry datasource (uid mimir-telemetry): OTLP-sourced histograms (horde_*_duration, http_server_duration) and the Tempo metrics-generator span metrics both land there. The regex pins the picker to that datasource so the panels cannot be pointed at a tenant that carries none of these series.",
         "current": {
           "selected": false,
           "text": "Telemetry",
@@ -326,5 +326,5 @@
   "timezone": "browser",
   "title": "Horde App Traces (OTLP RED)",
   "uid": "horde-app-traces",
-  "version": 2
+  "version": 3
 }

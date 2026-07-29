@@ -12,7 +12,7 @@
       }
     ]
   },
-  "description": "AI Horde operator pulse — active alerts, headline workers/queue/throughput, historical stats, pop diagnostics, generation outcomes, and teams.",
+  "description": "AI Horde operator pulse: active alerts, headline workers/queue/throughput, historical stats, pop diagnostics, generation outcomes, hot-path phase latency and teams. Two datasource pickers, because the panels draw on two Mimir tenants that carry disjoint metric families. Exporter Metrics selects the AI Horde App datasource (uid mimir-app, ai-horde-app tenant) for horde_performance_*, horde_stats_* and horde_exporter_* series. App Telemetry selects the Telemetry datasource (uid mimir-telemetry, ai-horde-telemetry tenant) for the OTLP horde_generate_*/horde_pop_*/horde_submit_* histograms and the horde:* recording rules. Both pickers are regex-pinned so neither set of panels can be aimed at the wrong tenant.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -781,7 +781,7 @@
       "type": "row",
       "panels": [
         {
-          "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
+          "datasource": { "type": "prometheus", "uid": "${telemetry}" },
           "description": "Job-pop skip rate by reason. A dominant reason indicates worker pool/model mismatch.",
           "fieldConfig": {
             "defaults": {
@@ -812,7 +812,7 @@
           "type": "timeseries"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
+          "datasource": { "type": "prometheus", "uid": "${telemetry}" },
           "description": "Top 10 skip reasons over the last hour.",
           "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "unit": "short", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] } }, "overrides": [] },
           "gridPos": { "h": 8, "w": 8, "x": 16, "y": 65 },
@@ -826,7 +826,7 @@
           "type": "table"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
+          "datasource": { "type": "prometheus", "uid": "${telemetry}" },
           "description": "How many candidate WPs the pop loop evaluated before returning. High p95 with low return ratio = saturation/mismatch.",
           "fieldConfig": {
             "defaults": {
@@ -860,7 +860,7 @@
           "type": "timeseries"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
+          "datasource": { "type": "prometheus", "uid": "${telemetry}" },
           "description": "Fraction of pop attempts that returned a job. Low values mean workers are connecting but not getting work.",
           "fieldConfig": {
             "defaults": {
@@ -889,7 +889,7 @@
       "type": "row",
       "panels": [
         {
-          "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
+          "datasource": { "type": "prometheus", "uid": "${telemetry}" },
           "description": "Submit outcome rate by category. Sustained censored/faulted indicate abuse, worker quality, or model failures.",
           "fieldConfig": {
             "defaults": {
@@ -925,7 +925,7 @@
           "type": "timeseries"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
+          "datasource": { "type": "prometheus", "uid": "${telemetry}" },
           "description": "Faulted-to-total ratio. Threshold annotation tracks HordeSubmitFaultRate.",
           "fieldConfig": {
             "defaults": {
@@ -959,7 +959,7 @@
           "type": "timeseries"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "mimir-telemetry" },
+          "datasource": { "type": "prometheus", "uid": "${telemetry}" },
           "description": "Censored-to-total ratio. Sustained elevation cross-checks raid mode.",
           "fieldConfig": {
             "defaults": {
@@ -997,6 +997,449 @@
     {
       "collapsed": true,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 66 },
+      "id": 310,
+      "title": "/generate Phase Latency",
+      "type": "row",
+      "panels": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${telemetry}" },
+          "description": "End-to-end p95 of POST /generate per gentype, from the horde:generate_duration:p95_seconds recording rule. The threshold line is HordeGenerateLatencyHigh at 2s. When this rises, read the phase panels beside it to see which phase moved with it.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "unit": "s",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "line" }
+              },
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 2.0 }] }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 67 },
+          "id": 320,
+          "options": {
+            "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+              { "expr": "horde:generate_duration:p95_seconds", "legendFormat": "{{horde_gentype}}", "refId": "A" }
+          ],
+          "title": "/generate p95 by gentype",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${telemetry}" },
+          "description": "p95 of each phase inside POST /generate. validate covers request admission, initiate_wp builds the waiting prompt (build is the constructor, kudos_check the upfront balance check), activate_wp runs kudos calculation and dispatch. Aggregated across gentypes because several sub-phases are recorded without a gentype label; use the end-to-end panel beside it for the gentype split.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "unit": "s",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "off" }
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 8, "x": 8, "y": 67 },
+          "id": 321,
+          "options": {
+            "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+              { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_validate_duration_bucket[$__rate_interval])))", "legendFormat": "validate", "refId": "A" },
+              { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_validate_find_user_duration_bucket[$__rate_interval])))", "legendFormat": "validate.find_user", "refId": "B" },
+              { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_validate_wp_count_duration_bucket[$__rate_interval])))", "legendFormat": "validate.wp_count", "refId": "C" },
+              { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_validate_prompt_filter_duration_bucket[$__rate_interval])))", "legendFormat": "validate.prompt_filter", "refId": "D" },
+              { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_initiate_wp_duration_bucket[$__rate_interval])))", "legendFormat": "initiate_wp", "refId": "E" },
+              { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_init_wp_build_duration_bucket[$__rate_interval])))", "legendFormat": "initiate_wp.build", "refId": "F" },
+              { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_init_wp_kudos_check_duration_bucket[$__rate_interval])))", "legendFormat": "initiate_wp.kudos_check", "refId": "G" },
+              { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_activate_wp_duration_bucket[$__rate_interval])))", "legendFormat": "activate_wp", "refId": "H" }
+          ],
+          "title": "/generate Phase p95",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${telemetry}" },
+          "description": "Mean duration of each phase inside POST /generate, computed as rate of the histogram sum over rate of its count. Compare against the p95 panel: a phase whose mean is flat while its p95 climbs is developing a tail rather than a uniform slowdown. Aggregated across gentypes because several sub-phases are recorded without a gentype label; use the end-to-end panel beside it for the gentype split.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "unit": "s",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "off" }
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 67 },
+          "id": 322,
+          "options": {
+            "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+              { "expr": "sum(rate(horde_generate_validate_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_generate_validate_duration_count[$__rate_interval])), 1e-9)", "legendFormat": "validate", "refId": "A" },
+              { "expr": "sum(rate(horde_generate_validate_find_user_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_generate_validate_find_user_duration_count[$__rate_interval])), 1e-9)", "legendFormat": "validate.find_user", "refId": "B" },
+              { "expr": "sum(rate(horde_generate_validate_wp_count_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_generate_validate_wp_count_duration_count[$__rate_interval])), 1e-9)", "legendFormat": "validate.wp_count", "refId": "C" },
+              { "expr": "sum(rate(horde_generate_validate_prompt_filter_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_generate_validate_prompt_filter_duration_count[$__rate_interval])), 1e-9)", "legendFormat": "validate.prompt_filter", "refId": "D" },
+              { "expr": "sum(rate(horde_generate_initiate_wp_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_generate_initiate_wp_duration_count[$__rate_interval])), 1e-9)", "legendFormat": "initiate_wp", "refId": "E" },
+              { "expr": "sum(rate(horde_generate_init_wp_build_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_generate_init_wp_build_duration_count[$__rate_interval])), 1e-9)", "legendFormat": "initiate_wp.build", "refId": "F" },
+              { "expr": "sum(rate(horde_generate_init_wp_kudos_check_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_generate_init_wp_kudos_check_duration_count[$__rate_interval])), 1e-9)", "legendFormat": "initiate_wp.kudos_check", "refId": "G" },
+              { "expr": "sum(rate(horde_generate_activate_wp_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_generate_activate_wp_duration_count[$__rate_interval])), 1e-9)", "legendFormat": "activate_wp", "refId": "H" }
+          ],
+          "title": "/generate Phase Mean",
+          "type": "timeseries"
+        }
+      ]
+    },
+    {
+      "collapsed": true,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 67 },
+      "id": 311,
+      "title": "/generate/pop Phase Latency",
+      "type": "row",
+      "panels": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${telemetry}" },
+          "description": "End-to-end p95 of worker pop, from the horde:pop_duration:p95_seconds recording rule. The threshold line is HordePopLatencyHigh at 1s.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "unit": "s",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "line" }
+              },
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1.0 }] }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 68 },
+          "id": 330,
+          "options": {
+            "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+              { "expr": "horde:pop_duration:p95_seconds", "legendFormat": "p95", "refId": "A" }
+          ],
+          "title": "/generate/pop p95",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${telemetry}" },
+          "description": "p95 of each phase inside /generate/pop. pre_eval is the sum of validate, check_in and wp_query, which are also charted individually; wp_query is the candidate-selection database query and is the usual cause of pop regressions. eval_loop is the in-process candidate scan and start_generation the dispatch on a successful match. Aggregated across gentypes because several sub-phases are recorded without a gentype label; use the end-to-end panel beside it for the gentype split.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "unit": "s",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "off" }
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 8, "x": 8, "y": 68 },
+          "id": 331,
+          "options": {
+            "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+              { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_pop_pre_eval_duration_bucket[$__rate_interval])))", "legendFormat": "pre_eval", "refId": "A" },
+              { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_pop_validate_duration_bucket[$__rate_interval])))", "legendFormat": "pre_eval.validate", "refId": "B" },
+              { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_pop_check_in_duration_bucket[$__rate_interval])))", "legendFormat": "pre_eval.check_in", "refId": "C" },
+              { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_pop_wp_query_duration_bucket[$__rate_interval])))", "legendFormat": "pre_eval.wp_query", "refId": "D" },
+              { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_pop_eval_loop_duration_bucket[$__rate_interval])))", "legendFormat": "eval_loop", "refId": "E" },
+              { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_pop_start_generation_duration_bucket[$__rate_interval])))", "legendFormat": "start_generation", "refId": "F" }
+          ],
+          "title": "/generate/pop Phase p95",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${telemetry}" },
+          "description": "Mean duration of each phase inside /generate/pop, computed as rate of the histogram sum over rate of its count. Every pop pays the pre_eval phases, so their means track worker poll cost directly. Aggregated across gentypes because several sub-phases are recorded without a gentype label; use the end-to-end panel beside it for the gentype split.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "unit": "s",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "off" }
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 68 },
+          "id": 332,
+          "options": {
+            "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+              { "expr": "sum(rate(horde_pop_pre_eval_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_pop_pre_eval_duration_count[$__rate_interval])), 1e-9)", "legendFormat": "pre_eval", "refId": "A" },
+              { "expr": "sum(rate(horde_pop_validate_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_pop_validate_duration_count[$__rate_interval])), 1e-9)", "legendFormat": "pre_eval.validate", "refId": "B" },
+              { "expr": "sum(rate(horde_pop_check_in_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_pop_check_in_duration_count[$__rate_interval])), 1e-9)", "legendFormat": "pre_eval.check_in", "refId": "C" },
+              { "expr": "sum(rate(horde_pop_wp_query_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_pop_wp_query_duration_count[$__rate_interval])), 1e-9)", "legendFormat": "pre_eval.wp_query", "refId": "D" },
+              { "expr": "sum(rate(horde_pop_eval_loop_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_pop_eval_loop_duration_count[$__rate_interval])), 1e-9)", "legendFormat": "eval_loop", "refId": "E" },
+              { "expr": "sum(rate(horde_pop_start_generation_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_pop_start_generation_duration_count[$__rate_interval])), 1e-9)", "legendFormat": "start_generation", "refId": "F" }
+          ],
+          "title": "/generate/pop Phase Mean",
+          "type": "timeseries"
+        }
+      ]
+    },
+    {
+      "collapsed": true,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 68 },
+      "id": 312,
+      "title": "/generate/submit Phase Latency",
+      "type": "row",
+      "panels": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${telemetry}" },
+          "description": "End-to-end p95 of worker submit per gentype, from the horde:submit_duration:p95_seconds recording rule. The threshold line is HordeSubmitLatencyHigh at 2s. Submit is split across two phase panels because it has more sub-phases than one chart can distinguish by colour.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "unit": "s",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "line" }
+              },
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 2.0 }] }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 69 },
+          "id": 340,
+          "options": {
+            "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+              { "expr": "horde:submit_duration:p95_seconds", "legendFormat": "{{horde_gentype}}", "refId": "A" }
+          ],
+          "title": "/generate/submit p95 by gentype",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${telemetry}" },
+          "description": "p95 of the phases that run up to and including the submit commit. claim is the compare-and-set that takes ownership of the procgen, so a jump there means concurrent submissions are contending; a jump in commit points at row-lock contention or database load. Aggregated across gentypes because several sub-phases are recorded without a gentype label; use the end-to-end panel beside it for the gentype split.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "unit": "s",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "off" }
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 8, "x": 8, "y": 69 },
+          "id": 341,
+          "options": {
+            "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+              { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_get_progen_duration_bucket[$__rate_interval])))", "legendFormat": "get_progen", "refId": "A" },
+              { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_find_user_duration_bucket[$__rate_interval])))", "legendFormat": "find_user", "refId": "B" },
+              { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_state_handling_duration_bucket[$__rate_interval])))", "legendFormat": "state_handling", "refId": "C" },
+              { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_set_generation_duration_bucket[$__rate_interval])))", "legendFormat": "set_generation", "refId": "D" },
+              { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_claim_duration_bucket[$__rate_interval])))", "legendFormat": "claim", "refId": "E" },
+              { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_get_gen_kudos_duration_bucket[$__rate_interval])))", "legendFormat": "get_gen_kudos", "refId": "F" },
+              { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_genstats_record_duration_bucket[$__rate_interval])))", "legendFormat": "genstats_record", "refId": "G" },
+              { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_commit_duration_bucket[$__rate_interval])))", "legendFormat": "commit", "refId": "H" }
+          ],
+          "title": "/generate/submit Phase p95 (request path)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${telemetry}" },
+          "description": "p95 of the accounting and post-commit phases of submit. record folds worker contribution and waiting-prompt usage; record_performance, wp_completion and record_fulfilment_stat run after the commit; server_upload is object storage and is the phase most exposed to an external dependency. Aggregated across gentypes because several sub-phases are recorded without a gentype label; use the end-to-end panel beside it for the gentype split.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "unit": "s",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "off" }
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 69 },
+          "id": 342,
+          "options": {
+            "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+              { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_record_duration_bucket[$__rate_interval])))", "legendFormat": "record", "refId": "A" },
+              { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_worker_contribution_duration_bucket[$__rate_interval])))", "legendFormat": "record.worker_contribution", "refId": "B" },
+              { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_wp_record_usage_duration_bucket[$__rate_interval])))", "legendFormat": "record.wp_record_usage", "refId": "C" },
+              { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_record_performance_duration_bucket[$__rate_interval])))", "legendFormat": "record_performance", "refId": "D" },
+              { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_wp_completion_duration_bucket[$__rate_interval])))", "legendFormat": "wp_completion", "refId": "E" },
+              { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_record_fulfilment_stat_duration_bucket[$__rate_interval])))", "legendFormat": "record_fulfilment_stat", "refId": "F" },
+              { "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_server_upload_duration_bucket[$__rate_interval])))", "legendFormat": "server_upload", "refId": "G" }
+          ],
+          "title": "/generate/submit Phase p95 (accounting path)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${telemetry}" },
+          "description": "Mean duration of the submit phases up to the commit, computed as rate of the histogram sum over rate of its count. Read alongside the matching p95 panel to separate a broad slowdown from a tail. Aggregated across gentypes because several sub-phases are recorded without a gentype label; use the end-to-end panel beside it for the gentype split.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "unit": "s",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "off" }
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 77 },
+          "id": 343,
+          "options": {
+            "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+              { "expr": "sum(rate(horde_submit_get_progen_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_submit_get_progen_duration_count[$__rate_interval])), 1e-9)", "legendFormat": "get_progen", "refId": "A" },
+              { "expr": "sum(rate(horde_submit_find_user_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_submit_find_user_duration_count[$__rate_interval])), 1e-9)", "legendFormat": "find_user", "refId": "B" },
+              { "expr": "sum(rate(horde_submit_state_handling_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_submit_state_handling_duration_count[$__rate_interval])), 1e-9)", "legendFormat": "state_handling", "refId": "C" },
+              { "expr": "sum(rate(horde_submit_set_generation_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_submit_set_generation_duration_count[$__rate_interval])), 1e-9)", "legendFormat": "set_generation", "refId": "D" },
+              { "expr": "sum(rate(horde_submit_claim_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_submit_claim_duration_count[$__rate_interval])), 1e-9)", "legendFormat": "claim", "refId": "E" },
+              { "expr": "sum(rate(horde_submit_get_gen_kudos_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_submit_get_gen_kudos_duration_count[$__rate_interval])), 1e-9)", "legendFormat": "get_gen_kudos", "refId": "F" },
+              { "expr": "sum(rate(horde_submit_genstats_record_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_submit_genstats_record_duration_count[$__rate_interval])), 1e-9)", "legendFormat": "genstats_record", "refId": "G" },
+              { "expr": "sum(rate(horde_submit_commit_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_submit_commit_duration_count[$__rate_interval])), 1e-9)", "legendFormat": "commit", "refId": "H" }
+          ],
+          "title": "/generate/submit Phase Mean (request path)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${telemetry}" },
+          "description": "Mean duration of the submit accounting and post-commit phases, computed as rate of the histogram sum over rate of its count. Read alongside the matching p95 panel to separate a broad slowdown from a tail. Aggregated across gentypes because several sub-phases are recorded without a gentype label; use the end-to-end panel beside it for the gentype split.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "unit": "s",
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "off" }
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 77 },
+          "id": 344,
+          "options": {
+            "legend": { "calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+              { "expr": "sum(rate(horde_submit_record_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_submit_record_duration_count[$__rate_interval])), 1e-9)", "legendFormat": "record", "refId": "A" },
+              { "expr": "sum(rate(horde_submit_worker_contribution_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_submit_worker_contribution_duration_count[$__rate_interval])), 1e-9)", "legendFormat": "record.worker_contribution", "refId": "B" },
+              { "expr": "sum(rate(horde_submit_wp_record_usage_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_submit_wp_record_usage_duration_count[$__rate_interval])), 1e-9)", "legendFormat": "record.wp_record_usage", "refId": "C" },
+              { "expr": "sum(rate(horde_submit_record_performance_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_submit_record_performance_duration_count[$__rate_interval])), 1e-9)", "legendFormat": "record_performance", "refId": "D" },
+              { "expr": "sum(rate(horde_submit_wp_completion_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_submit_wp_completion_duration_count[$__rate_interval])), 1e-9)", "legendFormat": "wp_completion", "refId": "E" },
+              { "expr": "sum(rate(horde_submit_record_fulfilment_stat_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_submit_record_fulfilment_stat_duration_count[$__rate_interval])), 1e-9)", "legendFormat": "record_fulfilment_stat", "refId": "F" },
+              { "expr": "sum(rate(horde_submit_server_upload_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_submit_server_upload_duration_count[$__rate_interval])), 1e-9)", "legendFormat": "server_upload", "refId": "G" }
+          ],
+          "title": "/generate/submit Phase Mean (accounting path)",
+          "type": "timeseries"
+        }
+      ]
+    },
+    {
+      "collapsed": true,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 69 },
       "id": 105,
       "title": "Teams Overview",
       "type": "row",
@@ -1053,7 +1496,7 @@
     },
     {
       "collapsed": true,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 67 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 70 },
       "id": 106,
       "title": "Exporter Health",
       "type": "row",
@@ -1140,16 +1583,33 @@
     "list": [
       {
         "current": { "selected": false, "text": "AI Horde App", "value": "mimir-app" },
+        "description": "Horde exporter metrics (horde_performance_*, horde_stats_*, horde_exporter_*) live in the ai-horde-app Mimir tenant, served by the AI Horde App datasource (uid mimir-app). The regex pins this picker to that datasource so the exporter panels cannot be pointed at a tenant that does not carry these series.",
         "hide": 0,
         "includeAll": false,
-        "label": "Data Source",
+        "label": "Exporter Metrics",
         "multi": false,
         "name": "datasource",
         "options": [],
         "query": "prometheus",
         "queryValue": "",
         "refresh": 1,
-        "regex": "",
+        "regex": "/AI Horde App/",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": { "selected": false, "text": "Telemetry", "value": "mimir-telemetry" },
+        "description": "Application OTLP metrics (horde_generate_*, horde_pop_*, horde_submit_*, horde_job_*, horde_kudos_*) and the horde:* recording rules live in the ai-horde-telemetry Mimir tenant, served by the Telemetry datasource (uid mimir-telemetry). Kept separate from the exporter picker above because the two tenants carry disjoint metric families.",
+        "hide": 0,
+        "includeAll": false,
+        "label": "App Telemetry",
+        "multi": false,
+        "name": "telemetry",
+        "options": [],
+        "query": "prometheus",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "/Telemetry/",
         "skipUrlSync": false,
         "type": "datasource"
       }
@@ -1160,5 +1620,5 @@
   "timezone": "browser",
   "title": "Horde Performance (Internal)",
   "uid": "horde-performance",
-  "version": 2
+  "version": 3
 }
