@@ -46,6 +46,18 @@ components:
     display_order: 60
 
   # ---- Internal-only infrastructure ----
+  - id: kudos
+    name: Kudos Accounting
+    description: Ledger applier folding balances and derived counters.
+    audience: internal
+    display_order: 100
+
+  - id: app-jobs
+    name: Application Background Jobs
+    description: Quorum-node periodic jobs (queue checks, stats, kudos applier).
+    audience: internal
+    display_order: 105
+
   - id: postgres
     name: PostgreSQL
     description: Primary application database.

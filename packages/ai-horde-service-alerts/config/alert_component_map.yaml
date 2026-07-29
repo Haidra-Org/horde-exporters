@@ -37,6 +37,11 @@ mappings:
     label_match:
       horde_gentype: image
     status: degraded
+  - component: image
+    alertname: HordeSubmitLatencyHigh
+    label_match:
+      horde_gentype: image
+    status: degraded
 
   # ---- Text generation ----
   - component: text
@@ -44,6 +49,11 @@ mappings:
     status: down
   - component: text
     alertname: HordeGenerateLatencyHigh
+    label_match:
+      horde_gentype: text
+    status: degraded
+  - component: text
+    alertname: HordeSubmitLatencyHigh
     label_match:
       horde_gentype: text
     status: degraded
@@ -59,6 +69,30 @@ mappings:
   # ---- Webhooks ----
   - component: webhooks
     alertname: HordeWebhookFailureBurst
+    status: degraded
+
+  # ---- Kudos accounting (internal component) ----
+  # A silent applier freezes balance materialization entirely; sustained lag or
+  # backlog means balances and counters are stale by that amount. Postings stay
+  # durable throughout, so these drive the internal component rather than any
+  # public pill. HordeKudosFloorCreationHigh is a finance anomaly signal, not a
+  # service-health one, and is deliberately unmapped.
+  - component: kudos
+    alertname: HordeKudosApplierSilent
+    status: down
+  - component: kudos
+    alertname: HordeKudosApplierLagHigh
+    status: degraded
+  - component: kudos
+    alertname: HordeKudosBacklogHigh
+    status: degraded
+  - component: kudos
+    alertname: HordeKudosReservationStuck
+    status: degraded
+
+  # ---- Application background jobs (internal component) ----
+  - component: app-jobs
+    alertname: HordeBackgroundJobFailures
     status: degraded
 
   # alchemy: pill driven only by the external prober — the deployed rules
