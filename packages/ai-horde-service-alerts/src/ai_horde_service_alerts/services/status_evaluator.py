@@ -28,6 +28,7 @@ from datetime import UTC, datetime, timedelta
 
 from ai_horde_service_alerts.clients.alertmanager import AlertmanagerClient
 from ai_horde_service_alerts.clients.errors import UpstreamUnavailable
+from ai_horde_service_alerts.db.models import ComponentOverride
 from ai_horde_service_alerts.db.repositories import (
     ComponentRepository,
     HistoryRepository,
@@ -113,6 +114,11 @@ class StatusEvaluator:
             await override_repo.expire_overdue(now=moment)
 
             components = list(await components_repo.list_all())
+            # One query for all active overrides instead of one per component;
+            # list_active is newest-first, so the first hit per component wins.
+            active_overrides: dict[str, ComponentOverride] = {}
+            for candidate in await override_repo.list_active(now=moment):
+                active_overrides.setdefault(candidate.component_id, candidate)
             latest_probes = await probe_repo.latest_per_component(
                 freshness=self._probe_freshness,
                 now=moment,
@@ -127,7 +133,7 @@ class StatusEvaluator:
 
             results: list[EvaluatedComponent] = []
             for component in components:
-                override = await override_repo.get_active(component.id, now=moment)
+                override = active_overrides.get(component.id)
                 if override is not None:
                     override_trigger: OverrideHistoryTrigger = {
                         "override_id": str(override.id),

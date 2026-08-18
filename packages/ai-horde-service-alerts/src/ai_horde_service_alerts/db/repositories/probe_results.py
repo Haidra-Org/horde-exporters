@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from typing import Protocol, cast
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ai_horde_service_alerts.db.models import ProbeResult
@@ -56,17 +56,32 @@ class ProbeResultRepository:
         freshness: timedelta | None = None,
         now: datetime | None = None,
     ) -> dict[str, ProbeResult]:
-        """Return the freshest probe sample per component (only those within ``freshness``)."""
+        """Return the freshest probe sample per component (only those within ``freshness``).
+
+        Bounded on the database side: the freshness cutoff is applied in SQL
+        (index ``ix_probe_results_observed_at``) and a window function picks the
+        newest row per component, so the result set is one row per component
+        regardless of how large ``probe_results`` has grown. The previous
+        implementation selected the whole table every evaluator tick and
+        filtered in Python, which pinned a CPU core for ~20 s per tick and
+        allocated ~500 MB once the table reached a few hundred thousand rows.
+        """
         moment = (now or datetime.now(tz=UTC)).astimezone(UTC)
-        stmt = select(ProbeResult).order_by(ProbeResult.observed_at.desc())
+        ranked = select(
+            ProbeResult.id.label("id"),
+            func.row_number()
+            .over(
+                partition_by=ProbeResult.component_id,
+                order_by=ProbeResult.observed_at.desc(),
+            )
+            .label("rn"),
+        )
+        if freshness is not None:
+            ranked = ranked.where(ProbeResult.observed_at >= moment - freshness)
+        ranked_sq = ranked.subquery("ranked")
+        stmt = select(ProbeResult).join(ranked_sq, ranked_sq.c.id == ProbeResult.id).where(ranked_sq.c.rn == 1)
         result = await self._session.execute(stmt)
-        latest: dict[str, ProbeResult] = {}
-        for row in result.scalars():
-            if freshness is not None and (moment - row.observed_at) > freshness:
-                continue
-            if row.component_id not in latest:
-                latest[row.component_id] = row
-        return latest
+        return {row.component_id: row for row in result.scalars()}
 
     async def recent(
         self,

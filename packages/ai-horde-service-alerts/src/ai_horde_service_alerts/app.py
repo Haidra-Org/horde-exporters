@@ -124,7 +124,10 @@ def create_app(
                 logger.exception("backfill failed; service will continue without historical fill")
 
         if db_bundle is not None and resolved_settings.enable_background_tasks:
-            runner = MaintenanceRunner(db_bundle)
+            runner = MaintenanceRunner(
+                db_bundle,
+                probe_result_retention=timedelta(days=resolved_settings.probe_result_retention_days),
+            )
             evaluator = StatusEvaluator(
                 db_bundle,
                 alertmanager_client,

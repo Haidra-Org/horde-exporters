@@ -17,7 +17,7 @@ members = [
 
 [[package]]
 name = "ai-horde-service-alerts"
-version = "0.3.0"
+version = "0.8.0"
 source = { editable = "packages/ai-horde-service-alerts" }
 dependencies = [
     { name = "alembic" },
@@ -514,7 +514,7 @@ wheels = [
 
 [[package]]
 name = "horde-exporters"
-version = "0.4.0"
+version = "0.9.2"
 source = { virtual = "." }
 
 [package.dev-dependencies]
@@ -537,7 +537,7 @@ dev = [
 
 [[package]]
 name = "horde-status-prober"
-version = "0.1.0"
+version = "0.3.0"
 source = { editable = "packages/horde-status-prober" }
 dependencies = [
     { name = "apscheduler" },
