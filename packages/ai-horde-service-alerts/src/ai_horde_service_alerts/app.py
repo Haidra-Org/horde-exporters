@@ -187,7 +187,11 @@ def create_app(
         app.add_middleware(
             CORSMiddleware,
             allow_origins=list(resolved_settings.cors_allow_origins),
-            allow_methods=["GET"],
+            # The internal (moderator) routes are POST/PATCH; a browser preflights
+            # those (custom `apikey` header + JSON body) and refuses to send them
+            # unless the method is listed here. GET-only broke incident creation
+            # from aihorde.net/status while reads kept working.
+            allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
             allow_headers=["apikey", "content-type"],
             allow_credentials=False,
         )
