@@ -15,7 +15,7 @@
       }
     ]
   },
-  "description": "Production request lifecycle latency, terminal outcomes, and measurable evidence for shadow start/completion estimates and unstarted-expiry forecasts.",
+  "description": "Production request lifecycle latency, terminal outcomes, client-facing assignment-pressure evidence, and validation of shadow start/completion estimates and unstarted-expiry forecasts.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -1095,6 +1095,319 @@
         "y": 63
       },
       "id": 104,
+      "title": "Client-facing assignment-pressure advisory",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Share of production assignment-pressure calculations that returned might_stall=true. Samples are emitted only on the authoritative 60-second availability-cache miss, so repeated client polling does not overweight a request.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "max": 1,
+          "min": 0,
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 64
+      },
+      "id": 50,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "((sum by (horde_gentype) (rate(horde_request_assignment_pressure_samples{job=~\"ai-horde(/ai-horde)?\", deployment_environment_name=\"production\", horde_might_stall=\"true\"}[15m]))) or on (horde_gentype) (0 * sum by (horde_gentype) (rate(horde_request_assignment_pressure_samples{job=~\"ai-horde(/ai-horde)?\", deployment_environment_name=\"production\"}[15m])))) / clamp_min(sum by (horde_gentype) (rate(horde_request_assignment_pressure_samples{job=~\"ai-horde(/ai-horde)?\", deployment_environment_name=\"production\"}[15m])), 1e-9)",
+          "legendFormat": "{{horde_gentype}}",
+          "refId": "A"
+        }
+      ],
+      "title": "might_stall advisory share",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Distribution of the detector's bounded evidence states. arrival_outpaces_drain is the only state that sets might_stall; insufficient states show where observation history is not yet strong enough to decide.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 70,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          },
+          "max": 1,
+          "min": 0,
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 8,
+        "y": 64
+      },
+      "id": 51,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_gentype, horde_evidence) (rate(horde_request_assignment_pressure_samples{job=~\"ai-horde(/ai-horde)?\", deployment_environment_name=\"production\"}[15m])) / on (horde_gentype) group_left clamp_min(sum by (horde_gentype) (rate(horde_request_assignment_pressure_samples{job=~\"ai-horde(/ai-horde)?\", deployment_environment_name=\"production\"}[15m])), 1e-9)",
+          "legendFormat": "{{horde_gentype}} {{horde_evidence}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Assignment-pressure evidence states",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Median compatible dispatch opportunities observed during the bounded window and the subset consumed by requests ordered ahead of the target.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 72
+      },
+      "id": 52,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by (le, horde_gentype) (rate(horde_request_assignment_pressure_dispatch_opportunities_bucket{job=~\"ai-horde(/ai-horde)?\", deployment_environment_name=\"production\"}[15m])))",
+          "legendFormat": "{{horde_gentype}} opportunities",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.50, sum by (le, horde_gentype) (rate(horde_request_assignment_pressure_lost_opportunities_bucket{job=~\"ai-horde(/ai-horde)?\", deployment_environment_name=\"production\"}[15m])))",
+          "legendFormat": "{{horde_gentype}} lost",
+          "refId": "B"
+        }
+      ],
+      "title": "Compatible opportunities (p50)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Median compatible batches that returned capacity during the window versus preceding compatible batches still active at observation time.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 72
+      },
+      "id": 53,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by (le, horde_gentype) (rate(horde_request_assignment_pressure_returned_capacity_bucket{job=~\"ai-horde(/ai-horde)?\", deployment_environment_name=\"production\"}[15m])))",
+          "legendFormat": "{{horde_gentype}} returned",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.50, sum by (le, horde_gentype) (rate(horde_request_assignment_pressure_active_preceding_dispatches_bucket{job=~\"ai-horde(/ai-horde)?\", deployment_environment_name=\"production\"}[15m])))",
+          "legendFormat": "{{horde_gentype}} still active",
+          "refId": "B"
+        }
+      ],
+      "title": "Capacity return evidence (p50)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Median normalized compatible work arriving ahead versus work returned by compatible capacity. might_stall requires arrivals to outpace returned work in both halves of the observation window.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "min": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 72
+      },
+      "id": 54,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by (le, horde_gentype) (rate(horde_request_assignment_pressure_arriving_preceding_work_bucket{job=~\"ai-horde(/ai-horde)?\", deployment_environment_name=\"production\"}[15m])))",
+          "legendFormat": "{{horde_gentype}} arriving ahead",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.50, sum by (le, horde_gentype) (rate(horde_request_assignment_pressure_returned_work_bucket{job=~\"ai-horde(/ai-horde)?\", deployment_environment_name=\"production\"}[15m])))",
+          "legendFormat": "{{horde_gentype}} returned",
+          "refId": "B"
+        }
+      ],
+      "title": "Arrival versus drain work (p50)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 80
+      },
+      "id": 105,
       "title": "Terminal outcomes and telemetry coverage",
       "type": "row"
     },
@@ -1131,7 +1444,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 64
+        "y": 81
       },
       "id": 40,
       "options": {
@@ -1187,7 +1500,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 64
+        "y": 81
       },
       "id": 41,
       "options": {
@@ -1248,7 +1561,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 72
+        "y": 89
       },
       "id": 42,
       "options": {
