@@ -486,7 +486,7 @@
     "type": "prometheus",
     "uid": "mimir-telemetry"
    },
-   "description": "Kudos applier fold lag, from horde:kudos_applier_lag:avg_seconds. Red at 60s matches HordeKudosApplierLagHigh. Emitted only by the quorum node, so this reads \"No data\" rather than zero when that node is not exporting telemetry.",
+   "description": "Current kudos applier fold lag. Red at 60s matches HordeKudosApplierLagHigh. Emitted only by the quorum node, so No data is not a healthy zero.",
    "fieldConfig": {
     "defaults": {
      "color": {
@@ -536,7 +536,7 @@
    },
    "targets": [
     {
-     "expr": "horde:kudos_applier_lag:avg_seconds",
+     "expr": "horde:kudos_applier_lag:current_seconds{deployment_environment_name=\"production\"}",
      "legendFormat": "applier lag",
      "refId": "A"
     }
@@ -549,7 +549,7 @@
     "type": "prometheus",
     "uid": "mimir-telemetry"
    },
-   "description": "Unapplied kudos ledger rows, from horde:kudos_pending_rows:avg. Red at 10k matches HordeKudosBacklogHigh. Emitted only by the quorum node, so this reads \"No data\" rather than zero when that node is not exporting telemetry.",
+   "description": "Current unapplied drainable kudos rows. Red at 10k matches HordeKudosBacklogHigh. Emitted only by the quorum node, so No data is not a healthy zero.",
    "fieldConfig": {
     "defaults": {
      "color": {
@@ -599,7 +599,7 @@
    },
    "targets": [
     {
-     "expr": "horde:kudos_pending_rows:avg",
+     "expr": "horde:kudos_pending_rows:current{deployment_environment_name=\"production\"}",
      "legendFormat": "pending rows",
      "refId": "A"
     }
