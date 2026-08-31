@@ -15,7 +15,7 @@
    }
   ]
  },
- "description": "AI Horde kudos accounting subsystem: deferred-ledger projector health, queue capacity, quarantined projection evidence, admission holds, economy events and Postgres context. Application panels are scoped by environment; quorum-only gauges are aggregated across process restarts and quorum handoffs. Datasources: app OTLP metrics on mimir-telemetry, postgres_exporter on mimir-infra, and audit/error logs on loki-app.",
+ "description": "AI Horde kudos accounting subsystem: deferred-ledger projector health, queue capacity and headroom, admission holds, economy events and Postgres context, with incident-only signals (quarantines, idempotent replays) isolated in their own row. Application panels are scoped by environment; quorum-only gauges are freshness-gated and aggregated across process restarts and quorum handoffs. Datasources: app OTLP metrics on mimir-telemetry, postgres_exporter on mimir-infra, and audit/error logs on loki-app.",
  "editable": true,
  "fiscalYearStartMonth": 0,
  "graphTooltip": 1,
@@ -82,7 +82,7 @@
    },
    "gridPos": {
     "h": 5,
-    "w": 6,
+    "w": 5,
     "x": 0,
     "y": 1
    },
@@ -145,8 +145,8 @@
    },
    "gridPos": {
     "h": 5,
-    "w": 6,
-    "x": 6,
+    "w": 5,
+    "x": 5,
     "y": 1
    },
    "id": 2,
@@ -205,8 +205,8 @@
    },
    "gridPos": {
     "h": 5,
-    "w": 6,
-    "x": 12,
+    "w": 5,
+    "x": 10,
     "y": 1
    },
    "id": 15,
@@ -264,8 +264,8 @@
    },
    "gridPos": {
     "h": 5,
-    "w": 6,
-    "x": 18,
+    "w": 5,
+    "x": 15,
     "y": 1
    },
    "id": 3,
@@ -290,6 +290,68 @@
     }
    ],
    "title": "Catch-up Saturation (5m)",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Age of the newest quorum-owned kudos health observation. Every current-state panel on this dashboard is freshness-gated on this signal: past 600 seconds the recording rules drop the stale quorum data and those panels go blank. Amber at 300s is the early warning; red at 600s means blank panels are a telemetry outage, not a healthy system.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "s",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 300
+       },
+       {
+        "color": "red",
+        "value": 600
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 5,
+    "w": 4,
+    "x": 20,
+    "y": 1
+   },
+   "id": 24,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "area",
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "expr": "time() - max(horde_kudos_applier_observation_timestamp{deployment_environment_name=~\"$environment\"})",
+     "legendFormat": "observation age",
+     "refId": "A"
+    }
+   ],
+   "title": "Quorum Observation Age",
    "type": "stat"
   },
   {
@@ -452,7 +514,7 @@
     "type": "prometheus",
     "uid": "mimir-telemetry"
    },
-   "description": "Current open kudos reservations holding balance for in-flight requests. A rising floor that never drains suggests holds are not being released; cross-check the oldest-reservation age.",
+   "description": "Current open kudos reservations holding balance for in-flight requests, freshness-gated like the other quorum gauges so a stale process cannot report here across a quorum handoff. A rising floor that never drains suggests holds are not being released; cross-check the oldest-reservation age.",
    "fieldConfig": {
     "defaults": {
      "color": {
@@ -494,7 +556,7 @@
    },
    "targets": [
     {
-     "expr": "max(horde_kudos_active_reservations{deployment_environment_name=~\"$environment\"})",
+     "expr": "horde:kudos_active_reservations:current{deployment_environment_name=~\"$environment\"}",
      "legendFormat": "active reservations",
      "refId": "A"
     }
@@ -686,7 +748,7 @@
    },
    "gridPos": {
     "h": 7,
-    "w": 6,
+    "w": 8,
     "x": 0,
     "y": 21
    },
@@ -766,8 +828,8 @@
    },
    "gridPos": {
     "h": 7,
-    "w": 6,
-    "x": 6,
+    "w": 8,
+    "x": 8,
     "y": 21
    },
    "id": 16,
@@ -827,8 +889,8 @@
    },
    "gridPos": {
     "h": 7,
-    "w": 4,
-    "x": 12,
+    "w": 8,
+    "x": 16,
     "y": 21
    },
    "id": 10,
@@ -854,69 +916,6 @@
    ],
    "title": "Kudos Minted by Flooring (range)",
    "type": "stat"
-  },
-  {
-   "datasource": {
-    "type": "prometheus",
-    "uid": "mimir-telemetry"
-   },
-   "description": "Per-second rate of horde_kudos_transfers_idempotent_replays. The counter is created on the first transfer_kudos call that short-circuits as a replay. Tenant ai-horde-telemetry (datasource uid mimir-telemetry).",
-   "fieldConfig": {
-    "defaults": {
-     "color": {
-      "mode": "palette-classic"
-     },
-     "unit": "short",
-     "custom": {
-      "drawStyle": "line",
-      "lineInterpolation": "smooth",
-      "lineWidth": 2,
-      "fillOpacity": 20,
-      "gradientMode": "opacity",
-      "showPoints": "never",
-      "spanNulls": true,
-      "stacking": {
-       "group": "A",
-       "mode": "none"
-      },
-      "thresholdsStyle": {
-       "mode": "off"
-      }
-     }
-    },
-    "overrides": []
-   },
-   "gridPos": {
-    "h": 7,
-    "w": 8,
-    "x": 16,
-    "y": 21
-   },
-   "id": 11,
-   "options": {
-    "legend": {
-     "calcs": [
-      "lastNotNull",
-      "max"
-     ],
-     "displayMode": "table",
-     "placement": "bottom",
-     "showLegend": true
-    },
-    "tooltip": {
-     "mode": "single",
-     "sort": "none"
-    }
-   },
-   "targets": [
-    {
-     "expr": "sum(rate(horde_kudos_transfers_idempotent_replays{deployment_environment_name=~\"$environment\"}[$__rate_interval]))",
-     "legendFormat": "replays/s",
-     "refId": "A"
-    }
-   ],
-   "title": "Transfer Idempotent Replay Rate",
-   "type": "timeseries"
   },
   {
    "datasource": {
@@ -967,87 +966,619 @@
     "type": "prometheus",
     "uid": "mimir-telemetry"
    },
-   "description": "Newly quarantined projection events in the last hour. Any nonzero value is an incident requiring producer review and an explicit repair or acceptance decision.",
+   "description": "Current drainable backlog split into currency and statistic events. This makes a one-sided projector failure visible instead of hiding it in the combined total.",
    "fieldConfig": {
     "defaults": {
-     "color": {"mode": "thresholds"},
-     "unit": "short",
-     "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}
+     "unit": "short"
     },
     "overrides": []
    },
-   "gridPos": {"h": 6, "w": 4, "x": 0, "y": 37},
-   "id": 17,
-   "options": {"colorMode": "background", "graphMode": "area", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
-   "targets": [{"expr": "sum(increase(horde_kudos_applier_quarantined{deployment_environment_name=~\"$environment\"}[1h]))", "legendFormat": "new quarantines", "refId": "A"}],
-   "title": "New Quarantines (1h)",
-   "type": "stat"
-  },
-  {
-   "datasource": {"type": "prometheus", "uid": "mimir-telemetry"},
-   "description": "Total retained quarantine evidence. This is intentionally cumulative and does not represent unresolved incident state.",
-   "fieldConfig": {"defaults": {"unit": "short", "color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 1}]}}, "overrides": []},
-   "gridPos": {"h": 6, "w": 4, "x": 4, "y": 37},
-   "id": 18,
-   "options": {"colorMode": "background", "graphMode": "area", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
-   "targets": [{"expr": "horde:kudos_quarantined_rows:current{deployment_environment_name=~\"$environment\"}", "legendFormat": "retained", "refId": "A"}],
-   "title": "Retained Quarantine Rows",
-   "type": "stat"
-  },
-  {
-   "datasource": {"type": "prometheus", "uid": "mimir-telemetry"},
-   "description": "Current drainable backlog split into currency and statistic events. This makes a one-sided projector failure visible instead of hiding it in the combined total.",
-   "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
-   "gridPos": {"h": 6, "w": 8, "x": 8, "y": 37},
+   "gridPos": {
+    "h": 6,
+    "w": 8,
+    "x": 0,
+    "y": 37
+   },
    "id": 19,
-   "options": {"legend": {"calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
-   "targets": [{"expr": "horde:kudos_pending_rows_by_type:current{deployment_environment_name=~\"$environment\"}", "legendFormat": "{{horde_kudos_row_type}}", "refId": "A"}],
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "horde:kudos_pending_rows_by_type:current{deployment_environment_name=~\"$environment\"}",
+     "legendFormat": "{{horde_kudos_row_type}}",
+     "refId": "A"
+    }
+   ],
    "title": "Pending Rows by Type",
    "type": "timeseries"
   },
   {
-   "datasource": {"type": "prometheus", "uid": "mimir-telemetry"},
-   "description": "Per-second change in the combined backlog. Positive means the applier is losing ground; negative means it is draining. Approximate drain ETA is current backlog divided by the absolute negative rate.",
-   "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
-   "gridPos": {"h": 6, "w": 8, "x": 16, "y": 37},
-   "id": 20,
-   "options": {"legend": {"calcs": ["lastNotNull", "mean"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Current age of the oldest drainable event split into currency and statistic classes. Pairs with the row-count split so a one-sided projector stall shows up as one class ageing while the other drains.",
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 8,
+    "x": 8,
+    "y": 37
+   },
+   "id": 25,
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
    "targets": [
-    {"expr": "horde:kudos_pending_rows:growth_per_second{deployment_environment_name=~\"$environment\"}", "legendFormat": "net backlog change/s", "refId": "A"},
-    {"expr": "(horde:kudos_pending_rows:current{deployment_environment_name=~\"$environment\"} / clamp_min(-horde:kudos_pending_rows:growth_per_second{deployment_environment_name=~\"$environment\"}, 1e-9)) and horde:kudos_pending_rows:growth_per_second{deployment_environment_name=~\"$environment\"} < 0", "legendFormat": "drain ETA seconds", "refId": "B"}
+    {
+     "expr": "horde:kudos_oldest_pending_by_type:current_seconds{deployment_environment_name=~\"$environment\"}",
+     "legendFormat": "{{horde_kudos_row_type}}",
+     "refId": "A"
+    }
+   ],
+   "title": "Oldest Pending Age by Type",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Per-second change in the combined backlog. Positive means the applier is losing ground; negative means it is draining. Approximate drain ETA is current backlog divided by the absolute negative rate.",
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ops"
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "drain ETA seconds"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "s"
+       },
+       {
+        "id": "custom.axisPlacement",
+        "value": "right"
+       }
+      ]
+     }
+    ]
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 8,
+    "x": 16,
+    "y": 37
+   },
+   "id": 20,
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "mean"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "horde:kudos_pending_rows:growth_per_second{deployment_environment_name=~\"$environment\"}",
+     "legendFormat": "net backlog change/s",
+     "refId": "A"
+    },
+    {
+     "expr": "(horde:kudos_pending_rows:current{deployment_environment_name=~\"$environment\"} / clamp_min(-horde:kudos_pending_rows:growth_per_second{deployment_environment_name=~\"$environment\"}, 1e-9)) and horde:kudos_pending_rows:growth_per_second{deployment_environment_name=~\"$environment\"} < 0",
+     "legendFormat": "drain ETA seconds",
+     "refId": "B"
+    }
    ],
    "title": "Backlog Growth and Drain ETA",
    "type": "timeseries"
   },
   {
-   "datasource": {"type": "prometheus", "uid": "mimir-telemetry"},
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
    "description": "Mean duration of each phase within an applier cycle. Claim includes selecting, locking and hydrating both batches; sustained claim time over 20 seconds while backlogged triggers HordeKudosApplierClaimSlow.",
-   "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
-   "gridPos": {"h": 8, "w": 12, "x": 0, "y": 43},
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 43
+   },
    "id": 21,
-   "options": {"legend": {"calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
-   "targets": [{"expr": "horde:kudos_applier_phase:avg_seconds{deployment_environment_name=~\"$environment\"}", "legendFormat": "{{horde_kudos_phase}}", "refId": "A"}],
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "horde:kudos_applier_phase:avg_seconds{deployment_environment_name=~\"$environment\"}",
+     "legendFormat": "{{horde_kudos_phase}}",
+     "refId": "A"
+    }
+   ],
    "title": "Applier Phase Duration",
    "type": "timeseries"
   },
   {
-   "datasource": {"type": "prometheus", "uid": "mimir-telemetry"},
-   "description": "New quarantines split by bounded machine-readable reason. The aggregate quarantine alert is initialized at process start so the first incident is observable; use the log panel for exact event IDs.",
-   "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
-   "gridPos": {"h": 8, "w": 12, "x": 12, "y": 43},
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Applier cycles actually used per outer tick against the configured catch-up bound. The average riding the bound means every tick exhausts its cycle budget: the applier has no headroom and the backlog panels decide whether it is losing ground. Raise batch size or the cycle bound only after phase duration rules out slow folds.",
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 12,
+    "y": 43
+   },
+   "id": 26,
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "sum(rate(horde_kudos_applier_cycles_per_tick_sum{deployment_environment_name=~\"$environment\"}[10m])) / clamp_min(sum(rate(horde_kudos_applier_cycles_per_tick_count{deployment_environment_name=~\"$environment\"}[10m])), 1e-9)",
+     "legendFormat": "cycles used per tick (10m avg)",
+     "refId": "A"
+    },
+    {
+     "expr": "max(horde_kudos_applier_max_catchup_cycles{deployment_environment_name=~\"$environment\"})",
+     "legendFormat": "max catch-up cycles",
+     "refId": "B"
+    }
+   ],
+   "title": "Applier Headroom (cycles per tick)",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Configured maximum currency rows and stat rows claimed per applier cycle. Context for the throughput and headroom panels when judging a backlog.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "short",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "text",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 4,
+    "x": 20,
+    "y": 43
+   },
+   "id": 27,
+   "options": {
+    "colorMode": "none",
+    "graphMode": "none",
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "expr": "max(horde_kudos_applier_batch_size{deployment_environment_name=~\"$environment\"})",
+     "legendFormat": "batch size",
+     "refId": "A"
+    }
+   ],
+   "title": "Configured Batch Size",
+   "type": "stat"
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 51
+   },
+   "id": 150,
+   "title": "Incident Signals \u2014 blank or zero when healthy",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Growth of retained quarantine evidence in the last hour, computed from the continuously exported retained-rows gauge rather than the quarantine counter (which produces no series at all until the first-ever event). Any nonzero value is an incident requiring producer review and an explicit repair or acceptance decision.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "short",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 4,
+    "x": 0,
+    "y": 52
+   },
+   "id": 17,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "area",
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "expr": "horde:kudos_quarantined_rows:current{deployment_environment_name=~\"$environment\"} - min_over_time(horde:kudos_quarantined_rows:current{deployment_environment_name=~\"$environment\"}[1h])",
+     "legendFormat": "new quarantines",
+     "refId": "A"
+    }
+   ],
+   "title": "New Quarantines (1h)",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Age of the newest retained quarantine event; zero when quarantine is empty. Distinguishes a fresh incident (small nonzero age) from long-settled historical evidence next to the cumulative retained count.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "s",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 4,
+    "x": 4,
+    "y": 52
+   },
+   "id": 28,
+   "options": {
+    "colorMode": "none",
+    "graphMode": "area",
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "expr": "horde:kudos_newest_quarantine_age:current_seconds{deployment_environment_name=~\"$environment\"}",
+     "legendFormat": "newest quarantine age",
+     "refId": "A"
+    }
+   ],
+   "title": "Newest Quarantine Age",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Total retained quarantine evidence. This is intentionally cumulative and does not represent unresolved incident state.",
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 4,
+    "x": 8,
+    "y": 52
+   },
+   "id": 18,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "area",
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "expr": "horde:kudos_quarantined_rows:current{deployment_environment_name=~\"$environment\"}",
+     "legendFormat": "retained",
+     "refId": "A"
+    }
+   ],
+   "title": "Retained Quarantine Rows",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "transfer_kudos calls short-circuited as idempotent replays. The counter is not exported until the first replay ever occurs, so this panel pins the line at zero when the series is absent; a sustained nonzero rate means a caller is retrying transfers.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "short",
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 20,
+      "gradientMode": "opacity",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 6,
+    "w": 12,
+    "x": 12,
+    "y": 52
+   },
+   "id": 11,
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "single",
+     "sort": "none"
+    }
+   },
+   "targets": [
+    {
+     "expr": "sum(rate(horde_kudos_transfers_idempotent_replays{deployment_environment_name=~\"$environment\"}[$__rate_interval])) or on() vector(0)",
+     "legendFormat": "replays/s",
+     "refId": "A"
+    }
+   ],
+   "title": "Transfer Idempotent Replay Rate",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "New quarantines split by bounded machine-readable reason. The underlying counter produces no series until the first-ever quarantine, so an empty panel here is the healthy state; use the log panel below for exact event IDs once it fires.",
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 24,
+    "x": 0,
+    "y": 58
+   },
    "id": 22,
-   "options": {"legend": {"calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
-   "targets": [{"expr": "sum by (horde_kudos_reason) (increase(horde_kudos_applier_quarantined_by_reason{deployment_environment_name=~\"$environment\"}[$__rate_interval]))", "legendFormat": "{{horde_kudos_reason}}", "refId": "A"}],
+   "options": {
+    "legend": {
+     "calcs": [
+      "sum"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "sum by (horde_kudos_reason) (increase(horde_kudos_applier_quarantined_by_reason{deployment_environment_name=~\"$environment\"}[$__rate_interval]))",
+     "legendFormat": "{{horde_kudos_reason}}",
+     "refId": "A"
+    }
+   ],
    "title": "Quarantines by Reason",
    "type": "timeseries"
   },
   {
-   "datasource": {"type": "loki", "uid": "loki-app"},
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-app"
+   },
    "description": "Focused projector failures and durable quarantine decisions. Infrastructure failures should repeat and alert through HordeBackgroundJobFailures; deterministic poison data should appear once here and in quarantine metrics.",
-   "gridPos": {"h": 8, "w": 24, "x": 0, "y": 51},
+   "gridPos": {
+    "h": 8,
+    "w": 24,
+    "x": 0,
+    "y": 65
+   },
    "id": 23,
-   "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showCommonLabels": false, "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true},
-   "targets": [{"expr": "{app=\"ai-horde\"} |~ \"apply_kudos_ledger|Kudos applier|ForeignKeyViolation|DeadlockDetected|lock timeout|quarantin\"", "refId": "A"}],
+   "options": {
+    "dedupStrategy": "none",
+    "enableLogDetails": true,
+    "prettifyLogMessage": false,
+    "showCommonLabels": false,
+    "showLabels": false,
+    "showTime": true,
+    "sortOrder": "Descending",
+    "wrapLogMessage": true
+   },
+   "targets": [
+    {
+     "expr": "{app=\"ai-horde\"} |~ \"apply_kudos_ledger|Kudos applier|ForeignKeyViolation|DeadlockDetected|lock timeout|quarantin\"",
+     "refId": "A"
+    }
+   ],
    "title": "Kudos Projector Errors and Quarantine Log",
    "type": "logs"
   },
@@ -1057,7 +1588,7 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 59
+    "y": 73
    },
    "id": 130,
    "title": "Database Context",
@@ -1114,7 +1645,7 @@
     "h": 7,
     "w": 12,
     "x": 0,
-    "y": 60
+    "y": 74
    },
    "id": 13,
    "options": {
@@ -1194,7 +1725,7 @@
     "h": 7,
     "w": 12,
     "x": 12,
-    "y": 60
+    "y": 74
    },
    "id": 14,
    "options": {
@@ -1270,5 +1801,5 @@
  "timezone": "browser",
  "title": "Horde Kudos Accounting",
  "uid": "horde-kudos-accounting",
- "version": 3
+ "version": 4
 }

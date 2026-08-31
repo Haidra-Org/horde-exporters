@@ -83,17 +83,17 @@
    },
    "targets": [
     {
-     "expr": "histogram_quantile(0.50, sum by (le, horde_gentype) (rate(horde_generate_duration_bucket[5m])))",
+     "expr": "histogram_quantile(0.50, sum by (le, horde_gentype) (rate(horde_generate_duration_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "p50 {{horde_gentype}}",
      "refId": "A"
     },
     {
-     "expr": "histogram_quantile(0.95, sum by (le, horde_gentype) (rate(horde_generate_duration_bucket[5m])))",
+     "expr": "histogram_quantile(0.95, sum by (le, horde_gentype) (rate(horde_generate_duration_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "p95 {{horde_gentype}}",
      "refId": "B"
     },
     {
-     "expr": "histogram_quantile(0.99, sum by (le, horde_gentype) (rate(horde_generate_duration_bucket[5m])))",
+     "expr": "histogram_quantile(0.99, sum by (le, horde_gentype) (rate(horde_generate_duration_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "p99 {{horde_gentype}}",
      "refId": "C"
     }
@@ -136,17 +136,17 @@
    },
    "targets": [
     {
-     "expr": "histogram_quantile(0.50, sum by (le, horde_gentype) (rate(horde_pop_duration_bucket[5m])))",
+     "expr": "histogram_quantile(0.50, sum by (le, horde_gentype) (rate(horde_pop_duration_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "p50 {{horde_gentype}}",
      "refId": "A"
     },
     {
-     "expr": "histogram_quantile(0.95, sum by (le, horde_gentype) (rate(horde_pop_duration_bucket[5m])))",
+     "expr": "histogram_quantile(0.95, sum by (le, horde_gentype) (rate(horde_pop_duration_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "p95 {{horde_gentype}}",
      "refId": "B"
     },
     {
-     "expr": "histogram_quantile(0.99, sum by (le, horde_gentype) (rate(horde_pop_duration_bucket[5m])))",
+     "expr": "histogram_quantile(0.99, sum by (le, horde_gentype) (rate(horde_pop_duration_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "p99 {{horde_gentype}}",
      "refId": "C"
     }
@@ -189,17 +189,17 @@
    },
    "targets": [
     {
-     "expr": "histogram_quantile(0.50, sum by (le, horde_gentype) (rate(horde_submit_duration_bucket[5m])))",
+     "expr": "histogram_quantile(0.50, sum by (le, horde_gentype) (rate(horde_submit_duration_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "p50 {{horde_gentype}}",
      "refId": "A"
     },
     {
-     "expr": "histogram_quantile(0.95, sum by (le, horde_gentype) (rate(horde_submit_duration_bucket[5m])))",
+     "expr": "histogram_quantile(0.95, sum by (le, horde_gentype) (rate(horde_submit_duration_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "p95 {{horde_gentype}}",
      "refId": "B"
     },
     {
-     "expr": "histogram_quantile(0.99, sum by (le, horde_gentype) (rate(horde_submit_duration_bucket[5m])))",
+     "expr": "histogram_quantile(0.99, sum by (le, horde_gentype) (rate(horde_submit_duration_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "p99 {{horde_gentype}}",
      "refId": "C"
     }
@@ -240,7 +240,7 @@
    },
    "targets": [
     {
-     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_pop_wp_query_duration_bucket[5m])))",
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_pop_wp_query_duration_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "p95",
      "refId": "A"
     }
@@ -269,12 +269,12 @@
    },
    "targets": [
     {
-     "expr": "histogram_quantile(0.50, sum by (le, horde_gentype) (rate(horde_pop_candidates_evaluated_bucket[5m])))",
+     "expr": "histogram_quantile(0.50, sum by (le, horde_gentype) (rate(horde_pop_candidates_evaluated_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "p50 {{horde_gentype}}",
      "refId": "A"
     },
     {
-     "expr": "histogram_quantile(0.95, sum by (le, horde_gentype) (rate(horde_pop_candidates_evaluated_bucket[5m])))",
+     "expr": "histogram_quantile(0.95, sum by (le, horde_gentype) (rate(horde_pop_candidates_evaluated_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "p95 {{horde_gentype}}",
      "refId": "B"
     }
@@ -303,7 +303,7 @@
    },
    "targets": [
     {
-     "expr": "sum by (horde_skip_reason) (rate(horde_pop_skipped[5m]))",
+     "expr": "sum by (horde_skip_reason) (rate(horde_pop_skipped{deployment_environment_name=~\"$environment\"}[5m]))",
      "legendFormat": "{{horde_skip_reason}}",
      "refId": "A"
     }
@@ -347,7 +347,7 @@
    },
    "targets": [
     {
-     "expr": "sum by (outcome) (rate(horde_webhook_outcomes[5m]))",
+     "expr": "sum by (outcome) (rate(horde_webhook_outcomes{deployment_environment_name=~\"$environment\"}[5m]))",
      "legendFormat": "{{outcome}}",
      "refId": "A"
     }
@@ -376,7 +376,7 @@
    },
    "targets": [
     {
-     "expr": "histogram_quantile(0.95, sum by (le, outcome) (rate(horde_webhook_attempt_duration_bucket[5m])))",
+     "expr": "histogram_quantile(0.95, sum by (le, outcome) (rate(horde_webhook_attempt_duration_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "p95 {{outcome}}",
      "refId": "A"
     }
@@ -417,7 +417,7 @@
    },
    "targets": [
     {
-     "expr": "histogram_quantile(0.95, sum by (le, horde_job_name) (rate(horde_job_duration_bucket[5m])))",
+     "expr": "histogram_quantile(0.95, sum by (le, horde_job_name) (rate(horde_job_duration_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "{{horde_job_name}}",
      "refId": "A"
     }
@@ -449,7 +449,7 @@
    },
    "targets": [
     {
-     "expr": "sum by (horde_job_name) (rate(horde_job_duration_count{horde_job_failed=\"true\"}[5m]))",
+     "expr": "sum by (horde_job_name) (rate(horde_job_duration_count{horde_job_failed=\"true\", deployment_environment_name=~\"$environment\"}[5m]))",
      "legendFormat": "{{horde_job_name}}",
      "refId": "A"
     }
@@ -490,7 +490,7 @@
    },
    "targets": [
     {
-     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_countermeasures_ip_check_duration_bucket[5m])))",
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_countermeasures_ip_check_duration_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "p95",
      "refId": "A"
     }
@@ -519,12 +519,12 @@
    },
    "targets": [
     {
-     "expr": "histogram_quantile(0.50, sum by (le, horde_gentype) (rate(horde_submit_kudos_bucket[5m])))",
+     "expr": "histogram_quantile(0.50, sum by (le, horde_gentype) (rate(horde_submit_kudos_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "p50 {{horde_gentype}}",
      "refId": "A"
     },
     {
-     "expr": "histogram_quantile(0.95, sum by (le, horde_gentype) (rate(horde_submit_kudos_bucket[5m])))",
+     "expr": "histogram_quantile(0.95, sum by (le, horde_gentype) (rate(horde_submit_kudos_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "p95 {{horde_gentype}}",
      "refId": "B"
     }
@@ -820,12 +820,12 @@
    },
    "targets": [
     {
-     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_webhook_call_duration_bucket[5m])))",
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_webhook_call_duration_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "p95",
      "refId": "A"
     },
     {
-     "expr": "sum(rate(horde_submit_webhook_call_duration_sum[5m])) / clamp_min(sum(rate(horde_submit_webhook_call_duration_count[5m])), 1e-9)",
+     "expr": "sum(rate(horde_submit_webhook_call_duration_sum{deployment_environment_name=~\"$environment\"}[5m])) / clamp_min(sum(rate(horde_submit_webhook_call_duration_count{deployment_environment_name=~\"$environment\"}[5m])), 1e-9)",
      "legendFormat": "mean",
      "refId": "B"
     }
@@ -882,12 +882,12 @@
    },
    "targets": [
     {
-     "expr": "histogram_quantile(0.95, sum by (le, horde_outcome) (rate(horde_generate_check_duration_bucket[5m])))",
+     "expr": "histogram_quantile(0.95, sum by (le, horde_outcome) (rate(horde_generate_check_duration_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "p95 {{horde_outcome}}",
      "refId": "A"
     },
     {
-     "expr": "histogram_quantile(0.50, sum by (le, horde_outcome) (rate(horde_generate_check_duration_bucket[5m])))",
+     "expr": "histogram_quantile(0.50, sum by (le, horde_outcome) (rate(horde_generate_check_duration_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "p50 {{horde_outcome}}",
      "refId": "B"
     }
@@ -930,7 +930,7 @@
    },
    "targets": [
     {
-     "expr": "sum by (horde_outcome) (rate(horde_generate_check_outcomes[5m]))",
+     "expr": "sum by (horde_outcome) (rate(horde_generate_check_outcomes{deployment_environment_name=~\"$environment\"}[5m]))",
      "legendFormat": "{{horde_outcome}}",
      "refId": "A"
     }
@@ -973,12 +973,12 @@
    },
    "targets": [
     {
-     "expr": "histogram_quantile(0.95, sum by (le, horde_outcome) (rate(horde_generate_status_duration_bucket[5m])))",
+     "expr": "histogram_quantile(0.95, sum by (le, horde_outcome) (rate(horde_generate_status_duration_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "p95 {{horde_outcome}}",
      "refId": "A"
     },
     {
-     "expr": "sum(rate(horde_generate_status_duration_sum[5m])) / clamp_min(sum(rate(horde_generate_status_duration_count[5m])), 1e-9)",
+     "expr": "sum(rate(horde_generate_status_duration_sum{deployment_environment_name=~\"$environment\"}[5m])) / clamp_min(sum(rate(horde_generate_status_duration_count{deployment_environment_name=~\"$environment\"}[5m])), 1e-9)",
      "legendFormat": "mean",
      "refId": "B"
     }
@@ -1035,12 +1035,12 @@
    },
    "targets": [
     {
-     "expr": "histogram_quantile(0.95, sum by (le, horde_wp_type) (rate(horde_wp_activate_duration_bucket[5m])))",
+     "expr": "histogram_quantile(0.95, sum by (le, horde_wp_type) (rate(horde_wp_activate_duration_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "p95 {{horde_wp_type}}",
      "refId": "A"
     },
     {
-     "expr": "histogram_quantile(0.50, sum by (le, horde_wp_type) (rate(horde_wp_activate_duration_bucket[5m])))",
+     "expr": "histogram_quantile(0.50, sum by (le, horde_wp_type) (rate(horde_wp_activate_duration_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "p50 {{horde_wp_type}}",
      "refId": "B"
     }
@@ -1083,12 +1083,12 @@
    },
    "targets": [
     {
-     "expr": "histogram_quantile(0.95, sum by (le, horde_wp_type) (rate(horde_wp_activation_age_bucket[5m])))",
+     "expr": "histogram_quantile(0.95, sum by (le, horde_wp_type) (rate(horde_wp_activation_age_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "p95 {{horde_wp_type}}",
      "refId": "A"
     },
     {
-     "expr": "histogram_quantile(0.50, sum by (le, horde_wp_type) (rate(horde_wp_activation_age_bucket[5m])))",
+     "expr": "histogram_quantile(0.50, sum by (le, horde_wp_type) (rate(horde_wp_activation_age_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "p50 {{horde_wp_type}}",
      "refId": "B"
     }
@@ -1131,17 +1131,17 @@
    },
    "targets": [
     {
-     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_wp_calculate_kudos_duration_bucket[5m])))",
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_wp_calculate_kudos_duration_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "calculate_kudos",
      "refId": "A"
     },
     {
-     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_wp_kudos_torch_duration_bucket[5m])))",
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_wp_kudos_torch_duration_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "kudos model forward",
      "refId": "B"
     },
     {
-     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_wp_kudos_commit_duration_bucket[5m])))",
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_wp_kudos_commit_duration_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "commit",
      "refId": "C"
     }
@@ -1184,22 +1184,22 @@
    },
    "targets": [
     {
-     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_wp_activate_post_super_duration_bucket[5m])))",
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_wp_activate_post_super_duration_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "post super()",
      "refId": "A"
     },
     {
-     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_wp_activate_post_kudos_duration_bucket[5m])))",
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_wp_activate_post_kudos_duration_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "post calculate_kudos",
      "refId": "B"
     },
     {
-     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_wp_activate_base_record_usage_duration_bucket[5m])))",
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_wp_activate_base_record_usage_duration_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "base record_usage",
      "refId": "C"
     },
     {
-     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_wp_activate_base_commit_duration_bucket[5m])))",
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_wp_activate_base_commit_duration_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "base commit",
      "refId": "D"
     }
@@ -1256,12 +1256,12 @@
    },
    "targets": [
     {
-     "expr": "histogram_quantile(0.99, sum by (le, horde_img2img) (rate(horde_generate_duration_bucket{horde_gentype=\"image\"}[5m])))",
+     "expr": "histogram_quantile(0.99, sum by (le, horde_img2img) (rate(horde_generate_duration_bucket{horde_gentype=\"image\", deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "p99 img2img={{horde_img2img}}",
      "refId": "A"
     },
     {
-     "expr": "histogram_quantile(0.95, sum by (le, horde_img2img) (rate(horde_generate_duration_bucket{horde_gentype=\"image\"}[5m])))",
+     "expr": "histogram_quantile(0.95, sum by (le, horde_img2img) (rate(horde_generate_duration_bucket{horde_gentype=\"image\", deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "p95 img2img={{horde_img2img}}",
      "refId": "B"
     }
@@ -1304,7 +1304,7 @@
    },
    "targets": [
     {
-     "expr": "sum by (horde_img2img) (rate(horde_generate_duration_count{horde_gentype=\"image\"}[5m])) / ignoring(horde_img2img) group_left sum(rate(horde_generate_duration_count{horde_gentype=\"image\"}[5m]))",
+     "expr": "sum by (horde_img2img) (rate(horde_generate_duration_count{horde_gentype=\"image\", deployment_environment_name=~\"$environment\"}[5m])) / ignoring(horde_img2img) group_left sum(rate(horde_generate_duration_count{horde_gentype=\"image\", deployment_environment_name=~\"$environment\"}[5m]))",
      "legendFormat": "img2img={{horde_img2img}}",
      "refId": "A"
     }
@@ -1347,17 +1347,17 @@
    },
    "targets": [
     {
-     "expr": "histogram_quantile(0.99, sum by (le) (rate(horde_generate_source_upload_duration_bucket[5m])))",
+     "expr": "histogram_quantile(0.99, sum by (le) (rate(horde_generate_source_upload_duration_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "p99",
      "refId": "A"
     },
     {
-     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_source_upload_duration_bucket[5m])))",
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_generate_source_upload_duration_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
      "legendFormat": "p95",
      "refId": "B"
     },
     {
-     "expr": "sum(rate(horde_generate_source_upload_duration_sum[5m])) / clamp_min(sum(rate(horde_generate_source_upload_duration_count[5m])), 1e-9)",
+     "expr": "sum(rate(horde_generate_source_upload_duration_sum{deployment_environment_name=~\"$environment\"}[5m])) / clamp_min(sum(rate(horde_generate_source_upload_duration_count{deployment_environment_name=~\"$environment\"}[5m])), 1e-9)",
      "legendFormat": "mean",
      "refId": "C"
     }
@@ -1389,6 +1389,33 @@
      "text": "Telemetry",
      "value": "mimir-telemetry"
     }
+   },
+   {
+    "current": {
+     "selected": true,
+     "text": "production",
+     "value": "production"
+    },
+    "datasource": {
+     "type": "prometheus",
+     "uid": "${datasource}"
+    },
+    "definition": "label_values(horde_generate_duration_count, deployment_environment_name)",
+    "description": "Scopes every application OTLP panel. The Tempo span-metrics panels (traces_spanmetrics_*) are generated without this resource attribute and always show all environments.",
+    "hide": 0,
+    "includeAll": false,
+    "label": "Environment",
+    "multi": false,
+    "name": "environment",
+    "options": [],
+    "query": {
+     "query": "label_values(horde_generate_duration_count, deployment_environment_name)",
+     "refId": "environment"
+    },
+    "refresh": 1,
+    "skipUrlSync": false,
+    "sort": 1,
+    "type": "query"
    }
   ]
  },
@@ -1400,5 +1427,5 @@
  "timezone": "browser",
  "title": "Horde App Traces (OTLP RED)",
  "uid": "horde-app-traces",
- "version": 3
+ "version": 4
 }

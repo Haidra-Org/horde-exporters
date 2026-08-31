@@ -612,6 +612,126 @@
     "type": "prometheus",
     "uid": "mimir-telemetry"
    },
+   "description": "Current age of the oldest drainable kudos event. Red at 900s matches HordeKudosOldestPendingHigh. Emitted only by the quorum node, so No data is not a healthy zero. Drill into the Horde Kudos Accounting dashboard for the queue split and applier diagnostics.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "s",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 300
+       },
+       {
+        "color": "red",
+        "value": 900
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 3,
+    "x": 0,
+    "y": 14
+   },
+   "id": 184,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "area",
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "expr": "horde:kudos_oldest_pending:current_seconds{deployment_environment_name=\"production\"}",
+     "legendFormat": "oldest pending",
+     "refId": "A"
+    }
+   ],
+   "title": "Kudos Oldest Pending",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Growth of retained kudos quarantine evidence over the last 24h, from the continuously exported retained-rows gauge. Any nonzero value is an incident: an invalid projection event was durably isolated and needs producer review on the Horde Kudos Accounting dashboard.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "short",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "red",
+        "value": 1
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 3,
+    "x": 3,
+    "y": 14
+   },
+   "id": 185,
+   "options": {
+    "colorMode": "background",
+    "graphMode": "area",
+    "orientation": "auto",
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "textMode": "auto"
+   },
+   "targets": [
+    {
+     "expr": "horde:kudos_quarantined_rows:current{deployment_environment_name=\"production\"} - min_over_time(horde:kudos_quarantined_rows:current{deployment_environment_name=\"production\"}[24h])",
+     "legendFormat": "new quarantines",
+     "refId": "A"
+    }
+   ],
+   "title": "Kudos Quarantines (24h)",
+   "type": "stat"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
    "description": "p95 latency of POST /generate by gentype, from the horde:generate_duration:p95_seconds recording rule. Threshold matches HordeGenerateLatencyHigh (>2s).",
    "fieldConfig": {
     "defaults": {
@@ -655,7 +775,7 @@
     "h": 7,
     "w": 7,
     "x": 0,
-    "y": 14
+    "y": 18
    },
    "id": 113,
    "options": {
@@ -731,7 +851,7 @@
     "h": 7,
     "w": 6,
     "x": 7,
-    "y": 14
+    "y": 18
    },
    "id": 114,
    "options": {
@@ -807,7 +927,7 @@
     "h": 7,
     "w": 7,
     "x": 13,
-    "y": 14
+    "y": 18
    },
    "id": 177,
    "options": {
@@ -872,7 +992,7 @@
     "h": 7,
     "w": 4,
     "x": 20,
-    "y": 14
+    "y": 18
    },
    "id": 112,
    "options": {
@@ -904,7 +1024,7 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 21
+    "y": 25
    },
    "id": 180,
    "title": "Which Phase Is Slow",
@@ -945,7 +1065,7 @@
     "h": 8,
     "w": 8,
     "x": 0,
-    "y": 22
+    "y": 26
    },
    "id": 181,
    "options": {
@@ -1038,7 +1158,7 @@
     "h": 8,
     "w": 8,
     "x": 8,
-    "y": 22
+    "y": 26
    },
    "id": 182,
    "options": {
@@ -1126,7 +1246,7 @@
     "h": 8,
     "w": 8,
     "x": 16,
-    "y": 22
+    "y": 26
    },
    "id": 183,
    "options": {
@@ -1185,7 +1305,7 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 30
+    "y": 34
    },
    "id": 120,
    "title": "Submit Outcomes, Worker Drop & Background Jobs",
@@ -1287,7 +1407,7 @@
     "h": 8,
     "w": 8,
     "x": 0,
-    "y": 31
+    "y": 35
    },
    "id": 121,
    "options": {
@@ -1365,7 +1485,7 @@
     "h": 8,
     "w": 8,
     "x": 8,
-    "y": 31
+    "y": 35
    },
    "id": 122,
    "options": {
@@ -1431,7 +1551,7 @@
     "h": 8,
     "w": 8,
     "x": 16,
-    "y": 31
+    "y": 35
    },
    "id": 178,
    "options": {
@@ -1465,7 +1585,7 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 39
+    "y": 43
    },
    "id": 160,
    "title": "Pop Diagnostics & Suspicion Logs",
@@ -1506,7 +1626,7 @@
     "h": 8,
     "w": 16,
     "x": 0,
-    "y": 40
+    "y": 44
    },
    "id": 161,
    "options": {
@@ -1562,7 +1682,7 @@
     "h": 8,
     "w": 8,
     "x": 16,
-    "y": 40
+    "y": 44
    },
    "id": 162,
    "options": {
@@ -1617,7 +1737,7 @@
     "h": 10,
     "w": 24,
     "x": 0,
-    "y": 48
+    "y": 52
    },
    "id": 163,
    "options": {
@@ -1645,7 +1765,7 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 58
+    "y": 62
    },
    "id": 130,
    "title": "Postgres Saturation",
@@ -1705,7 +1825,7 @@
     "h": 6,
     "w": 8,
     "x": 0,
-    "y": 59
+    "y": 63
    },
    "id": 131,
    "options": {
@@ -1785,7 +1905,7 @@
     "h": 6,
     "w": 8,
     "x": 8,
-    "y": 59
+    "y": 63
    },
    "id": 132,
    "options": {
@@ -1864,7 +1984,7 @@
     "h": 6,
     "w": 8,
     "x": 16,
-    "y": 59
+    "y": 63
    },
    "id": 133,
    "options": {
@@ -1944,7 +2064,7 @@
     "h": 6,
     "w": 12,
     "x": 0,
-    "y": 65
+    "y": 69
    },
    "id": 134,
    "options": {
@@ -1978,7 +2098,7 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 71
+    "y": 75
    },
    "id": 140,
    "title": "Host Top-N",
@@ -2020,7 +2140,7 @@
     "h": 8,
     "w": 8,
     "x": 0,
-    "y": 72
+    "y": 76
    },
    "id": 141,
    "options": {
@@ -2084,7 +2204,7 @@
     "h": 8,
     "w": 8,
     "x": 8,
-    "y": 72
+    "y": 76
    },
    "id": 142,
    "options": {
@@ -2166,7 +2286,7 @@
     "h": 8,
     "w": 8,
     "x": 16,
-    "y": 72
+    "y": 76
    },
    "id": 143,
    "options": {
@@ -2200,7 +2320,7 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 80
+    "y": 84
    },
    "id": 150,
    "title": "Logs (Loki)",
@@ -2271,7 +2391,7 @@
     "h": 8,
     "w": 12,
     "x": 0,
-    "y": 81
+    "y": 85
    },
    "id": 151,
    "links": [
@@ -2315,7 +2435,7 @@
     "h": 8,
     "w": 12,
     "x": 12,
-    "y": 81
+    "y": 85
    },
    "id": 152,
    "options": {
@@ -2346,7 +2466,7 @@
     "h": 6,
     "w": 12,
     "x": 12,
-    "y": 65
+    "y": 69
    },
    "id": 135,
    "title": "SQLAlchemy Pool Connections by State",
@@ -2399,5 +2519,5 @@
  "timezone": "browser",
  "title": "Horde Operations Overview",
  "uid": "horde-operations",
- "version": 3
+ "version": 4
 }
