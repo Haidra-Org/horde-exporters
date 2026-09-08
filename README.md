@@ -76,6 +76,8 @@ Infra dashboards shipped in release artifacts are emitted as classic dashboard J
 | **Text Model Detail** | `horde-text-model-detail.json` | Single text model drill-down — live stats, capacity share gauges (queue/worker/jobs), computed ratios over time, and historical generation stats with % of total. |
 | **Horde App Traces (OTLP RED)** | `dashboards/ai_horde_otlp/horde-app-traces.json` | OTLP-derived RED metrics, Tempo service graph, and a generate→pop→submit funnel (span-metrics from `mimir-telemetry`). Cap query intervals to ≤24h — telemetry-tenant retention is 3 days. |
 
+| **Horde Fleet Connectivity** | `dashboards/fleet/fleet-connectivity.json` | Outage-shape dashboard (Org 1, infra): WireGuard handshake age to/from the datastore host, edge HAProxy UP servers per backend host, redis-unreachable and error log rates per host (`loki-app`), request rate/p90/5xx per host (`mimir-telemetry`), and aihdb01 host/postgres health. Fixed colour per host on every panel; critical alerts drawn as annotations. Needs the `wireguard_peer_*` textfile metrics and aihdb01's pushed node metrics. |
+
 > **Note:** The legacy combined `horde-models.json` is superseded by the four model dashboards above.
 
 ### Public-org variants (`-public.json`)
