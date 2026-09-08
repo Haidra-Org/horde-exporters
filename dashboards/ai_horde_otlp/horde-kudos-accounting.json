@@ -12,6 +12,85 @@
     "iconColor": "rgba(0, 211, 255, 1)",
     "name": "Annotations & Alerts",
     "type": "dashboard"
+   },
+   {
+    "horde_overlay": "alerts-infra",
+    "name": "Infra alerts",
+    "datasource": {
+     "type": "prometheus",
+     "uid": "mimir-infra"
+    },
+    "enable": true,
+    "hide": false,
+    "iconColor": "#d03b3b",
+    "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\", alertname!~\"Watchdog|HostSystemdServiceFailed|HostOutOfInodes|HostSwapFillingUp|HostDiskWillFillIn24h|HostDiskUsageHigh|WireGuardTextfileStale|PrometheusTargetsMissing|HordeRequestObservationDataReady|HordeRequestEstimatorPromotionApproved|HordeRequestUnstartedExpiryForecastValidationReady\"}",
+    "step": "30s",
+    "titleFormat": "{{alertname}}",
+    "textFormat": "{{severity}} {{instance}}{{host}}{{peer}}{{proxy}}{{name}}",
+    "useValueForTime": false
+   },
+   {
+    "horde_overlay": "alerts-telemetry",
+    "name": "App alerts (telemetry)",
+    "datasource": {
+     "type": "prometheus",
+     "uid": "mimir-telemetry"
+    },
+    "enable": true,
+    "hide": false,
+    "iconColor": "#ec835a",
+    "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\", alertname!~\"Watchdog|HostSystemdServiceFailed|HostOutOfInodes|HostSwapFillingUp|HostDiskWillFillIn24h|HostDiskUsageHigh|WireGuardTextfileStale|PrometheusTargetsMissing|HordeRequestObservationDataReady|HordeRequestEstimatorPromotionApproved|HordeRequestUnstartedExpiryForecastValidationReady\"}",
+    "step": "30s",
+    "titleFormat": "{{alertname}}",
+    "textFormat": "{{severity}} {{horde_host}}{{horde_job_name}}{{deployment_environment_name}}",
+    "useValueForTime": false
+   },
+   {
+    "horde_overlay": "alerts-app",
+    "name": "App alerts (exporter)",
+    "datasource": {
+     "type": "prometheus",
+     "uid": "mimir-app"
+    },
+    "enable": true,
+    "hide": false,
+    "iconColor": "#e0b400",
+    "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\", alertname!~\"Watchdog|HostSystemdServiceFailed|HostOutOfInodes|HostSwapFillingUp|HostDiskWillFillIn24h|HostDiskUsageHigh|WireGuardTextfileStale|PrometheusTargetsMissing|HordeRequestObservationDataReady|HordeRequestEstimatorPromotionApproved|HordeRequestUnstartedExpiryForecastValidationReady\"}",
+    "step": "30s",
+    "titleFormat": "{{alertname}}",
+    "textFormat": "{{severity}}",
+    "useValueForTime": false
+   },
+   {
+    "horde_overlay": "app-restarts",
+    "name": "App restarts",
+    "datasource": {
+     "type": "loki",
+     "uid": "loki-app"
+    },
+    "enable": true,
+    "hide": false,
+    "iconColor": "#8ab8ff",
+    "expr": "{app=\"ai-horde\", component=\"backend\"} |= \"INIT\" |= \"Horde Database\" | line_format \"{{.instance}} {{.container}} started\""
+   },
+   {
+    "horde_overlay": "operator",
+    "name": "Operator notes & deploys",
+    "datasource": {
+     "type": "grafana",
+     "uid": "-- Grafana --"
+    },
+    "enable": true,
+    "hide": false,
+    "iconColor": "#b877d9",
+    "target": {
+     "type": "tags",
+     "tags": [
+      "ai-horde"
+     ],
+     "matchAny": true,
+     "limit": 200
+    }
    }
   ]
  },
@@ -1588,7 +1667,7 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 73
+    "y": 80
    },
    "id": 130,
    "title": "Database Context",
@@ -1645,7 +1724,7 @@
     "h": 7,
     "w": 12,
     "x": 0,
-    "y": 74
+    "y": 81
    },
    "id": 13,
    "options": {
@@ -1725,7 +1804,7 @@
     "h": 7,
     "w": 12,
     "x": 12,
-    "y": 74
+    "y": 81
    },
    "id": 14,
    "options": {
@@ -1752,6 +1831,404 @@
    ],
    "title": "Oldest Open Transaction",
    "type": "timeseries"
+  },
+  {
+   "id": 151,
+   "type": "timeseries",
+   "title": "'Quorum changed' log lines per 5m, by host",
+   "description": "The applier runs on the quorum node. A trickle here is the redis fan-out stalling (normal at :00/:30); a steady stream means the owner cannot renew the key and the applier may be running nowhere, or on two hosts.",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-app"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 73,
+    "w": 12,
+    "h": 7
+   },
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "custom": {
+      "drawStyle": "bars",
+      "lineWidth": 2,
+      "fillOpacity": 60,
+      "pointSize": 4,
+      "showPoints": "never",
+      "spanNulls": 60000,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "axisBorderShow": false,
+      "gradientMode": "none",
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "transparent",
+        "value": null
+       }
+      ]
+     },
+     "min": 0,
+     "decimals": 0
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\btroll\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#3987e5"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\bkobold\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#d95926"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\bgremlin\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#199e70"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\bmedusa\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#c98500"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\bstablehorde_orig\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#d55181"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\baihdb01\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#008300"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\borc\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#9085e9"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\baihorde\\.net\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#e66767"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true,
+     "calcs": []
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki-app"
+     },
+     "refId": "A",
+     "range": true,
+     "instant": false,
+     "expr": "sum by (instance) (count_over_time({app=\"ai-horde\"} |~ \"Quorum changed to port\" [5m]))",
+     "legendFormat": "{{instance}}",
+     "queryType": "range"
+    }
+   ]
+  },
+  {
+   "id": 152,
+   "type": "timeseries",
+   "title": "Redis 'appears unreachable' log lines per minute, by host",
+   "description": "Backends that cannot reach the shared redis. The applier goes silent whenever the quorum host appears here, which is why HordeKudosApplierSilent is inhibited during a partition: this panel is the cause, the lag panels above are the effect.",
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-app"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 73,
+    "w": 12,
+    "h": 7
+   },
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "custom": {
+      "drawStyle": "bars",
+      "lineWidth": 2,
+      "fillOpacity": 60,
+      "pointSize": 4,
+      "showPoints": "never",
+      "spanNulls": 60000,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "axisBorderShow": false,
+      "gradientMode": "none",
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "transparent",
+        "value": null
+       }
+      ]
+     },
+     "min": 0,
+     "decimals": 0
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\btroll\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#3987e5"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\bkobold\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#d95926"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\bgremlin\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#199e70"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\bmedusa\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#c98500"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\bstablehorde_orig\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#d55181"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\baihdb01\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#008300"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\borc\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#9085e9"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\baihorde\\.net\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#e66767"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true,
+     "calcs": []
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "loki",
+      "uid": "loki-app"
+     },
+     "refId": "A",
+     "range": true,
+     "instant": false,
+     "expr": "sum by (instance) (count_over_time({app=\"ai-horde\"} |~ \"appears unreachable\" [1m]))",
+     "legendFormat": "{{instance}}",
+     "queryType": "range"
+    }
+   ]
   }
  ],
  "refresh": "30s",

@@ -142,6 +142,21 @@ mappings:
   - component: kudos
     alertname: PostgresDown
     status: down
+  - component: api
+    alertname: EdgeFrontend5xxShareHigh
+    status: partial
+  - component: workers
+    alertname: EdgeFrontend5xxShareHigh
+    status: partial
+  - component: api
+    alertname: RedisDown
+    status: down
+  - component: workers
+    alertname: RedisDown
+    status: down
+  - component: kudos
+    alertname: RedisDown
+    status: down
 
   # alchemy: pill driven only by the external prober — the deployed rules
   # carry no alchemy/interrogation-specific alert, so there is nothing curated

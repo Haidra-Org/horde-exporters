@@ -12,6 +12,85 @@
     "iconColor": "rgba(0, 211, 255, 1)",
     "name": "Annotations & Alerts",
     "type": "dashboard"
+   },
+   {
+    "horde_overlay": "alerts-infra",
+    "name": "Infra alerts",
+    "datasource": {
+     "type": "prometheus",
+     "uid": "mimir-infra"
+    },
+    "enable": true,
+    "hide": false,
+    "iconColor": "#d03b3b",
+    "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\", alertname!~\"Watchdog|HostSystemdServiceFailed|HostOutOfInodes|HostSwapFillingUp|HostDiskWillFillIn24h|HostDiskUsageHigh|WireGuardTextfileStale|PrometheusTargetsMissing|HordeRequestObservationDataReady|HordeRequestEstimatorPromotionApproved|HordeRequestUnstartedExpiryForecastValidationReady\"}",
+    "step": "30s",
+    "titleFormat": "{{alertname}}",
+    "textFormat": "{{severity}} {{instance}}{{host}}{{peer}}{{proxy}}{{name}}",
+    "useValueForTime": false
+   },
+   {
+    "horde_overlay": "alerts-telemetry",
+    "name": "App alerts (telemetry)",
+    "datasource": {
+     "type": "prometheus",
+     "uid": "mimir-telemetry"
+    },
+    "enable": true,
+    "hide": false,
+    "iconColor": "#ec835a",
+    "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\", alertname!~\"Watchdog|HostSystemdServiceFailed|HostOutOfInodes|HostSwapFillingUp|HostDiskWillFillIn24h|HostDiskUsageHigh|WireGuardTextfileStale|PrometheusTargetsMissing|HordeRequestObservationDataReady|HordeRequestEstimatorPromotionApproved|HordeRequestUnstartedExpiryForecastValidationReady\"}",
+    "step": "30s",
+    "titleFormat": "{{alertname}}",
+    "textFormat": "{{severity}} {{horde_host}}{{horde_job_name}}{{deployment_environment_name}}",
+    "useValueForTime": false
+   },
+   {
+    "horde_overlay": "alerts-app",
+    "name": "App alerts (exporter)",
+    "datasource": {
+     "type": "prometheus",
+     "uid": "mimir-app"
+    },
+    "enable": true,
+    "hide": false,
+    "iconColor": "#e0b400",
+    "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\", alertname!~\"Watchdog|HostSystemdServiceFailed|HostOutOfInodes|HostSwapFillingUp|HostDiskWillFillIn24h|HostDiskUsageHigh|WireGuardTextfileStale|PrometheusTargetsMissing|HordeRequestObservationDataReady|HordeRequestEstimatorPromotionApproved|HordeRequestUnstartedExpiryForecastValidationReady\"}",
+    "step": "30s",
+    "titleFormat": "{{alertname}}",
+    "textFormat": "{{severity}}",
+    "useValueForTime": false
+   },
+   {
+    "horde_overlay": "app-restarts",
+    "name": "App restarts",
+    "datasource": {
+     "type": "loki",
+     "uid": "loki-app"
+    },
+    "enable": true,
+    "hide": false,
+    "iconColor": "#8ab8ff",
+    "expr": "{app=\"ai-horde\", component=\"backend\"} |= \"INIT\" |= \"Horde Database\" | line_format \"{{.instance}} {{.container}} started\""
+   },
+   {
+    "horde_overlay": "operator",
+    "name": "Operator notes & deploys",
+    "datasource": {
+     "type": "grafana",
+     "uid": "-- Grafana --"
+    },
+    "enable": true,
+    "hide": false,
+    "iconColor": "#b877d9",
+    "target": {
+     "type": "tags",
+     "tags": [
+      "ai-horde"
+     ],
+     "matchAny": true,
+     "limit": 200
+    }
    }
   ]
  },

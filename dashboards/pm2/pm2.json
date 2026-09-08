@@ -25,6 +25,30 @@
             "version": "v0"
           }
         }
+      },
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "builtIn": false,
+          "enable": true,
+          "hide": false,
+          "iconColor": "#b877d9",
+          "name": "Operator notes & deploys",
+          "horde_overlay": "operator",
+          "query": {
+            "kind": "DataQuery",
+            "group": "grafana",
+            "version": "v0",
+            "spec": {
+              "type": "tags",
+              "tags": [
+                "ai-horde"
+              ],
+              "matchAny": true,
+              "limit": 200
+            }
+          }
+        }
       }
     ],
     "cursorSync": "Off",
@@ -1438,10 +1462,25 @@
         ]
       }
     },
-    "links": [],
+    "links": [
+      {
+        "asDropdown": true,
+        "icon": "external link",
+        "includeVars": true,
+        "keepTime": true,
+        "tags": [
+          "horde"
+        ],
+        "targetBlank": false,
+        "title": "Horde Dashboards",
+        "type": "dashboards"
+      }
+    ],
     "liveNow": false,
     "preload": false,
-    "tags": [],
+    "tags": [
+      "horde"
+    ],
     "timeSettings": {
       "autoRefresh": "30s",
       "autoRefreshIntervals": [

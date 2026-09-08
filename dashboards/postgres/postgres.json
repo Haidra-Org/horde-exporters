@@ -25,6 +25,78 @@
             "version": "v0"
           }
         }
+      },
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "builtIn": false,
+          "enable": true,
+          "hide": false,
+          "iconColor": "#d03b3b",
+          "name": "Infra alerts",
+          "horde_overlay": "alerts-infra",
+          "query": {
+            "kind": "DataQuery",
+            "group": "prometheus",
+            "version": "v0",
+            "datasource": {
+              "name": "mimir-infra"
+            },
+            "spec": {
+              "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\", alertname!~\"Watchdog|HostSystemdServiceFailed|HostOutOfInodes|HostSwapFillingUp|HostDiskWillFillIn24h|HostDiskUsageHigh|WireGuardTextfileStale|PrometheusTargetsMissing|HordeRequestObservationDataReady|HordeRequestEstimatorPromotionApproved|HordeRequestUnstartedExpiryForecastValidationReady\"}",
+              "step": "30s",
+              "titleFormat": "{{alertname}}",
+              "textFormat": "{{severity}} {{instance}}{{host}}{{peer}}{{proxy}}{{name}}",
+              "useValueForTime": false
+            }
+          }
+        }
+      },
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "builtIn": false,
+          "enable": true,
+          "hide": false,
+          "iconColor": "#8ab8ff",
+          "name": "App restarts",
+          "horde_overlay": "app-restarts",
+          "query": {
+            "kind": "DataQuery",
+            "group": "loki",
+            "version": "v0",
+            "datasource": {
+              "name": "loki-app"
+            },
+            "spec": {
+              "expr": "{app=\"ai-horde\", component=\"backend\"} |= \"INIT\" |= \"Horde Database\" | line_format \"{{.instance}} {{.container}} started\""
+            }
+          }
+        }
+      },
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "builtIn": false,
+          "enable": true,
+          "hide": false,
+          "iconColor": "#b877d9",
+          "name": "Operator notes & deploys",
+          "horde_overlay": "operator",
+          "query": {
+            "kind": "DataQuery",
+            "group": "grafana",
+            "version": "v0",
+            "spec": {
+              "type": "tags",
+              "tags": [
+                "ai-horde"
+              ],
+              "matchAny": true,
+              "limit": 200
+            }
+          }
+        }
       }
     ],
     "cursorSync": "Off",
@@ -2352,13 +2424,27 @@
         ]
       }
     },
-    "links": [],
+    "links": [
+      {
+        "asDropdown": true,
+        "icon": "external link",
+        "includeVars": true,
+        "keepTime": true,
+        "tags": [
+          "horde"
+        ],
+        "targetBlank": false,
+        "title": "Horde Dashboards",
+        "type": "dashboards"
+      }
+    ],
     "liveNow": false,
     "preload": false,
     "tags": [
       "postgres",
       "db",
-      "stats"
+      "stats",
+      "horde"
     ],
     "timeSettings": {
       "autoRefresh": "10s",

@@ -153,17 +153,30 @@ def _convert_annotations(v2_annotations: list[Any]) -> list[dict[str, Any]]:
             entry["builtIn"] = 1
 
         query = spec.get("query") if isinstance(spec.get("query"), dict) else {}
-        if query.get("group") == "grafana":
-            entry["type"] = "dashboard"
+        if query.get("group") not in (None, "grafana"):
+            # Datasource-backed annotation (Prometheus ALERTS overlay, Loki
+            # restart markers): the classic model keeps the query fields
+            # (expr, step, titleFormat, ...) flat on the annotation entry.
+            ds_ref = _to_datasource_ref(query.get("datasource"), query.get("group"))
+            if ds_ref:
+                entry["datasource"] = ds_ref
             qspec = query.get("spec") if isinstance(query.get("spec"), dict) else {}
-            if qspec.get("type") == "dashboard":
-                entry.setdefault("type", "dashboard")
+            for key, value in qspec.items():
+                entry[key] = copy.deepcopy(value)
+        if spec.get("horde_overlay"):
+            entry["horde_overlay"] = spec["horde_overlay"]
+        if query.get("group") == "grafana":
+            qspec = query.get("spec") if isinstance(query.get("spec"), dict) else {}
+            entry["type"] = qspec.get("type", "dashboard")
+            if not spec.get("builtIn"):
+                entry["datasource"] = {"type": "grafana", "uid": "-- Grafana --"}
+            if qspec.get("type") in ("dashboard", "tags"):
                 if any(k in qspec for k in ("limit", "matchAny", "tags")):
                     entry["target"] = {
                         "limit": qspec.get("limit", 100),
                         "matchAny": qspec.get("matchAny", False),
                         "tags": qspec.get("tags", []),
-                        "type": "dashboard",
+                        "type": qspec["type"],
                     }
 
         out.append(entry)

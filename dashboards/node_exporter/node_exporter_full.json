@@ -30,6 +30,56 @@
             "version": "v0"
           }
         }
+      },
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "builtIn": false,
+          "enable": true,
+          "hide": false,
+          "iconColor": "#d03b3b",
+          "name": "Infra alerts",
+          "horde_overlay": "alerts-infra",
+          "query": {
+            "kind": "DataQuery",
+            "group": "prometheus",
+            "version": "v0",
+            "datasource": {
+              "name": "mimir-infra"
+            },
+            "spec": {
+              "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\", alertname!~\"Watchdog|HostSystemdServiceFailed|HostOutOfInodes|HostSwapFillingUp|HostDiskWillFillIn24h|HostDiskUsageHigh|WireGuardTextfileStale|PrometheusTargetsMissing|HordeRequestObservationDataReady|HordeRequestEstimatorPromotionApproved|HordeRequestUnstartedExpiryForecastValidationReady\"}",
+              "step": "30s",
+              "titleFormat": "{{alertname}}",
+              "textFormat": "{{severity}} {{instance}}{{host}}{{peer}}{{proxy}}{{name}}",
+              "useValueForTime": false
+            }
+          }
+        }
+      },
+      {
+        "kind": "AnnotationQuery",
+        "spec": {
+          "builtIn": false,
+          "enable": true,
+          "hide": false,
+          "iconColor": "#b877d9",
+          "name": "Operator notes & deploys",
+          "horde_overlay": "operator",
+          "query": {
+            "kind": "DataQuery",
+            "group": "grafana",
+            "version": "v0",
+            "spec": {
+              "type": "tags",
+              "tags": [
+                "ai-horde"
+              ],
+              "matchAny": true,
+              "limit": 200
+            }
+          }
+        }
       }
     ],
     "cursorSync": "Crosshair",
@@ -21609,12 +21659,25 @@
         "tooltip": "",
         "type": "link",
         "url": "https://grafana.com/grafana/dashboards/1860"
+      },
+      {
+        "asDropdown": true,
+        "icon": "external link",
+        "includeVars": true,
+        "keepTime": true,
+        "tags": [
+          "horde"
+        ],
+        "targetBlank": false,
+        "title": "Horde Dashboards",
+        "type": "dashboards"
       }
     ],
     "liveNow": false,
     "preload": false,
     "tags": [
-      "linux"
+      "linux",
+      "horde"
     ],
     "timeSettings": {
       "autoRefresh": "1m",

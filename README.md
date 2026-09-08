@@ -60,6 +60,25 @@ Pre-built Grafana dashboards are bundled with the package and also available in 
 
 Infra dashboards shipped in release artifacts are emitted as classic dashboard JSON (v1 model) to remain compatible with Grafana file provisioning flows.
 
+### Incident overlays
+
+A panel should never have to be interpreted alone. `scripts/apply_dashboard_overlays.py`
+stamps one shared annotation set and a preserved-time-range "Horde Dashboards" link onto every
+dashboard in the repo (run it after editing any dashboard; `--check` is the CI guard):
+
+| Overlay | Source | Shows |
+|---|---|---|
+| Infra alerts | `mimir-infra` `ALERTS` | critical/warning alerts from the infrastructure tenant, chronic ones excluded (`CHRONIC_ALERTS` in the script) |
+| App alerts (telemetry) | `mimir-telemetry` `ALERTS` | OTLP-derived app alerts (latency, kudos, background jobs) |
+| App alerts (exporter) | `mimir-app` `ALERTS` | exporter-derived alerts (API down, queue backlog, modes) |
+| App restarts | `loki-app` | one marker per backend container start (the `INIT | Started | Horde Database` line; a LOG CONTRACT in AI-Horde) |
+| Operator notes & deploys | Grafana annotations tagged `ai-horde` | `ops/scripts/annotate.sh` notes and the prod deploy play's rollout region |
+
+Public/package dashboards (provisioned into the public org too) only get maintenance/raid
+shading from their own datasource. The third-party v2 exports (Postgres, Node Exporter Full,
+pm2) receive the infra-alert and operator overlays at conversion time, which
+`scripts/convert_grafana_v2_to_classic.py` now carries through.
+
 | Dashboard | File | Description |
 |-----------|------|-------------|
 | **Horde Performance** | `horde-performance.json` | Operator Pulse top row (active alerts + key worker/queue/scrape stats), demoted Operator Modes row, per-period stat strips for historical generation stats (replaces the legacy bargauges), Pop Diagnostics, Generation Outcomes, Teams, and Exporter Health. |
@@ -76,7 +95,7 @@ Infra dashboards shipped in release artifacts are emitted as classic dashboard J
 | **Text Model Detail** | `horde-text-model-detail.json` | Single text model drill-down — live stats, capacity share gauges (queue/worker/jobs), computed ratios over time, and historical generation stats with % of total. |
 | **Horde App Traces (OTLP RED)** | `dashboards/ai_horde_otlp/horde-app-traces.json` | OTLP-derived RED metrics, Tempo service graph, and a generate→pop→submit funnel (span-metrics from `mimir-telemetry`). Cap query intervals to ≤24h — telemetry-tenant retention is 3 days. |
 
-| **Horde Fleet Connectivity** | `dashboards/fleet/fleet-connectivity.json` | Outage-shape dashboard (Org 1, infra): WireGuard handshake age to/from the datastore host, edge HAProxy UP servers per backend host, redis-unreachable and error log rates per host (`loki-app`), request rate/p90/5xx per host (`mimir-telemetry`), and aihdb01 host/postgres health. Fixed colour per host on every panel; critical alerts drawn as annotations. Needs the `wireguard_peer_*` textfile metrics and aihdb01's pushed node metrics. |
+| **Horde Fleet Connectivity** | `dashboards/fleet/fleet-connectivity.json` | Outage-shape dashboard (Org 1, infra): WireGuard handshake age to/from the datastore host, edge HAProxy UP servers per backend host, redis-unreachable and error log rates per host (`loki-app`), request rate/p90/5xx per host (`mimir-telemetry`), and aihdb01 host/postgres health. Fixed colour per host on every panel; an "Edge: what users got" row (HAProxy frontend 5xx rate/share per edge, independent of app telemetry) and a shared-redis row (`job="redis"` from Alloy on aihdb01). Needs the `wireguard_peer_*` textfile metrics and aihdb01's pushed node metrics. |
 
 > **Note:** The legacy combined `horde-models.json` is superseded by the four model dashboards above.
 

@@ -95,6 +95,85 @@
     "titleFormat": "{{alertname}}",
     "textFormat": "{{horde_host}}{{horde_job_name}}",
     "useValueForTime": false
+   },
+   {
+    "horde_overlay": "alerts-infra",
+    "name": "Infra alerts",
+    "datasource": {
+     "type": "prometheus",
+     "uid": "mimir-infra"
+    },
+    "enable": true,
+    "hide": false,
+    "iconColor": "#d03b3b",
+    "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\", alertname!~\"Watchdog|HostSystemdServiceFailed|HostOutOfInodes|HostSwapFillingUp|HostDiskWillFillIn24h|HostDiskUsageHigh|WireGuardTextfileStale|PrometheusTargetsMissing|HordeRequestObservationDataReady|HordeRequestEstimatorPromotionApproved|HordeRequestUnstartedExpiryForecastValidationReady\"}",
+    "step": "30s",
+    "titleFormat": "{{alertname}}",
+    "textFormat": "{{severity}} {{instance}}{{host}}{{peer}}{{proxy}}{{name}}",
+    "useValueForTime": false
+   },
+   {
+    "horde_overlay": "alerts-telemetry",
+    "name": "App alerts (telemetry)",
+    "datasource": {
+     "type": "prometheus",
+     "uid": "mimir-telemetry"
+    },
+    "enable": true,
+    "hide": false,
+    "iconColor": "#ec835a",
+    "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\", alertname!~\"Watchdog|HostSystemdServiceFailed|HostOutOfInodes|HostSwapFillingUp|HostDiskWillFillIn24h|HostDiskUsageHigh|WireGuardTextfileStale|PrometheusTargetsMissing|HordeRequestObservationDataReady|HordeRequestEstimatorPromotionApproved|HordeRequestUnstartedExpiryForecastValidationReady\"}",
+    "step": "30s",
+    "titleFormat": "{{alertname}}",
+    "textFormat": "{{severity}} {{horde_host}}{{horde_job_name}}{{deployment_environment_name}}",
+    "useValueForTime": false
+   },
+   {
+    "horde_overlay": "alerts-app",
+    "name": "App alerts (exporter)",
+    "datasource": {
+     "type": "prometheus",
+     "uid": "mimir-app"
+    },
+    "enable": true,
+    "hide": false,
+    "iconColor": "#e0b400",
+    "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\", alertname!~\"Watchdog|HostSystemdServiceFailed|HostOutOfInodes|HostSwapFillingUp|HostDiskWillFillIn24h|HostDiskUsageHigh|WireGuardTextfileStale|PrometheusTargetsMissing|HordeRequestObservationDataReady|HordeRequestEstimatorPromotionApproved|HordeRequestUnstartedExpiryForecastValidationReady\"}",
+    "step": "30s",
+    "titleFormat": "{{alertname}}",
+    "textFormat": "{{severity}}",
+    "useValueForTime": false
+   },
+   {
+    "horde_overlay": "app-restarts",
+    "name": "App restarts",
+    "datasource": {
+     "type": "loki",
+     "uid": "loki-app"
+    },
+    "enable": true,
+    "hide": false,
+    "iconColor": "#8ab8ff",
+    "expr": "{app=\"ai-horde\", component=\"backend\"} |= \"INIT\" |= \"Horde Database\" | line_format \"{{.instance}} {{.container}} started\""
+   },
+   {
+    "horde_overlay": "operator",
+    "name": "Operator notes & deploys",
+    "datasource": {
+     "type": "grafana",
+     "uid": "-- Grafana --"
+    },
+    "enable": true,
+    "hide": false,
+    "iconColor": "#b877d9",
+    "target": {
+     "type": "tags",
+     "tags": [
+      "ai-horde"
+     ],
+     "matchAny": true,
+     "limit": 200
+    }
    }
   ]
  },
@@ -111,7 +190,7 @@
    },
    "options": {
     "mode": "markdown",
-    "content": "Each row is one vantage point on the same event. A **datastore partition** shows as handshake age climbing on the tunnel row, backend hosts dropping on the edge row, redis-unreachable lines on the backend row, and traffic piling onto the surviving host on the application row. A **sick database host** shows on the bottom row first (IO wait, load, latency) with the tunnel row flat. A **lost monitoring path** shows scrape status going red on several hosts while the edge row and app logs stay healthy. Firing critical alerts are drawn as annotations. Colors are fixed per host on every panel: troll blue, kobold orange, gremlin aqua, medusa yellow, stablehorde_orig magenta, aihdb01 green, orc violet, aihorde.net red."
+    "content": "Each row is one vantage point on the same event. A **datastore partition** shows as handshake age climbing on the tunnel row, backend hosts dropping on the edge row, redis-unreachable lines on the backend row, and traffic piling onto the surviving host on the application row. A **sick database host** shows on the bottom row first (IO wait, load, latency) with the tunnel row flat. A **lost monitoring path** shows scrape status going red on several hosts while the edge row and app logs stay healthy. Firing critical alerts are drawn as annotations. Colors are fixed per host on every panel: troll blue, kobold orange, gremlin aqua, medusa yellow, stablehorde_orig magenta, aihdb01 green, orc violet, aihorde.net red.\n\n**Overlays.** Every timeline carries the shared annotation set: infra and app alerts (chronic ones excluded), backend restarts (the INIT `Horde Database` line), and operator/deploy notes tagged `ai-horde` (`ops/scripts/annotate.sh`, the prod deploy play). Hover a marker before reading a line. **Edge row** is the user-impact view that does not depend on app telemetry; **Datastore: shared redis** needs the exporter from `docs/aihdb01-observability-manual.md` \u00a76."
    }
   },
   {
@@ -1402,7 +1481,7 @@
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 37,
+    "y": 46,
     "w": 24,
     "h": 1
    },
@@ -1419,7 +1498,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 38,
+    "y": 47,
     "w": 12,
     "h": 8
    },
@@ -1618,7 +1697,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 38,
+    "y": 47,
     "w": 12,
     "h": 8
    },
@@ -1817,7 +1896,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 46,
+    "y": 55,
     "w": 12,
     "h": 7
    },
@@ -1901,7 +1980,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 46,
+    "y": 55,
     "w": 12,
     "h": 7
    },
@@ -2096,7 +2175,7 @@
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 53,
+    "y": 62,
     "w": 24,
     "h": 1
    },
@@ -2113,7 +2192,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 54,
+    "y": 63,
     "w": 8,
     "h": 8
    },
@@ -2311,7 +2390,7 @@
    },
    "gridPos": {
     "x": 8,
-    "y": 54,
+    "y": 63,
     "w": 8,
     "h": 8
    },
@@ -2509,7 +2588,7 @@
    },
    "gridPos": {
     "x": 16,
-    "y": 54,
+    "y": 63,
     "w": 8,
     "h": 8
    },
@@ -2703,7 +2782,7 @@
    "collapsed": false,
    "gridPos": {
     "x": 0,
-    "y": 62,
+    "y": 71,
     "w": 24,
     "h": 1
    },
@@ -2720,7 +2799,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 63,
+    "y": 72,
     "w": 8,
     "h": 8
    },
@@ -2814,7 +2893,7 @@
    },
    "gridPos": {
     "x": 8,
-    "y": 63,
+    "y": 72,
     "w": 8,
     "h": 8
    },
@@ -2906,7 +2985,7 @@
    },
    "gridPos": {
     "x": 16,
-    "y": 63,
+    "y": 72,
     "w": 8,
     "h": 8
    },
@@ -2988,7 +3067,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 71,
+    "y": 80,
     "w": 8,
     "h": 8
    },
@@ -3069,7 +3148,7 @@
    },
    "gridPos": {
     "x": 8,
-    "y": 71,
+    "y": 80,
     "w": 8,
     "h": 8
    },
@@ -3187,7 +3266,7 @@
    },
    "gridPos": {
     "x": 16,
-    "y": 71,
+    "y": 80,
     "w": 8,
     "h": 8
    },
@@ -3252,7 +3331,1178 @@
      "instant": false
     }
    ]
+  },
+  {
+   "id": 28,
+   "type": "row",
+   "title": "Edge: what users got (independent of app telemetry)",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 37,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 29,
+   "type": "timeseries",
+   "title": "5xx responses per second, by edge host",
+   "description": "HAProxy's own count of 5xx responses on the public frontend. Includes 503s the edge generated itself when a backend pool was empty and 504s for requests that hung, neither of which reach the app's counters.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-infra"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 38,
+    "w": 8,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 2,
+      "fillOpacity": 8,
+      "pointSize": 4,
+      "showPoints": "never",
+      "spanNulls": 60000,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "axisBorderShow": false,
+      "gradientMode": "none",
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "transparent",
+        "value": null
+       }
+      ]
+     },
+     "min": 0,
+     "unit": "reqps"
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\btroll\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#3987e5"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\bkobold\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#d95926"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\bgremlin\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#199e70"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\bmedusa\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#c98500"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\bstablehorde_orig\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#d55181"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\baihdb01\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#008300"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\borc\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#9085e9"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\baihorde\\.net\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#e66767"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true,
+     "calcs": []
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-infra"
+     },
+     "refId": "A",
+     "range": true,
+     "instant": false,
+     "expr": "sum by (instance) (rate(haproxy_frontend_http_responses_total{proxy=\"stable-horde\", code=\"5xx\"}[5m]))",
+     "legendFormat": "{{instance}}"
+    }
+   ]
+  },
+  {
+   "id": 30,
+   "type": "timeseries",
+   "title": "5xx share of responses, by edge host",
+   "description": "Same counter as a share of all responses on that edge. Baseline p99 is about 1% on stablehorde_orig and near zero on aihorde.net; EdgeFrontend5xxShareHigh fires at 5%.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-infra"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 38,
+    "w": 8,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 2,
+      "fillOpacity": 8,
+      "pointSize": 4,
+      "showPoints": "never",
+      "spanNulls": 60000,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "axisBorderShow": false,
+      "gradientMode": "none",
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "transparent",
+        "value": null
+       }
+      ]
+     },
+     "min": 0,
+     "unit": "percentunit",
+     "max": 1
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\btroll\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#3987e5"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\bkobold\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#d95926"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\bgremlin\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#199e70"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\bmedusa\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#c98500"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\bstablehorde_orig\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#d55181"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\baihdb01\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#008300"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\borc\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#9085e9"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\baihorde\\.net\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#e66767"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true,
+     "calcs": []
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-infra"
+     },
+     "refId": "A",
+     "range": true,
+     "instant": false,
+     "expr": "sum by (instance) (rate(haproxy_frontend_http_responses_total{proxy=\"stable-horde\", code=\"5xx\"}[5m])) / clamp_min(sum by (instance) (rate(haproxy_frontend_http_responses_total{proxy=\"stable-horde\"}[5m])), 0.1)",
+     "legendFormat": "{{instance}}"
+    }
+   ]
+  },
+  {
+   "id": 31,
+   "type": "timeseries",
+   "title": "Requests per second, by edge host",
+   "description": "Total public-frontend request rate per edge. Traffic that vanishes here (rather than moving between backends) is a DNS/Cloudflare/edge problem, not a fleet one.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-infra"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 38,
+    "w": 8,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 2,
+      "fillOpacity": 8,
+      "pointSize": 4,
+      "showPoints": "never",
+      "spanNulls": 60000,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "axisBorderShow": false,
+      "gradientMode": "none",
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "transparent",
+        "value": null
+       }
+      ]
+     },
+     "min": 0,
+     "unit": "reqps"
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\btroll\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#3987e5"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\bkobold\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#d95926"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\bgremlin\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#199e70"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\bmedusa\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#c98500"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\bstablehorde_orig\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#d55181"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\baihdb01\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#008300"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\borc\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#9085e9"
+        }
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": ".*\\baihorde\\.net\\b.*"
+      },
+      "properties": [
+       {
+        "id": "color",
+        "value": {
+         "mode": "fixed",
+         "fixedColor": "#e66767"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true,
+     "calcs": []
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-infra"
+     },
+     "refId": "A",
+     "range": true,
+     "instant": false,
+     "expr": "sum by (instance) (rate(haproxy_frontend_http_requests_total{proxy=\"stable-horde\"}[5m]))",
+     "legendFormat": "{{instance}}"
+    }
+   ]
+  },
+  {
+   "id": 32,
+   "type": "row",
+   "title": "Datastore: shared redis on aihdb01 (prometheus.exporter.redis via Alloy)",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 88,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 33,
+   "type": "timeseries",
+   "title": "Redis up / clients",
+   "description": "redis_up from the exporter (0 = the exporter could not connect) and connected clients. Every backend instance holds several connections; a client count that collapses while redis_up stays 1 is the backends losing the tunnel, not redis dying.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-infra"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 89,
+    "w": 8,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 2,
+      "fillOpacity": 8,
+      "pointSize": 4,
+      "showPoints": "never",
+      "spanNulls": 60000,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "axisBorderShow": false,
+      "gradientMode": "none",
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "transparent",
+        "value": null
+       }
+      ]
+     },
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true,
+     "calcs": []
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-infra"
+     },
+     "refId": "A",
+     "range": true,
+     "instant": false,
+     "expr": "redis_connected_clients{job=\"redis\", instance=\"aihdb01\"}",
+     "legendFormat": "connected clients"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-infra"
+     },
+     "refId": "B",
+     "range": true,
+     "instant": false,
+     "expr": "redis_up{job=\"redis\", instance=\"aihdb01\"}",
+     "legendFormat": "redis_up"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-infra"
+     },
+     "refId": "C",
+     "range": true,
+     "instant": false,
+     "expr": "redis_blocked_clients{job=\"redis\", instance=\"aihdb01\"}",
+     "legendFormat": "blocked clients"
+    }
+   ]
+  },
+  {
+   "id": 34,
+   "type": "timeseries",
+   "title": "Redis memory",
+   "description": "Used memory against maxmemory (0 maxmemory = unlimited, shown as no line). Approaching the limit means evictions of the caches the app reads on every request.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-infra"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 89,
+    "w": 8,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 2,
+      "fillOpacity": 8,
+      "pointSize": 4,
+      "showPoints": "never",
+      "spanNulls": 60000,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "axisBorderShow": false,
+      "gradientMode": "none",
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "transparent",
+        "value": null
+       }
+      ]
+     },
+     "min": 0,
+     "unit": "bytes"
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true,
+     "calcs": []
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-infra"
+     },
+     "refId": "A",
+     "range": true,
+     "instant": false,
+     "expr": "redis_memory_used_bytes{job=\"redis\", instance=\"aihdb01\"}",
+     "legendFormat": "used"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-infra"
+     },
+     "refId": "B",
+     "range": true,
+     "instant": false,
+     "expr": "redis_memory_max_bytes{job=\"redis\", instance=\"aihdb01\"} > 0",
+     "legendFormat": "maxmemory"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-infra"
+     },
+     "refId": "C",
+     "range": true,
+     "instant": false,
+     "expr": "redis_memory_used_rss_bytes{job=\"redis\", instance=\"aihdb01\"}",
+     "legendFormat": "rss"
+    }
+   ]
+  },
+  {
+   "id": 35,
+   "type": "timeseries",
+   "title": "Redis commands per second",
+   "description": "Command throughput. A drop to near zero with the app still running is the fleet unable to reach redis; a spike is a cache stampede or a background job.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-infra"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 89,
+    "w": 8,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 2,
+      "fillOpacity": 8,
+      "pointSize": 4,
+      "showPoints": "never",
+      "spanNulls": 60000,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "axisBorderShow": false,
+      "gradientMode": "none",
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "transparent",
+        "value": null
+       }
+      ]
+     },
+     "min": 0,
+     "unit": "ops"
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true,
+     "calcs": []
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-infra"
+     },
+     "refId": "A",
+     "range": true,
+     "instant": false,
+     "expr": "rate(redis_commands_processed_total{job=\"redis\", instance=\"aihdb01\"}[1m])",
+     "legendFormat": "commands/s"
+    }
+   ]
+  },
+  {
+   "id": 36,
+   "type": "timeseries",
+   "title": "Redis evictions, expirations, rejected connections (per 5m)",
+   "description": "Evictions mean memory pressure; rejected connections mean maxclients was hit (every backend instance reconnects at once after a partition heals).",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-infra"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 97,
+    "w": 8,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "custom": {
+      "drawStyle": "bars",
+      "lineWidth": 2,
+      "fillOpacity": 60,
+      "pointSize": 4,
+      "showPoints": "never",
+      "spanNulls": 60000,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "axisBorderShow": false,
+      "gradientMode": "none",
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "transparent",
+        "value": null
+       }
+      ]
+     },
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true,
+     "calcs": []
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-infra"
+     },
+     "refId": "A",
+     "range": true,
+     "instant": false,
+     "expr": "increase(redis_evicted_keys_total{job=\"redis\", instance=\"aihdb01\"}[5m])",
+     "legendFormat": "evicted keys"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-infra"
+     },
+     "refId": "B",
+     "range": true,
+     "instant": false,
+     "expr": "increase(redis_expired_keys_total{job=\"redis\", instance=\"aihdb01\"}[5m])",
+     "legendFormat": "expired keys"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-infra"
+     },
+     "refId": "C",
+     "range": true,
+     "instant": false,
+     "expr": "increase(redis_rejected_connections_total{job=\"redis\", instance=\"aihdb01\"}[5m])",
+     "legendFormat": "rejected connections"
+    }
+   ]
+  },
+  {
+   "id": 37,
+   "type": "timeseries",
+   "title": "Redis keyspace hit ratio",
+   "description": "Hits / (hits + misses) over 5m. A sudden drop after a restart or flush is the cache rebuilding; a slow decline is keys expiring faster than the app refreshes them.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-infra"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 97,
+    "w": 8,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 2,
+      "fillOpacity": 8,
+      "pointSize": 4,
+      "showPoints": "never",
+      "spanNulls": 60000,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "axisBorderShow": false,
+      "gradientMode": "none",
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "transparent",
+        "value": null
+       }
+      ]
+     },
+     "min": 0,
+     "unit": "percentunit",
+     "max": 1
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true,
+     "calcs": []
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-infra"
+     },
+     "refId": "A",
+     "range": true,
+     "instant": false,
+     "expr": "rate(redis_keyspace_hits_total{job=\"redis\", instance=\"aihdb01\"}[5m]) / clamp_min(rate(redis_keyspace_hits_total{job=\"redis\", instance=\"aihdb01\"}[5m]) + rate(redis_keyspace_misses_total{job=\"redis\", instance=\"aihdb01\"}[5m]), 1)",
+     "legendFormat": "hit ratio"
+    }
+   ]
+  },
+  {
+   "id": 38,
+   "type": "timeseries",
+   "title": "Redis slowlog and latency",
+   "description": "Slowlog entries per 5m and the exporter's own ping round-trip; both rise when the host is IO-bound (see DatabaseHostIoWaitHigh) or a large key is being scanned.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-infra"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 97,
+    "w": 8,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 2,
+      "fillOpacity": 8,
+      "pointSize": 4,
+      "showPoints": "never",
+      "spanNulls": 60000,
+      "stacking": {
+       "mode": "none",
+       "group": "A"
+      },
+      "axisBorderShow": false,
+      "gradientMode": "none",
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "transparent",
+        "value": null
+       }
+      ]
+     },
+     "min": 0
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true,
+     "calcs": []
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-infra"
+     },
+     "refId": "A",
+     "range": true,
+     "instant": false,
+     "expr": "increase(redis_slowlog_length{job=\"redis\", instance=\"aihdb01\"}[5m])",
+     "legendFormat": "slowlog entries (5m)"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-infra"
+     },
+     "refId": "B",
+     "range": true,
+     "instant": false,
+     "expr": "redis_exporter_last_scrape_duration_seconds{job=\"redis\", instance=\"aihdb01\"}",
+     "legendFormat": "exporter scrape duration"
+    }
+   ]
   }
  ],
- "links": []
+ "links": [
+  {
+   "asDropdown": true,
+   "icon": "external link",
+   "includeVars": true,
+   "keepTime": true,
+   "tags": [
+    "horde"
+   ],
+   "targetBlank": false,
+   "title": "Horde Dashboards",
+   "type": "dashboards"
+  }
+ ]
 }
