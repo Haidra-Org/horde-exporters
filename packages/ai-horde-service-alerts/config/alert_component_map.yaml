@@ -95,6 +95,54 @@ mappings:
     alertname: HordeBackgroundJobFailures
     status: degraded
 
+  # Infrastructure-shape alerts (ops-owned rules in the infrastructure tenant and
+  # the Loki app tenant). These NAME the incident; the symptom alerts above are
+  # inhibited in Alertmanager while they fire, and this service ignores inhibited
+  # alerts, so without these rows a datastore partition reads as operational
+  - component: api
+    alertname: WireGuardDatabasePathPartitioned
+    status: partial
+  - component: workers
+    alertname: WireGuardDatabasePathPartitioned
+    status: partial
+  - component: kudos
+    alertname: WireGuardDatabasePathPartitioned
+    status: degraded
+  - component: api
+    alertname: HordeRedisUnreachableWidespread
+    status: partial
+  - component: workers
+    alertname: HordeRedisUnreachableWidespread
+    status: partial
+  - component: api
+    alertname: DatabaseHostTunnelPeersStale
+    status: partial
+  - component: workers
+    alertname: DatabaseHostTunnelPeersStale
+    status: partial
+  - component: workers
+    alertname: EdgeWorkerApiCapacityLow
+    status: degraded
+  - component: workers
+    alertname: EdgeBackendPoolEmpty
+    label_match:
+      proxy: horde_worker_api
+    status: down
+  - component: api
+    alertname: EdgeBackendPoolEmpty
+    label_match:
+      proxy: horde_client_api
+    status: down
+  - component: api
+    alertname: PostgresDown
+    status: down
+  - component: workers
+    alertname: PostgresDown
+    status: down
+  - component: kudos
+    alertname: PostgresDown
+    status: down
+
   # alchemy: pill driven only by the external prober — the deployed rules
   # carry no alchemy/interrogation-specific alert, so there is nothing curated
   # to map. Add an entry here once a public-determinable alchemy alert exists.
