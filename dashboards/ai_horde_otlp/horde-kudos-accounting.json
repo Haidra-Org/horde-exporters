@@ -2285,12 +2285,12 @@
    },
    "targets": [
     {
-     "expr": "sum by (horde_style_type) (rate(horde_style_author_credits_kudos{deployment_environment_name=~\"$environment\"}[$__rate_interval])) * 3600",
+     "expr": "sum by (horde_style_type) (rate(horde_style_author_credits{deployment_environment_name=~\"$environment\"}[$__rate_interval])) * 3600",
      "legendFormat": "credited {{horde_style_type}}",
      "refId": "A"
     },
     {
-     "expr": "sum by (horde_style_type) (rate(horde_style_forgiven_surcharges_kudos{deployment_environment_name=~\"$environment\"}[$__rate_interval])) * 3600",
+     "expr": "sum by (horde_style_type) (rate(horde_style_forgiven_surcharges{deployment_environment_name=~\"$environment\"}[$__rate_interval])) * 3600",
      "legendFormat": "forgiven {{horde_style_type}}",
      "refId": "B"
     }
@@ -2363,14 +2363,14 @@
    },
    "targets": [
     {
-     "expr": "sum(increase(horde_style_author_credits_kudos{deployment_environment_name=~\"$environment\"}[$__range]))",
+     "expr": "sum(increase(horde_style_author_credits{deployment_environment_name=~\"$environment\"}[$__range]))",
      "legendFormat": "credited to authors",
      "refId": "A",
      "instant": true,
      "range": false
     },
     {
-     "expr": "sum(increase(horde_style_forgiven_surcharges_kudos{deployment_environment_name=~\"$environment\"}[$__range])) / clamp_min(sum(increase(horde_style_author_credits_kudos{deployment_environment_name=~\"$environment\"}[$__range])) + sum(increase(horde_style_forgiven_surcharges_kudos{deployment_environment_name=~\"$environment\"}[$__range])), 1)",
+     "expr": "sum(increase(horde_style_forgiven_surcharges{deployment_environment_name=~\"$environment\"}[$__range])) / clamp_min(sum(increase(horde_style_author_credits{deployment_environment_name=~\"$environment\"}[$__range])) + sum(increase(horde_style_forgiven_surcharges{deployment_environment_name=~\"$environment\"}[$__range])), 1)",
      "legendFormat": "forgiven share",
      "refId": "B",
      "instant": true,
