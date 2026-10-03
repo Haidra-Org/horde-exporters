@@ -1069,7 +1069,7 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 63
+    "y": 64
    },
    "id": 107,
    "panels": [],
@@ -1086,7 +1086,7 @@
     "h": 8,
     "w": 8,
     "x": 0,
-    "y": 64
+    "y": 65
    },
    "id": 60,
    "title": "WP activate p95 by wp type",
@@ -1134,7 +1134,7 @@
     "h": 8,
     "w": 8,
     "x": 8,
-    "y": 64
+    "y": 65
    },
    "id": 61,
    "title": "WP activation age by wp type",
@@ -1182,7 +1182,7 @@
     "h": 8,
     "w": 8,
     "x": 16,
-    "y": 64
+    "y": 65
    },
    "id": 62,
    "title": "Kudos pricing phases p95",
@@ -1235,7 +1235,7 @@
     "h": 8,
     "w": 24,
     "x": 0,
-    "y": 72
+    "y": 73
    },
    "id": 63,
    "title": "WP activate sub-phase p95",
@@ -1290,7 +1290,7 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 80
+    "y": 81
    },
    "id": 108,
    "panels": [],
@@ -1307,7 +1307,7 @@
     "h": 8,
     "w": 8,
     "x": 0,
-    "y": 81
+    "y": 82
    },
    "id": 70,
    "title": "Image /generate p99 by img2img",
@@ -1355,7 +1355,7 @@
     "h": 8,
     "w": 8,
     "x": 8,
-    "y": 81
+    "y": 82
    },
    "id": 71,
    "title": "Image request share by img2img",
@@ -1398,7 +1398,7 @@
     "h": 8,
     "w": 8,
     "x": 16,
-    "y": 81
+    "y": 82
    },
    "id": 72,
    "title": "Source image upload duration",
