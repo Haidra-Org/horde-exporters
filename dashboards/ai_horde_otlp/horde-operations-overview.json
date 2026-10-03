@@ -1664,7 +1664,7 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 47
+    "y": 56
    },
    "id": 160,
    "title": "Pop Diagnostics & Suspicion Logs",
@@ -1705,7 +1705,7 @@
     "h": 8,
     "w": 16,
     "x": 0,
-    "y": 48
+    "y": 57
    },
    "id": 161,
    "options": {
@@ -1761,7 +1761,7 @@
     "h": 8,
     "w": 8,
     "x": 16,
-    "y": 48
+    "y": 57
    },
    "id": 162,
    "options": {
@@ -1816,7 +1816,7 @@
     "h": 10,
     "w": 24,
     "x": 0,
-    "y": 56
+    "y": 65
    },
    "id": 163,
    "options": {
@@ -1844,7 +1844,7 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 66
+    "y": 75
    },
    "id": 130,
    "title": "Postgres Saturation",
@@ -1904,7 +1904,7 @@
     "h": 6,
     "w": 8,
     "x": 0,
-    "y": 67
+    "y": 76
    },
    "id": 131,
    "options": {
@@ -1984,7 +1984,7 @@
     "h": 6,
     "w": 8,
     "x": 8,
-    "y": 67
+    "y": 76
    },
    "id": 132,
    "options": {
@@ -2063,7 +2063,7 @@
     "h": 6,
     "w": 8,
     "x": 16,
-    "y": 67
+    "y": 76
    },
    "id": 133,
    "options": {
@@ -2143,7 +2143,7 @@
     "h": 6,
     "w": 12,
     "x": 0,
-    "y": 73
+    "y": 82
    },
    "id": 134,
    "options": {
@@ -2177,7 +2177,7 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 79
+    "y": 88
    },
    "id": 140,
    "title": "Host Top-N",
@@ -2219,7 +2219,7 @@
     "h": 8,
     "w": 8,
     "x": 0,
-    "y": 80
+    "y": 89
    },
    "id": 141,
    "options": {
@@ -2283,7 +2283,7 @@
     "h": 8,
     "w": 8,
     "x": 8,
-    "y": 80
+    "y": 89
    },
    "id": 142,
    "options": {
@@ -2365,7 +2365,7 @@
     "h": 8,
     "w": 8,
     "x": 16,
-    "y": 80
+    "y": 89
    },
    "id": 143,
    "options": {
@@ -2399,7 +2399,7 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 88
+    "y": 97
    },
    "id": 150,
    "title": "Logs (Loki)",
@@ -2470,7 +2470,7 @@
     "h": 8,
     "w": 12,
     "x": 0,
-    "y": 89
+    "y": 98
    },
    "id": 151,
    "links": [
@@ -2514,7 +2514,7 @@
     "h": 8,
     "w": 12,
     "x": 12,
-    "y": 89
+    "y": 98
    },
    "id": 152,
    "options": {
@@ -2545,7 +2545,7 @@
     "h": 6,
     "w": 12,
     "x": 12,
-    "y": 73
+    "y": 82
    },
    "id": 135,
    "title": "SQLAlchemy Pool Connections by State",
@@ -2916,6 +2916,220 @@
      "queryType": "instant"
     }
    ]
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 47
+   },
+   "title": "API Refusals & Empty Text Generations",
+   "type": "row",
+   "id": 191
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Client errors the API returned, by return code and HTTP status (horde.api.rejections via horde:api_rejections:rate5m). 'Unlisted' is a code missing from KNOWN_RC. A new code at the top after a deploy usually means a client is sending something the release now refuses.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "reqps",
+     "noValue": "0",
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 1,
+      "fillOpacity": 25,
+      "gradientMode": "none",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "normal"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 10,
+    "x": 0,
+    "y": 48
+   },
+   "options": {
+    "legend": {
+     "calcs": [
+      "mean",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "right",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "topk(10, horde:api_rejections:rate5m)",
+     "legendFormat": "{{horde_rc}} ({{http_response_status_code}})",
+     "refId": "A"
+    }
+   ],
+   "title": "API Refusals per Second by Return Code (top 10)",
+   "type": "timeseries",
+   "id": 192
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Refusals over the last hour by return code, route and method, production only.",
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "noValue": "0",
+     "custom": {
+      "align": "auto"
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 10,
+    "y": 48
+   },
+   "options": {
+    "showHeader": true,
+    "sortBy": [
+     {
+      "desc": true,
+      "displayName": "refusals (1h)"
+     }
+    ],
+    "footer": {
+     "show": false
+    }
+   },
+   "targets": [
+    {
+     "expr": "topk(15, sum by (horde_rc, http_route, http_request_method) (increase(horde_api_rejections{job=~\"ai-horde(/ai-horde)?\", deployment_environment_name=\"production\"}[1h])))",
+     "refId": "A",
+     "instant": true,
+     "range": false,
+     "format": "table"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "Value": "refusals (1h)",
+       "horde_rc": "return code",
+       "http_route": "route",
+       "http_request_method": "method"
+      }
+     }
+    },
+    {
+     "id": "sortBy",
+     "options": {
+      "sort": [
+       {
+        "field": "refusals (1h)",
+        "desc": true
+       }
+      ]
+     }
+    }
+   ],
+   "title": "Top Refusals (1h)",
+   "type": "table",
+   "id": 193
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Text generations a worker submitted with empty or whitespace-only text, by bridge agent and submitted state (horde.text.empty_generations). The request is still paid and the client gets nothing. Zero when healthy.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "short",
+     "noValue": "0",
+     "custom": {
+      "drawStyle": "bars",
+      "lineInterpolation": "smooth",
+      "lineWidth": 1,
+      "fillOpacity": 60,
+      "gradientMode": "none",
+      "showPoints": "never",
+      "spanNulls": false,
+      "stacking": {
+       "group": "A",
+       "mode": "normal"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 6,
+    "x": 18,
+    "y": 48
+   },
+   "options": {
+    "legend": {
+     "calcs": [
+      "mean",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "right",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "sum by (bridge_agent, state) (horde:text_empty_generations:rate5m) * 60",
+     "legendFormat": "{{bridge_agent}} / {{state}}",
+     "refId": "A"
+    }
+   ],
+   "title": "Empty Text Generations per Minute",
+   "type": "timeseries",
+   "id": 194
   }
  ],
  "refresh": "30s",

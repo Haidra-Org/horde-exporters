@@ -1,0 +1,1634 @@
+{
+ "annotations": {
+  "list": [
+   {
+    "builtIn": 1,
+    "datasource": {
+     "type": "grafana",
+     "uid": "-- Grafana --"
+    },
+    "enable": true,
+    "hide": true,
+    "iconColor": "rgba(0, 211, 255, 1)",
+    "name": "Annotations & Alerts",
+    "type": "dashboard"
+   },
+   {
+    "horde_overlay": "alerts-infra",
+    "name": "Infra alerts",
+    "datasource": {
+     "type": "prometheus",
+     "uid": "mimir-infra"
+    },
+    "enable": true,
+    "hide": false,
+    "iconColor": "#d03b3b",
+    "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\", alertname!~\"Watchdog|HostSystemdServiceFailed|HostOutOfInodes|HostSwapFillingUp|HostDiskWillFillIn24h|HostDiskUsageHigh|WireGuardTextfileStale|PrometheusTargetsMissing|HordeRequestObservationDataReady|HordeRequestEstimatorPromotionApproved|HordeRequestUnstartedExpiryForecastValidationReady\"}",
+    "step": "30s",
+    "titleFormat": "{{alertname}}",
+    "textFormat": "{{severity}} {{instance}}{{host}}{{peer}}{{proxy}}{{name}}",
+    "useValueForTime": false
+   },
+   {
+    "horde_overlay": "alerts-telemetry",
+    "name": "App alerts (telemetry)",
+    "datasource": {
+     "type": "prometheus",
+     "uid": "mimir-telemetry"
+    },
+    "enable": true,
+    "hide": false,
+    "iconColor": "#ec835a",
+    "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\", alertname!~\"Watchdog|HostSystemdServiceFailed|HostOutOfInodes|HostSwapFillingUp|HostDiskWillFillIn24h|HostDiskUsageHigh|WireGuardTextfileStale|PrometheusTargetsMissing|HordeRequestObservationDataReady|HordeRequestEstimatorPromotionApproved|HordeRequestUnstartedExpiryForecastValidationReady\"}",
+    "step": "30s",
+    "titleFormat": "{{alertname}}",
+    "textFormat": "{{severity}} {{horde_host}}{{horde_job_name}}{{deployment_environment_name}}",
+    "useValueForTime": false
+   },
+   {
+    "horde_overlay": "alerts-app",
+    "name": "App alerts (exporter)",
+    "datasource": {
+     "type": "prometheus",
+     "uid": "mimir-app"
+    },
+    "enable": true,
+    "hide": false,
+    "iconColor": "#e0b400",
+    "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\", alertname!~\"Watchdog|HostSystemdServiceFailed|HostOutOfInodes|HostSwapFillingUp|HostDiskWillFillIn24h|HostDiskUsageHigh|WireGuardTextfileStale|PrometheusTargetsMissing|HordeRequestObservationDataReady|HordeRequestEstimatorPromotionApproved|HordeRequestUnstartedExpiryForecastValidationReady\"}",
+    "step": "30s",
+    "titleFormat": "{{alertname}}",
+    "textFormat": "{{severity}}",
+    "useValueForTime": false
+   },
+   {
+    "horde_overlay": "app-restarts",
+    "name": "App restarts",
+    "datasource": {
+     "type": "loki",
+     "uid": "loki-app"
+    },
+    "enable": true,
+    "hide": false,
+    "iconColor": "#8ab8ff",
+    "expr": "{app=\"ai-horde\", component=\"backend\"} |= \"INIT\" |= \"Horde Database\" | line_format \"{{.instance}} {{.container}} started\""
+   },
+   {
+    "horde_overlay": "operator",
+    "name": "Operator notes & deploys",
+    "datasource": {
+     "type": "grafana",
+     "uid": "-- Grafana --"
+    },
+    "enable": true,
+    "hide": false,
+    "iconColor": "#b877d9",
+    "target": {
+     "type": "tags",
+     "tags": [
+      "ai-horde"
+     ],
+     "matchAny": true,
+     "limit": 200
+    }
+   }
+  ]
+ },
+ "description": "Who uses styles and through which clients. Style volume, contract adoption and author rewards come from app OTLP metrics on mimir-telemetry; per-client and per-style breakdowns parse the 'Style applied:' log line on loki-app (queued requests only); the edge client mix parses the Client-Agent capture on the aihorde.net HAProxy log on loki-infra.",
+ "editable": true,
+ "fiscalYearStartMonth": 0,
+ "graphTooltip": 1,
+ "id": null,
+ "links": [
+  {
+   "asDropdown": true,
+   "icon": "external link",
+   "includeVars": true,
+   "keepTime": true,
+   "tags": [
+    "horde"
+   ],
+   "targetBlank": false,
+   "title": "Horde Dashboards",
+   "type": "dashboards"
+  }
+ ],
+ "panels": [
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 0
+   },
+   "id": 1,
+   "title": "Style use (metrics)",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Generate requests that ran under a style and were queued (dry runs excluded), over the dashboard range. Source: horde.style.applications.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "short",
+     "decimals": 0,
+     "noValue": "0",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "text",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "orientation": "auto",
+    "textMode": "auto",
+    "colorMode": "value",
+    "graphMode": "none"
+   },
+   "targets": [
+    {
+     "expr": "sum(increase(horde_style_applications{deployment_environment_name=~\"$environment\", horde_dry_run=\"false\"}[$__range]))",
+     "refId": "A",
+     "instant": true,
+     "range": false
+    }
+   ],
+   "title": "Styled requests queued",
+   "type": "stat",
+   "gridPos": {
+    "h": 4,
+    "w": 5,
+    "x": 0,
+    "y": 1
+   },
+   "id": 2
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Dry-run previews under a style over the range. Clients preview a styled request repeatedly while its inputs change, so this is normally larger than the queued count.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "short",
+     "decimals": 0,
+     "noValue": "0",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "text",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "orientation": "auto",
+    "textMode": "auto",
+    "colorMode": "value",
+    "graphMode": "none"
+   },
+   "targets": [
+    {
+     "expr": "sum(increase(horde_style_applications{deployment_environment_name=~\"$environment\", horde_dry_run=\"true\"}[$__range]))",
+     "refId": "A",
+     "instant": true,
+     "range": false
+    }
+   ],
+   "title": "Styled dry runs",
+   "type": "stat",
+   "gridPos": {
+    "h": 4,
+    "w": 5,
+    "x": 5,
+    "y": 1
+   },
+   "id": 3
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Share of queued styled requests whose style was drawn from a collection.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "percentunit",
+     "decimals": 1,
+     "noValue": "0",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "text",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "orientation": "auto",
+    "textMode": "auto",
+    "colorMode": "value",
+    "graphMode": "none"
+   },
+   "targets": [
+    {
+     "expr": "sum(increase(horde_style_applications{deployment_environment_name=~\"$environment\", horde_dry_run=\"false\", horde_style_source=\"collection\"}[$__range])) / clamp_min(sum(increase(horde_style_applications{deployment_environment_name=~\"$environment\", horde_dry_run=\"false\"}[$__range])), 1)",
+     "refId": "A",
+     "instant": true,
+     "range": false
+    }
+   ],
+   "title": "Drawn from a collection",
+   "type": "stat",
+   "gridPos": {
+    "h": 4,
+    "w": 5,
+    "x": 10,
+    "y": 1
+   },
+   "id": 4
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Share of queued styled requests that paid the style surcharge (the requester is not the style's author).",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "percentunit",
+     "decimals": 1,
+     "noValue": "0",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "text",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "orientation": "auto",
+    "textMode": "auto",
+    "colorMode": "value",
+    "graphMode": "none"
+   },
+   "targets": [
+    {
+     "expr": "sum(increase(horde_style_applications{deployment_environment_name=~\"$environment\", horde_dry_run=\"false\", horde_style_surcharged=\"true\"}[$__range])) / clamp_min(sum(increase(horde_style_applications{deployment_environment_name=~\"$environment\", horde_dry_run=\"false\"}[$__range])), 1)",
+     "refId": "A",
+     "instant": true,
+     "range": false
+    }
+   ],
+   "title": "Surcharged",
+   "type": "stat",
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 15,
+    "y": 1
+   },
+   "id": 5
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Queued styled image requests divided by all image generate requests (horde_generate_duration_count, which also counts dry runs and refusals), so read it as a lower bound.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "percentunit",
+     "decimals": 2,
+     "noValue": "0",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "text",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "orientation": "auto",
+    "textMode": "auto",
+    "colorMode": "value",
+    "graphMode": "none"
+   },
+   "targets": [
+    {
+     "expr": "sum(increase(horde_style_applications{deployment_environment_name=~\"$environment\", horde_dry_run=\"false\", horde_gentype=\"image\"}[$__range])) / clamp_min(sum(increase(horde_generate_duration_count{deployment_environment_name=~\"$environment\", horde_gentype=\"image\"}[$__range])), 1)",
+     "refId": "A",
+     "instant": true,
+     "range": false
+    }
+   ],
+   "title": "Styled share of image requests",
+   "type": "stat",
+   "gridPos": {
+    "h": 4,
+    "w": 5,
+    "x": 19,
+    "y": 1
+   },
+   "id": 6
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Queued styled requests per minute. 'collection' means the style was drawn from a collection.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "short",
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 25,
+      "gradientMode": "none",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "normal"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "calcs": [
+      "mean",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "sum by (horde_gentype, horde_style_source) (rate(horde_style_applications{deployment_environment_name=~\"$environment\", horde_dry_run=\"false\"}[$__rate_interval])) * 60",
+     "legendFormat": "{{horde_gentype}} / {{horde_style_source}}",
+     "refId": "A"
+    }
+   ],
+   "title": "Styled requests per minute, by gentype and source",
+   "type": "timeseries",
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 5
+   },
+   "id": 7
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Queued styled requests per minute by the style's parameter_policy mode. 'undeclared' is a legacy style with no declaration; 'none', 'listed' and 'all' are styles written against the style contract.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "short",
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 25,
+      "gradientMode": "none",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "normal"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "calcs": [
+      "mean",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "sum by (horde_style_policy) (rate(horde_style_applications{deployment_environment_name=~\"$environment\", horde_dry_run=\"false\"}[$__rate_interval])) * 60",
+     "legendFormat": "{{horde_style_policy}}",
+     "refId": "A"
+    }
+   ],
+   "title": "Style contract adoption: policy mode",
+   "type": "timeseries",
+   "gridPos": {
+    "h": 8,
+    "w": 6,
+    "x": 12,
+    "y": 5
+   },
+   "id": 8
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Queued styled requests by whether the style declares template_fields, and dry runs per minute for comparison.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "short",
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 10,
+      "gradientMode": "none",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "calcs": [
+      "mean",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "sum by (horde_style_template_fields) (rate(horde_style_applications{deployment_environment_name=~\"$environment\", horde_dry_run=\"false\"}[$__rate_interval])) * 60",
+     "legendFormat": "queued, fields {{horde_style_template_fields}}",
+     "refId": "A"
+    },
+    {
+     "expr": "sum(rate(horde_style_applications{deployment_environment_name=~\"$environment\", horde_dry_run=\"true\"}[$__rate_interval])) * 60",
+     "legendFormat": "dry runs",
+     "refId": "B"
+    }
+   ],
+   "title": "Template fields and dry runs",
+   "type": "timeseries",
+   "gridPos": {
+    "h": 8,
+    "w": 6,
+    "x": 18,
+    "y": 5
+   },
+   "id": 9
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 13
+   },
+   "id": 10,
+   "title": "Style author rewards",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Kudos credited to style authors from the surcharge their requesters paid, over the range. Source: horde.style.author_credits.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "short",
+     "decimals": 0,
+     "noValue": "0",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "text",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "orientation": "auto",
+    "textMode": "auto",
+    "colorMode": "value",
+    "graphMode": "none"
+   },
+   "targets": [
+    {
+     "expr": "sum(increase(horde_style_author_credits_kudos{deployment_environment_name=~\"$environment\"}[$__range]))",
+     "refId": "A",
+     "instant": true,
+     "range": false
+    }
+   ],
+   "title": "Credited to authors",
+   "type": "stat",
+   "gridPos": {
+    "h": 4,
+    "w": 6,
+    "x": 0,
+    "y": 14
+   },
+   "id": 11
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Surcharge the minimum-balance floor forgave, and so was not credited, over the range. Source: horde.style.forgiven_surcharges.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "short",
+     "decimals": 0,
+     "noValue": "0",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "text",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "orientation": "auto",
+    "textMode": "auto",
+    "colorMode": "value",
+    "graphMode": "none"
+   },
+   "targets": [
+    {
+     "expr": "sum(increase(horde_style_forgiven_surcharges_kudos{deployment_environment_name=~\"$environment\"}[$__range]))",
+     "refId": "A",
+     "instant": true,
+     "range": false
+    }
+   ],
+   "title": "Forgiven by the floor",
+   "type": "stat",
+   "gridPos": {
+    "h": 4,
+    "w": 6,
+    "x": 6,
+    "y": 14
+   },
+   "id": 12
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Kudos per hour credited to style authors and forgiven by the floor, by style type. A forgiven share that grows means surcharged requests increasingly come from accounts at the floor.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "short",
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 10,
+      "gradientMode": "none",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "calcs": [
+      "mean",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "sum by (horde_style_type) (rate(horde_style_author_credits_kudos{deployment_environment_name=~\"$environment\"}[$__rate_interval])) * 3600",
+     "legendFormat": "credited {{horde_style_type}}",
+     "refId": "A"
+    },
+    {
+     "expr": "sum by (horde_style_type) (rate(horde_style_forgiven_surcharges_kudos{deployment_environment_name=~\"$environment\"}[$__rate_interval])) * 3600",
+     "legendFormat": "forgiven {{horde_style_type}}",
+     "refId": "B"
+    }
+   ],
+   "title": "Author credits and forgiven surcharge (kudos/hour)",
+   "type": "timeseries",
+   "gridPos": {
+    "h": 7,
+    "w": 24,
+    "x": 0,
+    "y": 18
+   },
+   "id": 13
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 25
+   },
+   "id": 14,
+   "title": "Who uses styles (app logs, queued requests only)",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-app"
+   },
+   "description": "Client name (first Client-Agent field) on 'Style applied:' lines over the range. Only queued requests are logged at info; dry runs are logged at debug and not shipped. Filter by host with $host.",
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "align": "auto"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "showHeader": true,
+    "sortBy": [
+     {
+      "desc": true,
+      "displayName": "styled requests"
+     }
+    ],
+    "footer": {
+     "show": false
+    }
+   },
+   "targets": [
+    {
+     "expr": "topk(25, sum by (client) (count_over_time({app=\"ai-horde\", instance=~\"$host\"} |= \"Style applied:\" | regexp \"agent '(?P<client>[^':]*)\" | label_format client=`{{ if .client }}{{ .client }}{{ else }}(empty){{ end }}` [$__range])))",
+     "refId": "A",
+     "instant": true,
+     "range": false,
+     "format": "table",
+     "queryType": "instant"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "Value": "styled requests"
+      }
+     }
+    },
+    {
+     "id": "sortBy",
+     "options": {
+      "sort": [
+       {
+        "field": "styled requests",
+        "desc": true
+       }
+      ]
+     }
+    }
+   ],
+   "title": "Clients applying styles",
+   "type": "table",
+   "gridPos": {
+    "h": 10,
+    "w": 8,
+    "x": 0,
+    "y": 26
+   },
+   "id": 15
+  },
+  {
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-app"
+   },
+   "description": "Styles named on 'Style applied:' lines over the range, by id and name.",
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "align": "auto"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "showHeader": true,
+    "sortBy": [
+     {
+      "desc": true,
+      "displayName": "styled requests"
+     }
+    ],
+    "footer": {
+     "show": false
+    }
+   },
+   "targets": [
+    {
+     "expr": "topk(25, sum by (style, name) (count_over_time({app=\"ai-horde\", instance=~\"$host\"} |= \"Style applied:\" | regexp \"Style applied: style (?P<style>\\\\S+) '(?P<name>[^']*)'\" [$__range])))",
+     "refId": "A",
+     "instant": true,
+     "range": false,
+     "format": "table",
+     "queryType": "instant"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "Value": "styled requests",
+       "style": "style id"
+      }
+     }
+    },
+    {
+     "id": "sortBy",
+     "options": {
+      "sort": [
+       {
+        "field": "styled requests",
+        "desc": true
+       }
+      ]
+     }
+    }
+   ],
+   "title": "Most used styles",
+   "type": "table",
+   "gridPos": {
+    "h": 10,
+    "w": 10,
+    "x": 8,
+    "y": 26
+   },
+   "id": 16
+  },
+  {
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-app"
+   },
+   "description": "Queued styled requests by style type and whether the requester paid the surcharge, from the log line.",
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "align": "auto"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "showHeader": true,
+    "sortBy": [
+     {
+      "desc": true,
+      "displayName": "styled requests"
+     }
+    ],
+    "footer": {
+     "show": false
+    }
+   },
+   "targets": [
+    {
+     "expr": "sum by (type, surcharge) (count_over_time({app=\"ai-horde\", instance=~\"$host\"} |= \"Style applied:\" | regexp \"type (?P<type>\\\\S+) owner .* surcharge=(?P<surcharge>\\\\S+)\" [$__range]))",
+     "refId": "A",
+     "instant": true,
+     "range": false,
+     "format": "table",
+     "queryType": "instant"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "Value": "styled requests"
+      }
+     }
+    },
+    {
+     "id": "sortBy",
+     "options": {
+      "sort": [
+       {
+        "field": "styled requests",
+        "desc": true
+       }
+      ]
+     }
+    }
+   ],
+   "title": "Styles by type and surcharge",
+   "type": "table",
+   "gridPos": {
+    "h": 10,
+    "w": 6,
+    "x": 18,
+    "y": 26
+   },
+   "id": 17
+  },
+  {
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-app"
+   },
+   "description": "Queued styled requests per 5 minutes for the ten busiest clients, from 'Style applied:' lines.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "short",
+     "custom": {
+      "drawStyle": "bars",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 60,
+      "gradientMode": "none",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "normal"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "calcs": [
+      "mean",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "topk(10, sum by (client) (count_over_time({app=\"ai-horde\", instance=~\"$host\"} |= \"Style applied:\" | regexp \"agent '(?P<client>[^':]*)\" | label_format client=`{{ if .client }}{{ .client }}{{ else }}(empty){{ end }}` [5m])))",
+     "legendFormat": "{{client}}",
+     "refId": "A"
+    }
+   ],
+   "title": "Styled requests per client (top 10)",
+   "type": "timeseries",
+   "gridPos": {
+    "h": 8,
+    "w": 24,
+    "x": 0,
+    "y": 36
+   },
+   "id": 18
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 44
+   },
+   "id": 19,
+   "title": "Style writes and stored-style faults",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-app"
+   },
+   "description": "'Stored style declaration invalid:' warnings and collection draws that skipped a style for that reason, per 5 minutes. Zero when healthy.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "short",
+     "custom": {
+      "drawStyle": "bars",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 60,
+      "gradientMode": "none",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "calcs": [
+      "mean",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "sum(count_over_time({app=\"ai-horde\", instance=~\"$host\"} |= \"Stored style declaration invalid:\" [5m]))",
+     "legendFormat": "invalid declaration",
+     "refId": "A"
+    },
+    {
+     "expr": "sum(count_over_time({app=\"ai-horde\", instance=~\"$host\"} |= \"left out of a collection draw\" [5m]))",
+     "legendFormat": "left out of a draw",
+     "refId": "B"
+    }
+   ],
+   "title": "Stored declarations that no longer validate",
+   "type": "timeseries",
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 0,
+    "y": 45
+   },
+   "id": 20
+  },
+  {
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-app"
+   },
+   "description": "Creates, patches and deletes of styles, collections and examples, with the account, and stored-declaration faults.",
+   "options": {
+    "showTime": true,
+    "showLabels": false,
+    "showCommonLabels": false,
+    "wrapLogMessage": true,
+    "prettifyLogMessage": false,
+    "enableLogDetails": true,
+    "dedupStrategy": "none",
+    "sortOrder": "Descending"
+   },
+   "targets": [
+    {
+     "expr": "{app=\"ai-horde\", instance=~\"$host\"} |~ \"Style (created|patched|deleted):|Collection (created|patched|deleted):|Style example (added|patched|deleted):|Stored style declaration invalid:|left out of a collection draw\"",
+     "refId": "A"
+    }
+   ],
+   "title": "Style, collection and example writes",
+   "type": "logs",
+   "gridPos": {
+    "h": 8,
+    "w": 16,
+    "x": 8,
+    "y": 45
+   },
+   "id": 21
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 53
+   },
+   "id": 22,
+   "title": "Refusals on style requests",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "API refusals over the range whose return code concerns styles or templates, or that hit a style or collection route. Source: horde.api.rejections.",
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "align": "auto"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "showHeader": true,
+    "sortBy": [
+     {
+      "desc": true,
+      "displayName": "refusals"
+     }
+    ],
+    "footer": {
+     "show": false
+    }
+   },
+   "targets": [
+    {
+     "expr": "sum by (horde_rc, http_route, http_request_method) (increase(horde_api_rejections{deployment_environment_name=~\"$environment\", horde_rc=~\"Style.*|Template.*|SharedKeyAssignedStyles|StylesAnonForbidden|StylesRequiresCustomizer|TooManyStyleExamples|PromptExceedsContext\"}[$__range])) or sum by (horde_rc, http_route, http_request_method) (increase(horde_api_rejections{deployment_environment_name=~\"$environment\", http_route=~\".*(style|collection).*\"}[$__range]))",
+     "refId": "A",
+     "instant": true,
+     "range": false,
+     "format": "table",
+     "queryType": "instant"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "Value": "refusals",
+       "horde_rc": "return code",
+       "http_route": "route",
+       "http_request_method": "method"
+      }
+     }
+    },
+    {
+     "id": "sortBy",
+     "options": {
+      "sort": [
+       {
+        "field": "refusals",
+        "desc": true
+       }
+      ]
+     }
+    }
+   ],
+   "title": "Style-related refusals by return code",
+   "type": "table",
+   "gridPos": {
+    "h": 9,
+    "w": 12,
+    "x": 0,
+    "y": 54
+   },
+   "id": 23
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Every text request's sizing against its prompt, by context_fit mode and outcome. 'sent_overlong' under 'ignore' is a prompt larger than the context sent anyway; 'refused' is PromptExceedsContext.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "short",
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 25,
+      "gradientMode": "none",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "normal"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "calcs": [
+      "mean",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "sum by (horde_context_fit_mode, horde_context_fit_outcome) (rate(horde_text_context_fit{deployment_environment_name=~\"$environment\"}[$__rate_interval])) * 60",
+     "legendFormat": "{{horde_context_fit_mode}} / {{horde_context_fit_outcome}}",
+     "refId": "A"
+    }
+   ],
+   "title": "Text request sizing (context_fit)",
+   "type": "timeseries",
+   "gridPos": {
+    "h": 9,
+    "w": 12,
+    "x": 12,
+    "y": 54
+   },
+   "id": 24
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 63
+   },
+   "id": 25,
+   "title": "Client mix at the edge (aihorde.net HAProxy)",
+   "type": "row"
+  },
+  {
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-infra"
+   },
+   "description": "Client name from the Client-Agent header the aihorde.net edge logs on every request, over the range. CORS preflights never carry the header. stablehorde_orig logs to a local file and is not in Loki. Edge logs are large: keep the range to a few hours.",
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "align": "auto"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "showHeader": true,
+    "sortBy": [
+     {
+      "desc": true,
+      "displayName": "requests"
+     }
+    ],
+    "footer": {
+     "show": false
+    }
+   },
+   "targets": [
+    {
+     "expr": "topk(30, sum by (client) (count_over_time({service_name=\"haproxy\", hostname=\"vps-854a13a4\"} |= \"] stable-horde\" |= \"/api/\" | regexp `\\{(?P<client>[^}:]*)[^}]*\\} \"` | label_format client=`{{ if .client }}{{ .client }}{{ else }}(no Client-Agent){{ end }}` [$__range])))",
+     "refId": "A",
+     "instant": true,
+     "range": false,
+     "format": "table",
+     "queryType": "instant"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "Value": "requests"
+      }
+     }
+    },
+    {
+     "id": "sortBy",
+     "options": {
+      "sort": [
+       {
+        "field": "requests",
+        "desc": true
+       }
+      ]
+     }
+    }
+   ],
+   "title": "API clients by requests",
+   "type": "table",
+   "gridPos": {
+    "h": 12,
+    "w": 8,
+    "x": 0,
+    "y": 64
+   },
+   "id": 26
+  },
+  {
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-infra"
+   },
+   "description": "Requests to /api/v2/styles and /api/v2/collections by client over the range, a proxy for which clients offer a style picker.",
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "align": "auto"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "showHeader": true,
+    "sortBy": [
+     {
+      "desc": true,
+      "displayName": "requests"
+     }
+    ],
+    "footer": {
+     "show": false
+    }
+   },
+   "targets": [
+    {
+     "expr": "topk(20, sum by (client) (count_over_time({service_name=\"haproxy\", hostname=\"vps-854a13a4\"} |= \"] stable-horde\" |~ \"/api/v2/(styles|collections)\" | regexp `\\{(?P<client>[^}:]*)[^}]*\\} \"` | label_format client=`{{ if .client }}{{ .client }}{{ else }}(no Client-Agent){{ end }}` [$__range])))",
+     "refId": "A",
+     "instant": true,
+     "range": false,
+     "format": "table",
+     "queryType": "instant"
+    }
+   ],
+   "transformations": [
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "Value": "requests"
+      }
+     }
+    },
+    {
+     "id": "sortBy",
+     "options": {
+      "sort": [
+       {
+        "field": "requests",
+        "desc": true
+       }
+      ]
+     }
+    }
+   ],
+   "title": "Clients browsing styles",
+   "type": "table",
+   "gridPos": {
+    "h": 12,
+    "w": 8,
+    "x": 8,
+    "y": 64
+   },
+   "id": 27
+  },
+  {
+   "datasource": {
+    "type": "loki",
+    "uid": "loki-infra"
+   },
+   "description": "Requests per minute at the edge with a Client-Agent and without one.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "short",
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 25,
+      "gradientMode": "none",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "normal"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "calcs": [
+      "mean",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "sum(count_over_time({service_name=\"haproxy\", hostname=\"vps-854a13a4\"} |= \"] stable-horde\" |= \"/api/\" |~ \"\\\\{[^}]+\\\\} \\\"\" [1m]))",
+     "legendFormat": "with Client-Agent",
+     "refId": "A"
+    },
+    {
+     "expr": "sum(count_over_time({service_name=\"haproxy\", hostname=\"vps-854a13a4\"} |= \"] stable-horde\" |= \"/api/\" |= \"{} \\\"\" [1m]))",
+     "legendFormat": "without",
+     "refId": "B"
+    }
+   ],
+   "title": "Requests with and without Client-Agent",
+   "type": "timeseries",
+   "gridPos": {
+    "h": 12,
+    "w": 8,
+    "x": 16,
+    "y": 64
+   },
+   "id": 28
+  }
+ ],
+ "refresh": "1m",
+ "schemaVersion": 39,
+ "tags": [
+  "horde",
+  "ai-horde",
+  "styles",
+  "clients"
+ ],
+ "templating": {
+  "list": [
+   {
+    "current": {
+     "selected": true,
+     "text": "production",
+     "value": "production"
+    },
+    "datasource": {
+     "type": "prometheus",
+     "uid": "mimir-telemetry"
+    },
+    "definition": "label_values(horde_generate_duration_count, deployment_environment_name)",
+    "description": "Scopes the metric panels.",
+    "hide": 0,
+    "includeAll": false,
+    "label": "Environment",
+    "multi": false,
+    "name": "environment",
+    "options": [],
+    "query": {
+     "query": "label_values(horde_generate_duration_count, deployment_environment_name)",
+     "refId": "environment"
+    },
+    "refresh": 1,
+    "skipUrlSync": false,
+    "sort": 1,
+    "type": "query"
+   },
+   {
+    "allValue": ".+",
+    "current": {
+     "selected": true,
+     "text": [
+      "All"
+     ],
+     "value": [
+      "$__all"
+     ]
+    },
+    "datasource": {
+     "type": "loki",
+     "uid": "loki-app"
+    },
+    "definition": "label_values({app=\"ai-horde\"}, instance)",
+    "description": "Scopes the app-log panels by host. Dev logs as shdev.",
+    "hide": 0,
+    "includeAll": true,
+    "label": "App host (logs)",
+    "multi": true,
+    "name": "host",
+    "options": [],
+    "query": {
+     "label": "instance",
+     "stream": "{app=\"ai-horde\"}",
+     "type": 1,
+     "refId": "host"
+    },
+    "refresh": 1,
+    "skipUrlSync": false,
+    "sort": 1,
+    "type": "query"
+   }
+  ]
+ },
+ "time": {
+  "from": "now-6h",
+  "to": "now"
+ },
+ "timepicker": {},
+ "timezone": "utc",
+ "title": "Horde Styles & Clients",
+ "uid": "horde-styles-clients",
+ "version": 1,
+ "weekStart": ""
+}

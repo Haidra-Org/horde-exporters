@@ -1006,7 +1006,7 @@
     "h": 8,
     "w": 24,
     "x": 0,
-    "y": 28
+    "y": 35
    },
    "id": 12,
    "options": {
@@ -1034,7 +1034,7 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 36
+    "y": 43
    },
    "id": 140,
    "title": "Projection Diagnostics",
@@ -1056,7 +1056,7 @@
     "h": 6,
     "w": 8,
     "x": 0,
-    "y": 37
+    "y": 44
    },
    "id": 19,
    "options": {
@@ -1100,7 +1100,7 @@
     "h": 6,
     "w": 8,
     "x": 8,
-    "y": 37
+    "y": 44
    },
    "id": 25,
    "options": {
@@ -1161,7 +1161,7 @@
     "h": 6,
     "w": 8,
     "x": 16,
-    "y": 37
+    "y": 44
    },
    "id": 20,
    "options": {
@@ -1210,7 +1210,7 @@
     "h": 8,
     "w": 12,
     "x": 0,
-    "y": 43
+    "y": 50
    },
    "id": 21,
    "options": {
@@ -1254,7 +1254,7 @@
     "h": 8,
     "w": 8,
     "x": 12,
-    "y": 43
+    "y": 50
    },
    "id": 26,
    "options": {
@@ -1315,7 +1315,7 @@
     "h": 8,
     "w": 4,
     "x": 20,
-    "y": 43
+    "y": 50
    },
    "id": 27,
    "options": {
@@ -1347,7 +1347,7 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 51
+    "y": 58
    },
    "id": 150,
    "title": "Incident Signals \u2014 blank or zero when healthy",
@@ -1385,7 +1385,7 @@
     "h": 6,
     "w": 4,
     "x": 0,
-    "y": 52
+    "y": 59
    },
    "id": 17,
    "options": {
@@ -1439,7 +1439,7 @@
     "h": 6,
     "w": 4,
     "x": 4,
-    "y": 52
+    "y": 59
    },
    "id": 28,
    "options": {
@@ -1497,7 +1497,7 @@
     "h": 6,
     "w": 4,
     "x": 8,
-    "y": 52
+    "y": 59
    },
    "id": 18,
    "options": {
@@ -1558,7 +1558,7 @@
     "h": 6,
     "w": 12,
     "x": 12,
-    "y": 52
+    "y": 59
    },
    "id": 11,
    "options": {
@@ -1602,7 +1602,7 @@
     "h": 7,
     "w": 24,
     "x": 0,
-    "y": 58
+    "y": 65
    },
    "id": 22,
    "options": {
@@ -1639,7 +1639,7 @@
     "h": 8,
     "w": 24,
     "x": 0,
-    "y": 65
+    "y": 72
    },
    "id": 23,
    "options": {
@@ -1667,7 +1667,7 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 80
+    "y": 87
    },
    "id": 130,
    "title": "Database Context",
@@ -1724,7 +1724,7 @@
     "h": 7,
     "w": 12,
     "x": 0,
-    "y": 81
+    "y": 88
    },
    "id": 13,
    "options": {
@@ -1804,7 +1804,7 @@
     "h": 7,
     "w": 12,
     "x": 12,
-    "y": 81
+    "y": 88
    },
    "id": 14,
    "options": {
@@ -1843,7 +1843,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 73,
+    "y": 80,
     "w": 12,
     "h": 7
    },
@@ -2042,7 +2042,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 73,
+    "y": 80,
     "w": 12,
     "h": 7
    },
@@ -2229,6 +2229,157 @@
      "queryType": "range"
     }
    ]
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Kudos per hour credited to style authors from the surcharge their requesters paid (horde.style.author_credits) and the part the minimum-balance floor forgave and so did not credit (horde.style.forgiven_surcharges), by style type. Credits ride the activation debit, so dry runs and refused requests credit nobody.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "short",
+     "noValue": "0",
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 1,
+      "fillOpacity": 25,
+      "gradientMode": "none",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 16,
+    "x": 0,
+    "y": 28
+   },
+   "options": {
+    "legend": {
+     "calcs": [
+      "mean",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "right",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "sum by (horde_style_type) (rate(horde_style_author_credits_kudos{deployment_environment_name=~\"$environment\"}[$__rate_interval])) * 3600",
+     "legendFormat": "credited {{horde_style_type}}",
+     "refId": "A"
+    },
+    {
+     "expr": "sum by (horde_style_type) (rate(horde_style_forgiven_surcharges_kudos{deployment_environment_name=~\"$environment\"}[$__rate_interval])) * 3600",
+     "legendFormat": "forgiven {{horde_style_type}}",
+     "refId": "B"
+    }
+   ],
+   "title": "Style Surcharge: Credited vs Forgiven (kudos/hour)",
+   "type": "timeseries",
+   "id": 153
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Kudos credited to style authors over the dashboard range, and the share of the surcharge the floor forgave.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "thresholds"
+     },
+     "unit": "short",
+     "decimals": 0,
+     "noValue": "0",
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "text",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "forgiven share"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "percentunit"
+       },
+       {
+        "id": "decimals",
+        "value": 1
+       }
+      ]
+     }
+    ]
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 8,
+    "x": 16,
+    "y": 28
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "orientation": "vertical",
+    "textMode": "value_and_name",
+    "colorMode": "value",
+    "graphMode": "none"
+   },
+   "targets": [
+    {
+     "expr": "sum(increase(horde_style_author_credits_kudos{deployment_environment_name=~\"$environment\"}[$__range]))",
+     "legendFormat": "credited to authors",
+     "refId": "A",
+     "instant": true,
+     "range": false
+    },
+    {
+     "expr": "sum(increase(horde_style_forgiven_surcharges_kudos{deployment_environment_name=~\"$environment\"}[$__range])) / clamp_min(sum(increase(horde_style_author_credits_kudos{deployment_environment_name=~\"$environment\"}[$__range])) + sum(increase(horde_style_forgiven_surcharges_kudos{deployment_environment_name=~\"$environment\"}[$__range])), 1)",
+     "legendFormat": "forgiven share",
+     "refId": "B",
+     "instant": true,
+     "range": false
+    }
+   ],
+   "title": "Style Author Credits (range)",
+   "type": "stat",
+   "id": 154
   }
  ],
  "refresh": "30s",
