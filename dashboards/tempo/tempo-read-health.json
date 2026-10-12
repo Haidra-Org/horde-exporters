@@ -1,0 +1,1596 @@
+{
+  "uid": "horde-tempo-read-health",
+  "title": "Horde Tempo Read and Cache Health",
+  "description": "Compare Tempo metadata caching, time-bounded lookup costs and worker-cap effects without adding trace queries. Infrastructure org only; relies on staged ops-tempo-read-* rules and node textfile metrics.",
+  "tags": [
+    "horde",
+    "infrastructure",
+    "tempo",
+    "cache"
+  ],
+  "timezone": "utc",
+  "editable": true,
+  "graphTooltip": 1,
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Read tuning: configured intent and observed health",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 2,
+      "type": "text",
+      "title": "How to judge the change",
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 24,
+        "h": 5
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "Compare equal lookup volume and similar time ranges. Good: warm metadata hits \u226580%, fewer backend GETs/lookup, p95 <10s, no 5xx/404 regression, no shared-cache evictions or Mimir degradation. Bad: missing cache counters despite traffic, errors/oversize skips, sustained work beyond the worker cap, or unchanged read cost. Budgets are initial review thresholds, not guaranteed savings. NO DATA is unknown, never healthy. Cache-effectiveness warnings wait 30 minutes after Tempo starts. Stats need the staged node textfile collectors; rules need ops-tempo-read-* in the infrastructure tenant. This dashboard queries metrics only and makes no Tempo trace lookups."
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Configured cache (0 disabled, 1 expected)",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(horde_tempo_cache_expected)",
+          "legendFormat": "cache expected",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": false,
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Observed cache warm-up / Tempo uptime",
+      "description": "Configured intent is not proof of functioning caching. Missing uptime is unknown.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 6,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "horde:tempo:cache_warm or (max(horde_tempo_cache_expected) * 0)",
+          "legendFormat": "warm (0 warming/disabled, 1 eligible)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "B",
+          "expr": "time() - max(process_start_time_seconds{job=\"tempo\"})",
+          "legendFormat": "uptime seconds",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": false,
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "row",
+      "title": "Effectiveness: traffic, read cost and external lookup latency",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "External trace lookups per second",
+      "description": "Only frontend v1/v2 trace routes; excludes internal shard requests.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "horde:tempo:lookup_rate5m",
+          "legendFormat": "lookups/s",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Backend GETs per second",
+      "description": "Includes query, polling and compaction traffic.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 14,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(tempodb_backend_request_duration_seconds_count{job=\"tempo\",operation=\"GET\"}[5m]))",
+          "legendFormat": "GETs/s",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "GETs per lookup: current and previous day",
+      "description": "Aggregate attribution estimate. Background compaction and different trace age can change the ratio. Only shown with \u226530 lookups/15m.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 200
+              }
+            ]
+          },
+          "custom": {
+            "thresholdsStyle": "line"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(tempodb_backend_request_duration_seconds_count{job=\"tempo\",operation=\"GET\"}[5m])) / clamp_min(sum(rate(tempo_request_duration_seconds_count{job=\"tempo\",route=~\"api(_v2)?_traces_traceid\"}[5m])), 1e-9) and on() (sum(increase(tempo_request_duration_seconds_count{job=\"tempo\",route=~\"api(_v2)?_traces_traceid\"}[15m])) >= 30)",
+          "legendFormat": "current",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(tempodb_backend_request_duration_seconds_count{job=\"tempo\",operation=\"GET\"}[5m] offset 1d)) / clamp_min(sum(rate(tempo_request_duration_seconds_count{job=\"tempo\",route=~\"api(_v2)?_traces_traceid\"}[5m] offset 1d)), 1e-9) and on() (sum(increase(tempo_request_duration_seconds_count{job=\"tempo\",route=~\"api(_v2)?_traces_traceid\"}[15m] offset 1d)) >= 30)",
+          "legendFormat": "1 day earlier",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "External lookup p50 / p95",
+      "description": "Compare similar traffic before/after. Initial p95 warning budget is 10s.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 21,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 10
+              }
+            ]
+          },
+          "custom": {
+            "thresholdsStyle": "line"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by(le)(rate(tempo_request_duration_seconds_bucket{job=\"tempo\",route=~\"api(_v2)?_traces_traceid\"}[5m])))",
+          "legendFormat": "p50",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "B",
+          "expr": "horde:tempo:lookup_p95_seconds5m",
+          "legendFormat": "p95",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "External lookup 5xx and 404 shares",
+      "description": "5xx budget 5%; 404 budget 20%. 404 may reflect bounds, retention or sampling. HTTP 200 partial traces cannot be detected from these counters.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "horde:tempo:lookup_error_ratio5m",
+          "legendFormat": "5xx",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "B",
+          "expr": "horde:tempo:lookup_notfound_ratio5m",
+          "legendFormat": "not found",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "External lookup responses",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 28,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by(status_code)(rate(tempo_request_duration_seconds_count{job=\"tempo\",route=~\"api(_v2)?_traces_traceid\"}[5m]))",
+          "legendFormat": "HTTP {{status_code}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "row",
+      "title": "Cache effectiveness and fallback risk",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 35,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Metadata cache hit and error ratios",
+      "description": "Pinned Tempo 2.7.1 Memcache.Get: 200 hit, 404 miss; other statuses are errors. Initial hit budget 80%, error budget 1%.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 36,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "horde:tempo:cache_hit_ratio5m",
+          "legendFormat": "hit share",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "B",
+          "expr": "horde:tempo:cache_error_ratio5m",
+          "legendFormat": "error share",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Cache Get results",
+      "description": "No counters with active traffic after warm-up triggers a warning. Combined role cache name does not distinguish bloom from footer hits.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 36,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by(name,status_code)(rate(tempo_memcache_request_duration_seconds_count{job=\"tempo\",method=\"Memcache.Get\"}[5m]))",
+          "legendFormat": "{{name}} HTTP {{status_code}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "Cache operation p95",
+      "description": "Configured timeout is 500ms; Get p95 above 100ms sustained 10m warns. Histogram precision is limited.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 43,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.1
+              }
+            ]
+          },
+          "custom": {
+            "thresholdsStyle": "line"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by(le,method)(rate(tempo_memcache_request_duration_seconds_bucket{job=\"tempo\"}[5m])))",
+          "legendFormat": "{{method}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "type": "stat",
+      "title": "Cache items skipped in 15 minutes",
+      "description": "Skipping writes can repeatedly miss the cache. No counter is unknown, not zero.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 43,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(tempo_memcache_client_set_skip_total{job=\"tempo\"}[15m]))",
+          "legendFormat": "oversize skips",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": false,
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "type": "row",
+      "title": "Shared Memcached: protect Mimir",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 50,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 18,
+      "type": "stat",
+      "title": "Stats collector up / sample age",
+      "description": "Collector runs every 30s. Missing/down or age >120s sustained for 5m warns when caching is expected.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 51,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(horde_memcached_up)",
+          "legendFormat": "collector up",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": false,
+          "instant": true
+        },
+        {
+          "refId": "B",
+          "expr": "time() - max(horde_memcached_stats_timestamp_seconds)",
+          "legendFormat": "sample age seconds",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": false,
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "type": "timeseries",
+      "title": "Cache memory occupied",
+      "description": "High occupancy alone is not a failure. Pair it with evictions and Mimir hit ratios.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 51,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(horde_memcached_bytes) / sum(horde_memcached_limit_bytes)",
+          "legendFormat": "occupied / allocated",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Evictions and refusal events per second",
+      "description": "Evictions can displace Mimir; refusal events catch connection saturation between gauge samples.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 58,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(horde_memcached_evictions_total[5m]))",
+          "legendFormat": "evictions/s",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(horde_memcached_listen_disabled_total[5m]))",
+          "legendFormat": "refusals/s",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Connections / server limit",
+      "description": "Initial warning at 80% sustained 5m.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 58,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.8
+              }
+            ]
+          },
+          "custom": {
+            "thresholdsStyle": "line"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(horde_memcached_connections) / sum(horde_memcached_connection_limit)",
+          "legendFormat": "connection use",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "Mimir cache hit ratios",
+      "description": "Different Mimir caches have different expected hit rates. New eviction plus store hit share <70% raises a correlated warning; it does not prove Tempo caused it.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 65,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "horde:mimir:store_cache_hit_ratio5m",
+          "legendFormat": "store index",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(cortex_frontend_query_result_cache_hits_total{job=\"mimir\"}[5m])) / clamp_min(sum(rate(cortex_frontend_query_result_cache_requests_total{job=\"mimir\"}[5m])), 1e-9)",
+          "legendFormat": "query results",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "Mimir query p95",
+      "description": "Watch for collateral latency regression while Tempo cache benefits improve.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 65,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by(le)(rate(cortex_request_duration_seconds_bucket{job=\"mimir\",route=~\".*query.*\"}[5m])))",
+          "legendFormat": "query p95",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "type": "row",
+      "title": "Worker cap and object-storage pressure",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 72,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 25,
+      "type": "timeseries",
+      "title": "Outstanding block jobs versus configured workers",
+      "description": "Outstanding includes queued AND executing jobs. Exceeding workers sustained 10m warns; this is not a universal S3 concurrency cap.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 73,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(tempodb_work_queue_length{job=\"tempo\"})",
+          "legendFormat": "outstanding",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "B",
+          "expr": "max(horde_tempo_backend_max_workers)",
+          "legendFormat": "worker cap",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        }
+      ]
+    },
+    {
+      "id": 26,
+      "type": "timeseries",
+      "title": "Backend GET mean and p95 duration",
+      "description": "",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 73,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(tempodb_backend_request_duration_seconds_sum{job=\"tempo\",operation=\"GET\"}[5m])) / clamp_min(sum(rate(tempodb_backend_request_duration_seconds_count{job=\"tempo\",operation=\"GET\"}[5m])), 1e-9)",
+          "legendFormat": "mean",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by(le)(rate(tempodb_backend_request_duration_seconds_bucket{job=\"tempo\",operation=\"GET\"}[5m])))",
+          "legendFormat": "p95",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        }
+      ]
+    },
+    {
+      "id": 27,
+      "type": "timeseries",
+      "title": "Garage descriptor use and S3 probe",
+      "description": "Existing alerts: FD >80% for 5m, S3 API unavailable for 2m. FD samples can miss short spikes.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 80,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(garage_process_open_fds / garage_process_max_fds)",
+          "legendFormat": "FD utilisation",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "B",
+          "expr": "min(garage_s3_api_up)",
+          "legendFormat": "S3 API up",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        }
+      ]
+    },
+    {
+      "id": 28,
+      "type": "timeseries",
+      "title": "Storage writes and failures",
+      "description": "Read tuning must preserve shared storage writes. These series use different counts; inspect each independently.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 80,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(tempo_ingester_flush_queue_length{job=\"tempo\"})",
+          "legendFormat": "Tempo flush backlog",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "B",
+          "expr": "sum(increase(tempo_ingester_failed_flushes_total{job=\"tempo\"}[15m]))",
+          "legendFormat": "Tempo failed flushes/15m",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "C",
+          "expr": "sum(increase(thanos_objstore_bucket_operation_failures_total{job=\"mimir\"}[15m]))",
+          "legendFormat": "Mimir S3 failures/15m",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        }
+      ]
+    },
+    {
+      "id": 29,
+      "type": "row",
+      "title": "Warnings and availability",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 87,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "Firing tuning alerts",
+      "description": "Warnings follow the existing warning delivery policy. HordeTempoTraceLookupErrors is critical and follows the generic Discord critical route.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 88,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "ALERTS{alertstate=\"firing\",alertname=~\"HordeTempo.*|HordeSharedCache.*|HordeMimirSharedCache.*|Garage.*|S3StorageBackendFailing\"}",
+          "legendFormat": "{{alertname}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "Monitoring scrape availability",
+      "description": "A metrics scrape being healthy does not prove the S3 API or cache works.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 88,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "NO DATA",
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "min by(job)(up{job=~\"tempo|mimir|s3\"})",
+          "legendFormat": "{{job}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "range": true,
+          "instant": false
+        }
+      ]
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "horde_overlay": "alerts-infra",
+        "name": "Infra alerts",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir-infra"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "#d03b3b",
+        "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\", alertname!~\"Watchdog|HostSystemdServiceFailed|HostOutOfInodes|HostSwapFillingUp|HostDiskWillFillIn24h|HostDiskUsageHigh|WireGuardTextfileStale|PrometheusTargetsMissing|HordeRequestObservationDataReady|HordeRequestEstimatorPromotionApproved|HordeRequestUnstartedExpiryForecastValidationReady\"}",
+        "step": "30s",
+        "titleFormat": "{{alertname}}",
+        "textFormat": "{{severity}} {{instance}}{{host}}{{peer}}{{proxy}}{{name}}",
+        "useValueForTime": false
+      },
+      {
+        "horde_overlay": "alerts-telemetry",
+        "name": "App alerts (telemetry)",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir-telemetry"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "#ec835a",
+        "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\", alertname!~\"Watchdog|HostSystemdServiceFailed|HostOutOfInodes|HostSwapFillingUp|HostDiskWillFillIn24h|HostDiskUsageHigh|WireGuardTextfileStale|PrometheusTargetsMissing|HordeRequestObservationDataReady|HordeRequestEstimatorPromotionApproved|HordeRequestUnstartedExpiryForecastValidationReady\"}",
+        "step": "30s",
+        "titleFormat": "{{alertname}}",
+        "textFormat": "{{severity}} {{horde_host}}{{horde_job_name}}{{deployment_environment_name}}",
+        "useValueForTime": false
+      },
+      {
+        "horde_overlay": "alerts-app",
+        "name": "App alerts (exporter)",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir-app"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "#e0b400",
+        "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\", alertname!~\"Watchdog|HostSystemdServiceFailed|HostOutOfInodes|HostSwapFillingUp|HostDiskWillFillIn24h|HostDiskUsageHigh|WireGuardTextfileStale|PrometheusTargetsMissing|HordeRequestObservationDataReady|HordeRequestEstimatorPromotionApproved|HordeRequestUnstartedExpiryForecastValidationReady\"}",
+        "step": "30s",
+        "titleFormat": "{{alertname}}",
+        "textFormat": "{{severity}}",
+        "useValueForTime": false
+      },
+      {
+        "horde_overlay": "app-restarts",
+        "name": "App restarts",
+        "datasource": {
+          "type": "loki",
+          "uid": "loki-app"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "#8ab8ff",
+        "expr": "{app=\"ai-horde\", component=\"backend\"} |= \"INIT\" |= \"Horde Database\" | line_format \"{{.instance}} {{.container}} started\""
+      },
+      {
+        "horde_overlay": "operator",
+        "name": "Operator notes & deploys",
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "#b877d9",
+        "target": {
+          "type": "tags",
+          "tags": [
+            "ai-horde"
+          ],
+          "matchAny": true,
+          "limit": 200
+        }
+      }
+    ]
+  },
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "horde"
+      ],
+      "targetBlank": false,
+      "title": "Horde Dashboards",
+      "type": "dashboards"
+    }
+  ]
+}
