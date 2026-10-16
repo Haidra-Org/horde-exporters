@@ -97,9 +97,29 @@ pm2) receive the infra-alert and operator overlays at conversion time, which
 
 | **Horde Fleet Connectivity** | `dashboards/fleet/fleet-connectivity.json` | Outage-shape dashboard (Org 1, infra): WireGuard handshake age to/from the datastore host, edge HAProxy UP servers per backend host, redis-unreachable and error log rates per host (`loki-app`), request rate/p90/5xx per host (`mimir-telemetry`), and aihdb01 host/postgres health. Fixed colour per host on every panel; an "Edge: what users got" row (HAProxy frontend 5xx rate/share per edge, independent of app telemetry) and a shared-redis row (`job="redis"` from Alloy on aihdb01). Needs the `wireguard_peer_*` textfile metrics and aihdb01's pushed node metrics. |
 | **Horde Tempo Read and Cache Health** | `dashboards/tempo/tempo-read-health.json` | Org 1, `mimir-infra`: external trace lookup traffic, GETs per lookup versus the previous day, p50/p95, 5xx/404 shares, metadata cache hits/errors/skips, shared Memcached memory/evictions/connections, Mimir cache performance, backend worker pressure, Garage descriptors and storage write failures. Requires `ops-tempo-read-*` rules and the staged tuning-intent/Memcached textfile metrics from ops. Uses metric queries only; does not add trace lookup traffic. |
-| **Horde Anomalous Activity** | `dashboards/ai_horde_otlp/horde-anomalous-activity.json` | Org 1 only (shows IP addresses). Signals for scripted or abusive traffic: per-model daily image counts against their own 14-day median (`mimir-app`; the same statistic worker "top N" model selection reads), the month ranking and workers on its top models, accepted and rejected (4xx) image submissions and status polls per Client-Agent family at the edge (`loki-infra`, needs edge HAProxy request logs with the Client-Agent name captured), and the busiest anonymous IP subjects (`loki-app`, fixed 15-minute window because of Loki's per-query series limit). |
+| **Horde Anomalous Activity** | `dashboards/ai_horde_otlp/horde-anomalous-activity.json` | Org 1 only (shows IP addresses). Signals for scripted or abusive traffic: per-model daily image counts against their own 14-day median (`mimir-app`; the same statistic worker "top N" model selection reads), the month ranking and workers on its top models, accepted and rejected (4xx) image submissions and status polls per Client-Agent family at the edge (`mimir-infra`), anonymous volume and concentration (`mimir-app`), and the busiest anonymous IP subjects right now (`loki-app`, 15-minute window). The edge and anonymous panels read Loki recording-rule series; see [Anomalous Activity recording series](#anomalous-activity-recording-series). |
 
 > **Note:** The legacy combined `horde-models.json` is superseded by the four model dashboards above.
+
+### Anomalous Activity recording series
+
+Counting edge requests per client straight from raw logs re-scans about 0.2 GB per hour of range on every refresh, which times out beyond
+a few hours. The dashboard therefore reads per-minute counts that Loki recording rules write to Mimir (Loki ruler `remote_write`, the
+rule's tenant sent as `X-Scope-OrgID`). Produce these series to use those panels; history starts when the rules start.
+
+| Series (Mimir tenant) | Labels | Value |
+|---|---|---|
+| `horde:edge_image_submissions:count1m` (infrastructure) | `client`, `status_class` (`2xx`…) | `POST /api/v2/generate/async` lines per minute; top 50 `client`/`status_class` pairs per evaluation; `(none)` when no Client-Agent |
+| `horde:edge_image_submissions_all:count1m` (infrastructure) | `status_class` | Same, all clients |
+| `horde:edge_status_polls:count1m` (infrastructure) | `client` | `GET /api/v2/generate/status/` lines per minute, top 50 clients |
+| `horde:edge_status_polls_all:count1m` (infrastructure) | — | Same, all clients |
+| `horde:anon_generations:count5m` (ai-horde-app) | — | `(requesting user Anonymous#0 [` settlement lines per 5 minutes |
+| `horde:anon_subjects:count5m` (ai-horde-app) | — | Distinct anonymous IP subjects (IPv4, or IPv6 /64) per 5 minutes |
+| `horde:anon_top_subject_generations:max5m` (ai-horde-app) | — | Settlement lines of the busiest single subject per 5 minutes |
+
+The edge series assume HAProxy `httplog` lines in Loki under `service_name="haproxy"` with the Client-Agent `name:version` captured as a
+`{...}` block before the request line (`http-request capture req.hdr(Client-Agent),field(1,:,2) len 64`). Record each window from one
+minute in the past (`offset 1m`) so lines still being shipped are counted. No IP address is stored in a metric; the IP table queries Loki.
 
 ### Public-org variants (`-public.json`)
 

@@ -102,7 +102,7 @@
       }
     ]
   },
-  "description": "Signals for scripted or abusive traffic: per-model demand against its own history, the monthly ranking that \"top N\" workers load from, per-client edge activity, and the busiest anonymous requesters. Org 1 only; needs the edge HAProxy logs with Client-Agent capture and the application logs in Loki.",
+  "description": "Signals for scripted or abusive traffic: per-model demand against its own history, the monthly ranking that \"top N\" workers load from, per-client edge activity and anonymous-requester concentration. Org 1 only. Edge and anonymous panels read Loki recording-rule series in Mimir (see README); the IP table reads Loki directly.",
   "panels": [
     {
       "type": "row",
@@ -360,7 +360,7 @@
     },
     {
       "type": "row",
-      "title": "Clients at the edge (edge HAProxy journals; Client-Agent capture)",
+      "title": "Clients at the edge (edge HAProxy request logs with Client-Agent capture; recorded per minute)",
       "id": 6,
       "collapsed": false,
       "gridPos": {
@@ -374,11 +374,11 @@
     {
       "type": "timeseries",
       "title": "Image submissions by client family (top 10)",
-      "description": "POST /api/v2/generate/async per client name, all statuses. An empty name means no Client-Agent header. A new name near the top with no history deserves a closer look at its request settings and prompts.",
+      "description": "POST /api/v2/generate/async per Client-Agent name and interval, all statuses, from the per-minute edge recording (top 50 clients per minute). \"(none)\" means no Client-Agent header. A new name near the top with no history deserves a closer look at its request settings and prompts.",
       "id": 7,
       "datasource": {
-        "type": "loki",
-        "uid": "loki-infra"
+        "type": "prometheus",
+        "uid": "mimir-infra"
       },
       "gridPos": {
         "h": 8,
@@ -419,21 +419,25 @@
       },
       "targets": [
         {
-          "expr": "topk(10, sum by (client) (count_over_time({service_name=\"haproxy\"} |~ \"\\\"POST /api/v2/generate/async \" | regexp \"\\\\{(?P<client>[^:}]*)\" [$__auto])))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "expr": "topk(10, sum by (client) (sum_over_time(horde:edge_image_submissions:count1m[$__interval])))",
           "legendFormat": "{{client}}",
-          "refId": "A",
-          "queryType": "range"
+          "refId": "A"
         }
-      ]
+      ],
+      "interval": "1m"
     },
     {
       "type": "timeseries",
-      "title": "Rejected image submissions by client family (4xx, top 10)",
-      "description": "POST /api/v2/generate/async answered with a 4xx at the edge, per client name. Clients that are blocked, rate-limited or sending invalid requests appear here; compare with the accepted volume on the left.",
+      "title": "Rejected (4xx) image submissions by client family (top 10)",
+      "description": "Image submissions answered with a 4xx at the edge, per client name and interval. Blocked, rate-limited or malformed clients appear here; compare with the accepted volume on the left.",
       "id": 8,
       "datasource": {
-        "type": "loki",
-        "uid": "loki-infra"
+        "type": "prometheus",
+        "uid": "mimir-infra"
       },
       "gridPos": {
         "h": 8,
@@ -474,25 +478,29 @@
       },
       "targets": [
         {
-          "expr": "topk(10, sum by (client, status) (count_over_time({service_name=\"haproxy\"} |~ \"\\\"POST /api/v2/generate/async \" | regexp \"\\\\{(?P<client>[^:}]*)\" | regexp \"/-?[0-9]+ (?P<status>[0-9]{3}) \" | status=~\"4..\" [$__auto])))",
-          "legendFormat": "{{client}} {{status}}",
-          "refId": "A",
-          "queryType": "range"
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "expr": "topk(10, sum by (client) (sum_over_time(horde:edge_image_submissions:count1m{status_class=\"4xx\"}[$__interval])))",
+          "legendFormat": "{{client}}",
+          "refId": "A"
         }
-      ]
+      ],
+      "interval": "1m"
     },
     {
       "type": "timeseries",
       "title": "Status polls by client family (top 10)",
-      "description": "GET /generate/status returns finished images and is the expensive poll. A client polling several times per submission multiplies its edge and API cost.",
+      "description": "GET /api/v2/generate/status per client name and interval. The status call returns finished images and is the expensive poll; a client polling many times per submission multiplies its edge and API cost.",
       "id": 9,
       "datasource": {
-        "type": "loki",
-        "uid": "loki-infra"
+        "type": "prometheus",
+        "uid": "mimir-infra"
       },
       "gridPos": {
         "h": 8,
-        "w": 24,
+        "w": 12,
         "x": 0,
         "y": 26
       },
@@ -529,12 +537,84 @@
       },
       "targets": [
         {
-          "expr": "topk(10, sum by (client) (count_over_time({service_name=\"haproxy\"} |~ \"\\\"GET /api/v2/generate/status/\" | regexp \"\\\\{(?P<client>[^:}]*)\" [$__auto])))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "expr": "topk(10, sum by (client) (sum_over_time(horde:edge_status_polls:count1m[$__interval])))",
           "legendFormat": "{{client}}",
-          "refId": "A",
-          "queryType": "range"
+          "refId": "A"
         }
-      ]
+      ],
+      "interval": "1m"
+    },
+    {
+      "type": "timeseries",
+      "title": "All image submissions by status class, and status polls",
+      "description": "Untruncated edge totals per interval: image submissions by status class, and all status polls.",
+      "id": 14,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 26
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "expr": "sum by (status_class) (sum_over_time(horde:edge_image_submissions_all:count1m[$__interval]))",
+          "legendFormat": "submissions {{status_class}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-infra"
+          },
+          "expr": "sum(sum_over_time(horde:edge_status_polls_all:count1m[$__interval]))",
+          "legendFormat": "status polls",
+          "refId": "B"
+        }
+      ],
+      "interval": "1m"
     },
     {
       "type": "row",
@@ -630,14 +710,14 @@
     {
       "type": "timeseries",
       "title": "Anonymous generations delivered",
-      "description": "All anonymous image and text generations settled, per interval.",
+      "description": "All anonymous image and text generations settled per interval, from the 5-minute recording.",
       "id": 12,
       "datasource": {
-        "type": "loki",
-        "uid": "loki-app"
+        "type": "prometheus",
+        "uid": "mimir-app"
       },
       "gridPos": {
-        "h": 10,
+        "h": 5,
         "w": 12,
         "x": 12,
         "y": 35
@@ -675,25 +755,84 @@
       },
       "targets": [
         {
-          "expr": "sum(count_over_time({app=\"ai-horde\", component=\"backend\"} |= \"(requesting user Anonymous#0 [\" [$__auto]))",
-          "legendFormat": "anonymous",
-          "refId": "A",
-          "queryType": "range"
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-app"
+          },
+          "expr": "sum(sum_over_time(horde:anon_generations:count5m[$__interval]))",
+          "legendFormat": "anonymous generations",
+          "refId": "A"
         }
-      ]
+      ],
+      "interval": "5m"
     },
     {
-      "type": "row",
-      "title": "Response",
-      "id": 13,
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 45
+      "type": "timeseries",
+      "title": "Anonymous sources per 5 minutes, and the busiest one",
+      "description": "Distinct anonymous IP subjects (IPv4 address or IPv6 /64) per 5 minutes, and how many generations the busiest one settled. No addresses are recorded; use the table on the left for who it is right now. A busiest-source line far above its usual level means one source is driving anonymous volume.",
+      "id": 15,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-app"
       },
-      "panels": []
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 12,
+        "y": 40
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-app"
+          },
+          "expr": "max(horde:anon_subjects:count5m)",
+          "legendFormat": "distinct IP subjects",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-app"
+          },
+          "expr": "max(horde:anon_top_subject_generations:max5m)",
+          "legendFormat": "busiest subject's generations",
+          "refId": "B"
+        }
+      ],
+      "interval": "5m"
     }
   ],
   "links": [
