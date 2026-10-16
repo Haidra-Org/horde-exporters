@@ -1,0 +1,713 @@
+{
+  "uid": "horde-anomalous-activity",
+  "title": "Horde Anomalous Activity",
+  "tags": [
+    "horde",
+    "ai-horde",
+    "abuse",
+    "ops"
+  ],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "graphTooltip": 1,
+  "refresh": "5m",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timezone": "utc",
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": [
+      {
+        "horde_overlay": "alerts-infra",
+        "name": "Infra alerts",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir-infra"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "#d03b3b",
+        "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\", alertname!~\"Watchdog|HostSystemdServiceFailed|HostOutOfInodes|HostSwapFillingUp|HostDiskWillFillIn24h|HostDiskUsageHigh|WireGuardTextfileStale|PrometheusTargetsMissing|HordeRequestObservationDataReady|HordeRequestEstimatorPromotionApproved|HordeRequestUnstartedExpiryForecastValidationReady\"}",
+        "step": "30s",
+        "titleFormat": "{{alertname}}",
+        "textFormat": "{{severity}} {{instance}}{{host}}{{peer}}{{proxy}}{{name}}",
+        "useValueForTime": false
+      },
+      {
+        "horde_overlay": "alerts-telemetry",
+        "name": "App alerts (telemetry)",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir-telemetry"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "#ec835a",
+        "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\", alertname!~\"Watchdog|HostSystemdServiceFailed|HostOutOfInodes|HostSwapFillingUp|HostDiskWillFillIn24h|HostDiskUsageHigh|WireGuardTextfileStale|PrometheusTargetsMissing|HordeRequestObservationDataReady|HordeRequestEstimatorPromotionApproved|HordeRequestUnstartedExpiryForecastValidationReady\"}",
+        "step": "30s",
+        "titleFormat": "{{alertname}}",
+        "textFormat": "{{severity}} {{horde_host}}{{horde_job_name}}{{deployment_environment_name}}",
+        "useValueForTime": false
+      },
+      {
+        "horde_overlay": "alerts-app",
+        "name": "App alerts (exporter)",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir-app"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "#e0b400",
+        "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\", alertname!~\"Watchdog|HostSystemdServiceFailed|HostOutOfInodes|HostSwapFillingUp|HostDiskWillFillIn24h|HostDiskUsageHigh|WireGuardTextfileStale|PrometheusTargetsMissing|HordeRequestObservationDataReady|HordeRequestEstimatorPromotionApproved|HordeRequestUnstartedExpiryForecastValidationReady\"}",
+        "step": "30s",
+        "titleFormat": "{{alertname}}",
+        "textFormat": "{{severity}}",
+        "useValueForTime": false
+      },
+      {
+        "horde_overlay": "app-restarts",
+        "name": "App restarts",
+        "datasource": {
+          "type": "loki",
+          "uid": "loki-app"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "#8ab8ff",
+        "expr": "{app=\"ai-horde\", component=\"backend\"} |= \"INIT\" |= \"Horde Database\" | line_format \"{{.instance}} {{.container}} started\""
+      },
+      {
+        "horde_overlay": "operator",
+        "name": "Operator notes & deploys",
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "#b877d9",
+        "target": {
+          "type": "tags",
+          "tags": [
+            "ai-horde"
+          ],
+          "matchAny": true,
+          "limit": 200
+        }
+      }
+    ]
+  },
+  "description": "Name-agnostic model-demand anomalies, per-client edge activity and top anonymous requesters. Org 1 only. Needs the ops-horde-demand (Mimir, ai-horde-app) and ops-horde-watched-clients (Loki, infrastructure) rule groups from ops.",
+  "panels": [
+    {
+      "type": "row",
+      "title": "Model demand \u2014 name-agnostic (the statistic worker \"top N\" selection reads)",
+      "id": 1,
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Images per model, rolling day (top 8)",
+      "description": "The horde's rolling 24h image count per model. A scripted campaign shows as one model pulling away from its usual level.",
+      "id": 2,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-app"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-app"
+          },
+          "expr": "topk(8, max by (model) (horde_stats_model_images_generated{period=\"day\"}))",
+          "legendFormat": "{{model}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Day count \u00f7 14-day median (alert above 2 and 10k/day)",
+      "description": "Recorded by ops-horde-demand. HordeModelDemandAnomaly fires when this exceeds 2 and the model also exceeds 10k images/day for 6h. Models under 2k/day are hidden.",
+      "id": 3,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-app"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 2
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-app"
+          },
+          "expr": "topk(8, horde:stats_model_images_day:ratio_to_median14d and on (model) (horde:stats_model_images_day:max > 2000))",
+          "legendFormat": "{{model}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "bargauge",
+      "title": "Monthly ranking (what \"top N\" workers load)",
+      "id": 4,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-app"
+      },
+      "description": "Month image counts per model. Workers configured with \"top N\" load from the top of this list, so inflating it diverts volunteer GPUs.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "continuous-BlPu"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "basic",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "valueMode": "text",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-app"
+          },
+          "expr": "sort_desc(topk(10, max by (model) (horde_stats_model_images_generated{period=\"month\"})))",
+          "legendFormat": "{{model}}",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Workers serving the month's top 5 models",
+      "description": "Online image workers per model, for the five most-generated models this month.",
+      "id": 5,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-app"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-app"
+          },
+          "expr": "max by (model) (horde_model_workers_count{type=\"image\"}) and on (model) topk(5, max by (model) (horde_stats_model_images_generated{period=\"month\"}))",
+          "legendFormat": "{{model}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Clients at the edge (aihorde.net HAProxy, Client-Agent capture)",
+      "id": 6,
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Image submissions by client family (top 10)",
+      "description": "POST /api/v2/generate/async per client name, all statuses. An empty name means no Client-Agent header. A new name appearing near the top with no history is worth a fingerprint run.",
+      "id": 7,
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-infra"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "topk(10, sum by (client) (count_over_time({service_name=\"haproxy\"} |~ \"\\\"POST /api/v2/generate/async \" | regexp \"\\\\{(?P<client>[^:}]*)\" [$__auto])))",
+          "legendFormat": "{{client}}",
+          "refId": "A",
+          "queryType": "range"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Watched clients: image submissions by status",
+      "description": "Clients we have blocked. 202 means accepted (HordeWatchedClientAccepted fires on these); 403 means the block held. Edit the name alternation here and in files/monitoring/horde-watched-clients-loki-rules.yml together.",
+      "id": 8,
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-infra"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (client, status) (count_over_time({service_name=\"haproxy\"} |~ \"\\\\{(MyTestApp):[^}]*\\\\} \\\"POST /api/v2/generate/async \" | regexp \"\\\\{(?P<client>[^:}]*)\" | regexp \"/-?[0-9]+ (?P<status>[0-9]{3}) \" [$__auto]))",
+          "legendFormat": "{{client}} {{status}}",
+          "refId": "A",
+          "queryType": "range"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Status polls by client family (top 10)",
+      "description": "GET /generate/status returns finished images and is the expensive poll. A client polling several times per submission multiplies its edge and API cost.",
+      "id": 9,
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-infra"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 26
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "topk(10, sum by (client) (count_over_time({service_name=\"haproxy\"} |~ \"\\\"GET /api/v2/generate/status/\" | regexp \"\\\\{(?P<client>[^:}]*)\" [$__auto])))",
+          "legendFormat": "{{client}}",
+          "refId": "A",
+          "queryType": "range"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Anonymous requesters (application logs; IP subjects \u2014 admin org only, do not copy out)",
+      "id": 10,
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      },
+      "panels": []
+    },
+    {
+      "type": "table",
+      "title": "Top anonymous IP subjects by delivered generations (last hour)",
+      "id": 11,
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-app"
+      },
+      "description": "From the 'requesting user Anonymous#0 [ip]' settlement line, image and text. IPv6 is cut to its first four hextets (the /64 the horde blocks); compressed addresses such as 2001:db8::1 are cut short. Fixed one-hour window: Loki's 500-series query limit counts every subject before topk, and 6h already exceeds it. Block with POST /api/v2/operations/ipaddr (see runbook).",
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 35
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value #A"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Generations"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Generations",
+            "desc": true
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            }
+          }
+        }
+      ],
+      "targets": [
+        {
+          "expr": "topk(20, sum by (subject) (count_over_time({app=\"ai-horde\", component=\"backend\"} |= \"(requesting user Anonymous#0 [\" | regexp \"Anonymous#0 \\\\[(?P<subject>[0-9.]+|[0-9a-f]+:[0-9a-f]+:[0-9a-f]+:[0-9a-f]+)\" [1h])))",
+          "legendFormat": "{{subject}}",
+          "refId": "A",
+          "queryType": "instant"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Anonymous generations delivered",
+      "description": "All anonymous image and text generations settled, per interval.",
+      "id": 12,
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-app"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 35
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(count_over_time({app=\"ai-horde\", component=\"backend\"} |= \"(requesting user Anonymous#0 [\" [$__auto]))",
+          "legendFormat": "anonymous",
+          "refId": "A",
+          "queryType": "range"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Response",
+      "id": 13,
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 45
+      },
+      "panels": []
+    },
+    {
+      "type": "text",
+      "title": "When something here looks wrong",
+      "id": 14,
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 46
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "1. Fingerprint live traffic by settings and prompt shape, whatever name it reports:\n   `python3 scripts/anon_fingerprint/fingerprint.py --minutes 60 --days 7` (ops repo, read-only).\n2. Block the flagged IP subjects and client name: **docs/2026-10-16-junk-image-traffic-runbook.md** in the ops repo.\n3. Add a renamed client to the watched list in this dashboard (horde-exporters) and in ops `files/monitoring/horde-watched-clients-loki-rules.yml`."
+      }
+    }
+  ],
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "horde"
+      ],
+      "targetBlank": false,
+      "title": "Horde Dashboards",
+      "type": "dashboards"
+    }
+  ]
+}
