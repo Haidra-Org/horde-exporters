@@ -53,7 +53,7 @@ class HordeAlertsSettings(BaseSettings):
         description="AI Horde API base URL (must end with /api/ and a trailing slash).",
     )
     aihorde_client_agent: str = Field(
-        default="ai-horde-service-alerts:0.2.0:haidra",
+        default="ai-horde-service-alerts:0.2.1:haidra",
         description="Value for the AI Horde Client-Agent header.",
     )
 
