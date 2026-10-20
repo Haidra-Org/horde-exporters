@@ -604,7 +604,7 @@
         "type": "prometheus",
         "uid": "mimir-telemetry"
       },
-      "description": "Cancels the front sent to the horde, by outcome, and requests carrying an SDK retry count above zero (clients retrying after an error).",
+      "description": "Cancels the front sent to the horde, by outcome, and requests carrying an SDK retry count above zero (clients retrying after an error). acknowledged: the horde accepted the cancel. already_gone: the horde no longer holds the request, so the cancel is not retried. failed, timed_out and not_started (no cancel slot came free in time, so nothing was sent) are retried periodically until the cancel expires. Each attempt is counted, so a cancel retried several times appears once per attempt.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1515,7 +1515,7 @@
         "type": "prometheus",
         "uid": "mimir-telemetry"
       },
-      "description": "Requests holding an in-flight slot. The dashed line is the front's default global cap (100); a deployment can set another.",
+      "description": "Requests holding an in-flight slot. The dashed line is the front's default global cap (1000); a deployment can set another.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1547,7 +1547,7 @@
               },
               {
                 "color": "orange",
-                "value": 100
+                "value": 1000
               }
             ]
           }
@@ -1732,6 +1732,71 @@
         "type": "prometheus",
         "uid": "mimir-telemetry"
       },
+      "description": "FrontAtCapacity (503, refused before admission) when the front's global or per-source in-flight cap is reached, and ChatRequestTimeout (408, after admission) when a request reaches its time budget without a result. Both responses carry Retry-After. Front counters only appear after their first event, so a quiet front shows no series.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_code=\"FrontAtCapacity\"}[5m])) * 60",
+          "legendFormat": "503 FrontAtCapacity (refused)",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(horde_oai_requests_errors{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_code=\"ChatRequestTimeout\"}[5m])) * 60",
+          "legendFormat": "408 ChatRequestTimeout (after admission)",
+          "refId": "B"
+        }
+      ],
+      "title": "Capacity refusals and request timeouts per minute",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 64
+      },
+      "id": 48
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
       "description": "All responses of the front's HTTP server.",
       "fieldConfig": {
         "defaults": {
@@ -1781,8 +1846,8 @@
       "type": "timeseries",
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 0,
+        "w": 8,
+        "x": 8,
         "y": 64
       },
       "id": 29
@@ -1841,8 +1906,8 @@
       "type": "timeseries",
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
+        "w": 8,
+        "x": 16,
         "y": 64
       },
       "id": 30
