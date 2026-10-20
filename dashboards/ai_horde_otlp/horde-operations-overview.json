@@ -2640,7 +2640,7 @@
       "type": "prometheus",
       "uid": "mimir-telemetry"
      },
-     "expr": "count(sum by (horde_host) (rate(http_server_duration_count{deployment_environment_name=\"production\"}[5m])))",
+     "expr": "count(sum by (horde_host) (rate(http_server_duration_count{job!=\"ai-horde/horde-oai\", deployment_environment_name=\"production\"}[5m])))",
      "legendFormat": "",
      "refId": "A",
      "instant": true
@@ -3130,6 +3130,452 @@
    "title": "Empty Text Generations per Minute",
    "type": "timeseries",
    "id": 194
+  },
+  {
+   "id": 195,
+   "type": "row",
+   "title": "Chat Completions (front and native chat API)",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 102,
+    "w": 24,
+    "h": 1
+   },
+   "panels": []
+  },
+  {
+   "id": 196,
+   "type": "stat",
+   "title": "Chat In-Flight",
+   "description": "Requests holding an in-flight slot at the chat front. The front refuses with FrontAtCapacity at its global cap (default 100). '-' means the front is not reporting in production.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 103,
+    "w": 6,
+    "h": 4
+   },
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 80
+       },
+       {
+        "color": "red",
+        "value": 100
+       }
+      ]
+     },
+     "color": {
+      "mode": "thresholds"
+     },
+     "noValue": "-",
+     "unit": "short",
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "links": [
+    {
+     "title": "Horde Chat Completions",
+     "url": "/d/horde-chat?${__url_time_range}&var-environment=production"
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "orientation": "auto",
+    "textMode": "auto",
+    "colorMode": "background",
+    "graphMode": "none"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-telemetry"
+     },
+     "expr": "sum(horde_oai_inflight{job=\"ai-horde/horde-oai\", deployment_environment_name=\"production\"})",
+     "legendFormat": "",
+     "refId": "A",
+     "instant": true
+    }
+   ]
+  },
+  {
+   "id": 197,
+   "type": "stat",
+   "title": "Chat p95 (delivered, 5m)",
+   "description": "p95 duration of chat requests that delivered a completion, arrival to end (streams last until the stream ends).",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "gridPos": {
+    "x": 6,
+    "y": 103,
+    "w": 6,
+    "h": 4
+   },
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 120
+       },
+       {
+        "color": "red",
+        "value": 300
+       }
+      ]
+     },
+     "color": {
+      "mode": "thresholds"
+     },
+     "noValue": "-",
+     "unit": "s"
+    },
+    "overrides": []
+   },
+   "links": [
+    {
+     "title": "Horde Chat Completions",
+     "url": "/d/horde-chat?${__url_time_range}&var-environment=production"
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "orientation": "auto",
+    "textMode": "auto",
+    "colorMode": "background",
+    "graphMode": "none"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-telemetry"
+     },
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_oai_request_duration_bucket{job=\"ai-horde/horde-oai\", deployment_environment_name=\"production\", horde_code=\"ok\"}[5m])))",
+     "legendFormat": "",
+     "refId": "A",
+     "instant": true
+    }
+   ]
+  },
+  {
+   "id": 198,
+   "type": "stat",
+   "title": "Chat Error Share (5m)",
+   "description": "Admitted chat requests that ended in an error status or a stream failure, as a share of admitted requests.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 103,
+    "w": 6,
+    "h": 4
+   },
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 0.1
+       },
+       {
+        "color": "red",
+        "value": 0.25
+       }
+      ]
+     },
+     "color": {
+      "mode": "thresholds"
+     },
+     "noValue": "-",
+     "unit": "percentunit",
+     "decimals": 1
+    },
+    "overrides": []
+   },
+   "links": [
+    {
+     "title": "Horde Chat Completions",
+     "url": "/d/horde-chat?${__url_time_range}&var-environment=production"
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "orientation": "auto",
+    "textMode": "auto",
+    "colorMode": "background",
+    "graphMode": "none"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-telemetry"
+     },
+     "expr": "(sum(rate(horde_oai_requests_errors{job=\"ai-horde/horde-oai\", deployment_environment_name=\"production\"}[5m])) + (sum(rate(horde_oai_stream_failures{job=\"ai-horde/horde-oai\", deployment_environment_name=\"production\"}[5m])) or on() vector(0))) / clamp_min(sum(rate(horde_oai_requests_admitted{job=\"ai-horde/horde-oai\", deployment_environment_name=\"production\"}[5m])), 1e-9)",
+     "legendFormat": "",
+     "refId": "A",
+     "instant": true
+    }
+   ]
+  },
+  {
+   "id": 199,
+   "type": "stat",
+   "title": "Chat Refused at Capacity (5m)",
+   "description": "Chat requests refused because the front's global or per-source in-flight cap was reached, per second.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "gridPos": {
+    "x": 18,
+    "y": 103,
+    "w": 6,
+    "h": 4
+   },
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "green",
+        "value": null
+       },
+       {
+        "color": "orange",
+        "value": 0.01
+       },
+       {
+        "color": "red",
+        "value": 0.5
+       }
+      ]
+     },
+     "color": {
+      "mode": "thresholds"
+     },
+     "noValue": "-",
+     "unit": "reqps",
+     "decimals": 2
+    },
+    "overrides": []
+   },
+   "links": [
+    {
+     "title": "Horde Chat Completions",
+     "url": "/d/horde-chat?${__url_time_range}&var-environment=production"
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "orientation": "auto",
+    "textMode": "auto",
+    "colorMode": "background",
+    "graphMode": "none"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-telemetry"
+     },
+     "expr": "sum(rate(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=\"production\", horde_code=\"FrontAtCapacity\"}[5m])) or on() (sum(horde_oai_inflight{job=\"ai-horde/horde-oai\", deployment_environment_name=\"production\"}) * 0)",
+     "legendFormat": "",
+     "refId": "A",
+     "instant": true
+    }
+   ]
+  },
+  {
+   "id": 200,
+   "type": "timeseries",
+   "title": "Chat Requests per Minute by Outcome",
+   "description": "Every admitted chat request by its final code: ok is a delivered completion, client_closed a client that left first, anything else an error code.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 107,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "color": {
+      "mode": "palette-classic"
+     },
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 1,
+      "fillOpacity": 20,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "normal"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "links": [
+    {
+     "title": "Horde Chat Completions",
+     "url": "/d/horde-chat?${__url_time_range}&var-environment=production"
+    }
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-telemetry"
+     },
+     "expr": "label_replace(sum by (horde_code) (rate(horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=\"production\"}[5m])) * 60, \"horde_code\", \"(none)\", \"horde_code\", \"\")",
+     "legendFormat": "{{horde_code}}",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 201,
+   "type": "timeseries",
+   "title": "Native Chat Route p95 (ms)",
+   "description": "Server-side p95 of the horde's native chat routes (submit and status), which the front calls for every chat request.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 107,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "color": {
+      "mode": "palette-classic"
+     },
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 1,
+      "fillOpacity": 20,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "links": [
+    {
+     "title": "Horde Chat Completions",
+     "url": "/d/horde-chat?${__url_time_range}&var-environment=production"
+    }
+   ],
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-telemetry"
+     },
+     "expr": "histogram_quantile(0.95, sum by (le, http_method, http_target) (rate(http_server_duration_bucket{job=\"ai-horde/ai-horde\", deployment_environment_name=\"production\", http_target=~\"/api/v2/generate/chat/.*\"}[5m])))",
+     "legendFormat": "{{http_method}} {{http_target}}",
+     "refId": "A"
+    }
+   ]
   }
  ],
  "refresh": "30s",

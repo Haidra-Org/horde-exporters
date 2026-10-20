@@ -258,6 +258,12 @@ WORKER_FIELDS: list[FieldSpec] = [
         "tokens_generated",
         condition=HordeType.TEXT,
     ),
+    FieldSpec(
+        "horde_worker_nonconformant_replies",
+        "Chat replies the horde refused for breaking a strict request's contract",
+        "nonconformant_replies",
+        condition=HordeType.TEXT,
+    ),
 ]
 
 WORKER_AGGREGATES: list[AggregateSpec] = [

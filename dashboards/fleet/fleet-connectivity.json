@@ -2185,7 +2185,7 @@
    "id": 18,
    "type": "timeseries",
    "title": "Requests per second by host",
-   "description": "Load redistribution is visible here: a surviving host's rate jumps as the edge sends it everyone else's traffic. Hosts without OTLP enabled are absent, not zero.",
+   "description": "Load redistribution is visible here: a surviving host's rate jumps as the edge sends it everyone else's traffic. Hosts without OTLP enabled are absent, not zero. Horde app only: the chat front (horde-oai) exports the same HTTP metric names and is excluded here; it has its own dashboard.",
    "datasource": {
     "type": "prometheus",
     "uid": "mimir-telemetry"
@@ -2371,7 +2371,7 @@
       "type": "prometheus",
       "uid": "mimir-telemetry"
      },
-     "expr": "sum by (horde_host) (rate(http_server_duration_count{deployment_environment_name=\"production\"}[5m]))",
+     "expr": "sum by (horde_host) (rate(http_server_duration_count{job!=\"ai-horde/horde-oai\", deployment_environment_name=\"production\"}[5m]))",
      "legendFormat": "{{horde_host}}",
      "refId": "A",
      "range": true,
@@ -2383,7 +2383,7 @@
    "id": 19,
    "type": "timeseries",
    "title": "p90 request duration by host",
-   "description": "Latency rising on every host together with the tunnel row flat points at the database host (see the bottom row), not the network.",
+   "description": "Latency rising on every host together with the tunnel row flat points at the database host (see the bottom row), not the network. Horde app only: the chat front (horde-oai) exports the same HTTP metric names and is excluded here; it has its own dashboard.",
    "datasource": {
     "type": "prometheus",
     "uid": "mimir-telemetry"
@@ -2569,7 +2569,7 @@
       "type": "prometheus",
       "uid": "mimir-telemetry"
      },
-     "expr": "histogram_quantile(0.9, sum by (horde_host, le) (rate(http_server_duration_bucket{deployment_environment_name=\"production\"}[5m])))",
+     "expr": "histogram_quantile(0.9, sum by (horde_host, le) (rate(http_server_duration_bucket{job!=\"ai-horde/horde-oai\", deployment_environment_name=\"production\"}[5m])))",
      "legendFormat": "{{horde_host}}",
      "refId": "A",
      "range": true,
@@ -2581,7 +2581,7 @@
    "id": 20,
    "type": "timeseries",
    "title": "5xx responses per second by host",
-   "description": "User-visible failures. Requests that hang until the edge times out never reach this counter, so read it together with the edge check duration.",
+   "description": "User-visible failures. Requests that hang until the edge times out never reach this counter, so read it together with the edge check duration. Horde app only: the chat front (horde-oai) exports the same HTTP metric names and is excluded here; it has its own dashboard.",
    "datasource": {
     "type": "prometheus",
     "uid": "mimir-telemetry"
@@ -2767,7 +2767,7 @@
       "type": "prometheus",
       "uid": "mimir-telemetry"
      },
-     "expr": "sum by (horde_host) (rate(http_server_duration_count{deployment_environment_name=\"production\", http_status_code=~\"5..\"}[5m]))",
+     "expr": "sum by (horde_host) (rate(http_server_duration_count{job!=\"ai-horde/horde-oai\", deployment_environment_name=\"production\", http_status_code=~\"5..\"}[5m]))",
      "legendFormat": "{{horde_host}}",
      "refId": "A",
      "range": true,

@@ -56,6 +56,7 @@ class HordeWorker(ApiModel):
     max_length: int = 0
     max_context_length: int = 0
     tokens_generated: float = 0
+    nonconformant_replies: int = 0
 
     @property
     def parsed_performance(self) -> float:

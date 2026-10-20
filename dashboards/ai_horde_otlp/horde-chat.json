@@ -1,0 +1,2763 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      },
+      {
+        "horde_overlay": "alerts-infra",
+        "name": "Infra alerts",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir-infra"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "#d03b3b",
+        "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\", alertname!~\"Watchdog|HostSystemdServiceFailed|HostOutOfInodes|HostSwapFillingUp|HostDiskWillFillIn24h|HostDiskUsageHigh|WireGuardTextfileStale|PrometheusTargetsMissing|HordeRequestObservationDataReady|HordeRequestEstimatorPromotionApproved|HordeRequestUnstartedExpiryForecastValidationReady\"}",
+        "step": "30s",
+        "titleFormat": "{{alertname}}",
+        "textFormat": "{{severity}} {{instance}}{{host}}{{peer}}{{proxy}}{{name}}",
+        "useValueForTime": false
+      },
+      {
+        "horde_overlay": "alerts-telemetry",
+        "name": "App alerts (telemetry)",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir-telemetry"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "#ec835a",
+        "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\", alertname!~\"Watchdog|HostSystemdServiceFailed|HostOutOfInodes|HostSwapFillingUp|HostDiskWillFillIn24h|HostDiskUsageHigh|WireGuardTextfileStale|PrometheusTargetsMissing|HordeRequestObservationDataReady|HordeRequestEstimatorPromotionApproved|HordeRequestUnstartedExpiryForecastValidationReady\"}",
+        "step": "30s",
+        "titleFormat": "{{alertname}}",
+        "textFormat": "{{severity}} {{horde_host}}{{horde_job_name}}{{deployment_environment_name}}",
+        "useValueForTime": false
+      },
+      {
+        "horde_overlay": "alerts-app",
+        "name": "App alerts (exporter)",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir-app"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "#e0b400",
+        "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\", alertname!~\"Watchdog|HostSystemdServiceFailed|HostOutOfInodes|HostSwapFillingUp|HostDiskWillFillIn24h|HostDiskUsageHigh|WireGuardTextfileStale|PrometheusTargetsMissing|HordeRequestObservationDataReady|HordeRequestEstimatorPromotionApproved|HordeRequestUnstartedExpiryForecastValidationReady\"}",
+        "step": "30s",
+        "titleFormat": "{{alertname}}",
+        "textFormat": "{{severity}}",
+        "useValueForTime": false
+      },
+      {
+        "horde_overlay": "app-restarts",
+        "name": "App restarts",
+        "datasource": {
+          "type": "loki",
+          "uid": "loki-app"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "#8ab8ff",
+        "expr": "{app=\"ai-horde\", component=\"backend\"} |= \"INIT\" |= \"Horde Database\" | line_format \"{{.instance}} {{.container}} started\""
+      },
+      {
+        "horde_overlay": "operator",
+        "name": "Operator notes & deploys",
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "#b877d9",
+        "target": {
+          "type": "tags",
+          "tags": [
+            "ai-horde"
+          ],
+          "matchAny": true,
+          "limit": 200
+        }
+      }
+    ]
+  },
+  "description": "Chat completions end to end: the OpenAI-compatible front (horde-oai) traffic, latency, capacity and wake sources from app OTLP metrics on mimir-telemetry; the horde's native chat routes and chat return codes; the front's finished-request log line on loki-app; and chat traces in Tempo.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "horde"
+      ],
+      "targetBlank": false,
+      "title": "Horde Dashboards",
+      "type": "dashboards"
+    }
+  ],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "panels": [],
+      "title": "Front traffic (OpenAI-compatible /v1/chat/completions)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Chat requests that took an in-flight slot over the dashboard range. Source: horde.oai.requests.admitted.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(horde_oai_requests_admitted{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[$__range]))",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Admitted",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "id": 2
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Completions delivered to the client over the range. Source: horde.oai.completions.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(horde_oai_completions{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[$__range]))",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Completions delivered",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "id": 3
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Completions divided by admitted requests over the range. Client disconnects, timeouts, horde refusals and faults all lower it.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "percentunit",
+          "decimals": 1,
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(horde_oai_completions{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[$__range])) / clamp_min(sum(increase(horde_oai_requests_admitted{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[$__range])), 1)",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Delivered share of admitted",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "id": 4
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Requests refused before taking an in-flight slot: body size or read timeout, validation, authorization, front at capacity.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[$__range]))",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Refused before admission",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "id": 5
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Admitted requests answered with an error status before any header: horde refusals at submit, timeouts, no eligible worker, faults, horde unavailable.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(horde_oai_requests_errors{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[$__range]))",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Errors after admission",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "id": 6
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Streamed requests whose 200 headers were sent and which then ended in an SSE error event.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(horde_oai_stream_failures{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[$__range]))",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Stream failures after headers",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "id": 7
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Admitted requests by streamed flag, and completions delivered.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_streamed) (rate(horde_oai_requests_admitted{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[5m])) * 60",
+          "legendFormat": "admitted, streamed={{horde_streamed}}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(horde_oai_completions{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[5m])) * 60",
+          "legendFormat": "delivered",
+          "refId": "B"
+        }
+      ],
+      "title": "Admitted and delivered per minute",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 5
+      },
+      "id": 8
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Completions by the model a worker served. 'usage estimated' counts completions whose token usage the front estimated because the worker did not report it.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_model) (rate(horde_oai_completions{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_model=~\"$model\"}[5m])) * 60",
+          "legendFormat": "{{horde_model}}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(horde_oai_completions{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_estimated_usage=\"true\"}[5m])) * 60",
+          "legendFormat": "usage estimated (all models)",
+          "refId": "B"
+        }
+      ],
+      "title": "Delivered completions per minute, by model",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 5
+      },
+      "id": 9
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Cancels the front sent to the horde, by outcome, and requests carrying an SDK retry count above zero (clients retrying after an error).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_outcome) (rate(horde_oai_cancels{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[5m])) * 60",
+          "legendFormat": "cancel {{horde_outcome}}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(horde_oai_client_retry_hints{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[5m])) * 60",
+          "legendFormat": "client retry hints",
+          "refId": "B"
+        }
+      ],
+      "title": "Cancels and client retries per minute",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 5
+      },
+      "id": 10
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Refusals before an in-flight slot. FrontAtCapacity (503) means the front's global or per-source cap was reached.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 25,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "label_replace(sum by (horde_status_code, horde_code) (rate(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[5m])) * 60, \"horde_code\", \"(none)\", \"horde_code\", \"\")",
+          "legendFormat": "{{horde_status_code}} {{horde_code}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Refused before admission per minute, by status and code",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 13
+      },
+      "id": 11
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Admitted requests that ended in an error status before any header. '(none)' is a status without a code, such as a 429 passed through from the horde.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 25,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "label_replace(sum by (horde_status_code, horde_code, horde_streamed) (rate(horde_oai_requests_errors{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[5m])) * 60, \"horde_code\", \"(none)\", \"horde_code\", \"\")",
+          "legendFormat": "{{horde_status_code}} {{horde_code}} streamed={{horde_streamed}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Errors after admission per minute, by status and code",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 13
+      },
+      "id": 12
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Streams that ended in an SSE error event after 200 headers.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 25,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_code) (rate(horde_oai_stream_failures{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[5m])) * 60",
+          "legendFormat": "{{horde_code}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Stream failures per minute, by code",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 13
+      },
+      "id": 13
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Every admitted request by final code, HTTP status and streamed flag. A stream records status 200 whatever its outcome; 'ok' is a delivered completion and 'client_closed' a client that disconnected first.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "requests"
+          }
+        ],
+        "footer": {
+          "show": false
+        }
+      },
+      "targets": [
+        {
+          "expr": "label_replace(sum by (horde_code, horde_status_code, horde_streamed) (increase(horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[$__range])), \"horde_code\", \"(none)\", \"horde_code\", \"\")",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "Value": "requests"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "requests",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "title": "Request outcomes over the range",
+      "type": "table",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 21
+      },
+      "id": 14
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Requests refused before an in-flight slot, by code and status.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "refusals"
+          }
+        ],
+        "footer": {
+          "show": false
+        }
+      },
+      "targets": [
+        {
+          "expr": "label_replace(sum by (horde_code, horde_status_code) (increase(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[$__range])), \"horde_code\", \"(none)\", \"horde_code\", \"\")",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "Value": "refusals"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "refusals",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "title": "Refusals before admission over the range",
+      "type": "table",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 21
+      },
+      "id": 15
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 30
+      },
+      "id": 16,
+      "panels": [],
+      "title": "Front latency",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "From an admitted request's arrival to its end, including the wait for a worker. A streamed request lasts until its stream ends.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, horde_streamed, horde_status_code) (rate(horde_oai_request_duration_bucket{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[5m])))",
+          "legendFormat": "p95 streamed={{horde_streamed}} {{horde_status_code}}",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.5, sum by (le, horde_streamed, horde_status_code) (rate(horde_oai_request_duration_bucket{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[5m])))",
+          "legendFormat": "p50 streamed={{horde_streamed}} {{horde_status_code}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Request duration p50 / p95, by streamed and status",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 31
+      },
+      "id": 17
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "From the submit acknowledgement to the first content sent: the first completion chunk, or the non-streamed body.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, horde_streamed) (rate(horde_oai_first_content_duration_bucket{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[5m])))",
+          "legendFormat": "p95 streamed={{horde_streamed}}",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.5, sum by (le, horde_streamed) (rate(horde_oai_first_content_duration_bucket{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[5m])))",
+          "legendFormat": "p50 streamed={{horde_streamed}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Time to first content p50 / p95, by streamed",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 31
+      },
+      "id": 18
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "The horde's queue_wait_seconds of each delivered generation: request creation to assignment to a worker.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, horde_model) (rate(horde_oai_queue_wait_bucket{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_model=~\"$model\"}[5m])))",
+          "legendFormat": "p95 {{horde_model}}",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.5, sum by (le, horde_model) (rate(horde_oai_queue_wait_bucket{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_model=~\"$model\"}[5m])))",
+          "legendFormat": "p50 {{horde_model}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Queue wait p50 / p95, by model",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 39
+      },
+      "id": 19
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Latency of each call from the front to the horde's native API, from taking a call slot to the answer. 'refused' is a horde status of 400 or above; 'abandoned' means the request's budget ended first.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, horde_call_type, horde_outcome) (rate(horde_oai_native_duration_bucket{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[5m])))",
+          "legendFormat": "{{horde_call_type}} {{horde_outcome}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Native call duration p95, by call type and outcome",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 39
+      },
+      "id": 20
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Calls from the front to the horde's native API. Status reads dominate while requests wait.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 25,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_call_type, horde_outcome) (rate(horde_oai_native_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[5m]))",
+          "legendFormat": "{{horde_call_type}} {{horde_outcome}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Native calls per second, by call type and outcome",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 39
+      },
+      "id": 21
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Size of each request body received whole. Oversized bodies are counted as refusals instead.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_oai_request_body_bytes_bucket{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[5m])))",
+          "legendFormat": "p95",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.5, sum by (le) (rate(horde_oai_request_body_bytes_bucket{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[5m])))",
+          "legendFormat": "p50",
+          "refId": "B"
+        }
+      ],
+      "title": "Request body size p50 / p95",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 47
+      },
+      "id": 22
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Server-side duration from the front's HTTP instrumentation (milliseconds). Requests to unknown paths carry no route.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, http_method, http_target, http_status_code) (rate(http_server_duration_bucket{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[5m])))",
+          "legendFormat": "{{http_method}} {{http_target}} {{http_status_code}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Front HTTP p95, by route and status",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 47
+      },
+      "id": 23
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Client-side duration of the front's HTTP calls to the horde (milliseconds), from the HTTP client instrumentation.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, http_method, http_status_code) (rate(http_client_duration_bucket{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[5m])))",
+          "legendFormat": "{{http_method}} {{http_status_code}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Front calls to the horde p95, by method and status",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 47
+      },
+      "id": 24
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 55
+      },
+      "id": 25,
+      "panels": [],
+      "title": "Front capacity",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Requests holding an in-flight slot. The dashed line is the front's default global cap (100); a deployment can set another.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 100
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(horde_oai_inflight{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"})",
+          "legendFormat": "in flight",
+          "refId": "A"
+        }
+      ],
+      "title": "Requests holding an in-flight slot",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 56
+      },
+      "id": 26
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Distinct client addresses holding at least one slot, and the most slots one address holds. The dashed line is the default per-source cap (5); a deployment can set another.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(horde_oai_inflight_sources{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"})",
+          "legendFormat": "distinct client addresses",
+          "refId": "A"
+        },
+        {
+          "expr": "max(horde_oai_inflight_source_max{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"})",
+          "legendFormat": "slots held by the busiest address",
+          "refId": "B"
+        }
+      ],
+      "title": "Distinct sources and the busiest source",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 56
+      },
+      "id": 27
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Requests the front's HTTP server is handling, including streams still open.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 25,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (http_method) (http_server_active_requests{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"})",
+          "legendFormat": "{{http_method}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Active HTTP requests in the front server, by method",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 56
+      },
+      "id": 28
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "All responses of the front's HTTP server.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 25,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (http_method, http_target, http_status_code) (rate(http_server_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[5m]))",
+          "legendFormat": "{{http_method}} {{http_target}} {{http_status_code}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Front HTTP responses per second, by route and status",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 64
+      },
+      "id": 29
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "The front's HTTP calls to the horde: POST submits, GET status reads and models, DELETE cancels.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 25,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (http_method, http_status_code) (rate(http_client_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[5m]))",
+          "legendFormat": "{{http_method}} {{http_status_code}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Front calls to the horde per second, by method and status",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 64
+      },
+      "id": 30
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 72
+      },
+      "id": 31,
+      "panels": [],
+      "title": "Wake sources (how waiting requests learn they finished)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Each status read of a waiting request by its cause: immediate (after the submit), signal, recheck, poll, deadline; and disconnect, recorded without a read.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 25,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_wake_source) (rate(horde_oai_wakes{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[5m])) * 60",
+          "legendFormat": "{{horde_wake_source}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Status reads per minute, by wake source",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 10,
+        "x": 0,
+        "y": 73
+      },
+      "id": 32
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Of the status reads that found the request finished, the share per wake source. A high poll share means the completion signal is not reaching the front.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percentunit",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 25,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_wake_source) (rate(horde_oai_wakes{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_found_finished=\"true\"}[5m])) / ignoring (horde_wake_source) group_left sum(rate(horde_oai_wakes{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_found_finished=\"true\"}[5m]))",
+          "legendFormat": "{{horde_wake_source}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Share of finishes found, by wake source",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 10,
+        "x": 10,
+        "y": 73
+      },
+      "id": 33
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Share of finished requests found through the completion signal over the range.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "percentunit",
+          "decimals": 1,
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(horde_oai_wakes{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_found_finished=\"true\", horde_wake_source=\"signal\"}[$__range])) / clamp_min(sum(increase(horde_oai_wakes{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_found_finished=\"true\"}[$__range])), 1)",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Finishes found by signal",
+      "type": "stat",
+      "gridPos": {
+        "h": 8,
+        "w": 4,
+        "x": 20,
+        "y": 73
+      },
+      "id": 34
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 81
+      },
+      "id": 35,
+      "panels": [],
+      "title": "Horde native chat API (/api/v2/generate/chat)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Requests to the horde's native chat routes, from every client including the front.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 25,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (http_method, http_target, http_status_code) (rate(http_server_duration_count{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", http_target=~\"/api/v2/generate/chat/.*\"}[5m]))",
+          "legendFormat": "{{http_method}} {{http_target}} {{http_status_code}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Chat route requests per second, by route and status",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 82
+      },
+      "id": 36
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Server-side duration of the native chat routes (milliseconds).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, http_method, http_target) (rate(http_server_duration_bucket{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", http_target=~\"/api/v2/generate/chat/.*\"}[5m])))",
+          "legendFormat": "p95 {{http_method}} {{http_target}}",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.5, sum by (le, http_method, http_target) (rate(http_server_duration_bucket{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", http_target=~\"/api/v2/generate/chat/.*\"}[5m])))",
+          "legendFormat": "p50 {{http_method}} {{http_target}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Chat route latency p50 / p95, by route",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 82
+      },
+      "id": 37
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Share of chat route responses with a 5xx status. Absent when there were none.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percentunit",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (http_target) (rate(http_server_duration_count{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", http_target=~\"/api/v2/generate/chat/.*\", http_status_code=~\"5..\"}[5m])) / clamp_min(sum by (http_target) (rate(http_server_duration_count{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", http_target=~\"/api/v2/generate/chat/.*\"}[5m])), 1e-9)",
+          "legendFormat": "{{http_target}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Chat route 5xx share, by route",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 82
+      },
+      "id": 38
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Refusals on the chat routes, plus chat return codes on any route (for example a worker's chat reply refused at text submit).",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "refusals"
+          }
+        ],
+        "footer": {
+          "show": false
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_rc, http_route, http_response_status_code) (increase(horde_api_rejections{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", http_route=~\"/api/v2/generate/chat/.*\"}[$__range])) or sum by (horde_rc, http_route, http_response_status_code) (increase(horde_api_rejections{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_rc=~\".*Chat.*\"}[$__range]))",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "Value": "refusals"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "refusals",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "title": "Chat refusals by return code over the range",
+      "type": "table",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 90
+      },
+      "id": 39
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Chat replies the horde refused when a worker submitted them: ChatSubmitInvalid (no client could use it) and ChatSubmitNonconformant (broke a strict request's tool_choice or response_format). Per-worker counts are on the text worker dashboards.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 25,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_rc) (rate(horde_api_rejections{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_rc=~\"ChatSubmitInvalid|ChatSubmitNonconformant\"}[5m])) * 60",
+          "legendFormat": "{{horde_rc}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Worker chat replies refused at submit, per minute",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 90
+      },
+      "id": 40
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 99
+      },
+      "id": 41,
+      "panels": [],
+      "title": "Finished-request log (front)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-app"
+      },
+      "description": "One 'Chat request ... finished:' line per admitted request, parsed. woke_by is the wake source of the read that found the request finished; None for a timeout, fail-fast or horde error. Filter with $code and $host.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "requests"
+          }
+        ],
+        "footer": {
+          "show": false
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (code, woke_by, streamed) (count_over_time({app=\"ai-horde\", component=\"oai\", instance=~\"$host\"} |= \"finished: streamed=\" | regexp \"streamed=(?P<streamed>\\\\S+) .* woke_by=(?P<woke_by>\\\\S+) .* code=(?P<code>\\\\S+)\" | code=~\"$code\" [$__range]))",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "queryType": "instant"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "Value": "requests"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "requests",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "title": "Finished requests by code, wake source and streamed",
+      "type": "table",
+      "gridPos": {
+        "h": 10,
+        "w": 8,
+        "x": 0,
+        "y": 100
+      },
+      "id": 42
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-app"
+      },
+      "description": "The front's finished-request line. Use the Code variable to pick outcomes; the line carries no key, prompt, title or client address.",
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending"
+      },
+      "targets": [
+        {
+          "expr": "{app=\"ai-horde\", component=\"oai\", instance=~\"$host\"} |= \"finished: streamed=\" | regexp \"code=(?P<code>\\\\S+)\" | code=~\"$code\"",
+          "refId": "A"
+        }
+      ],
+      "title": "Finished-request lines",
+      "type": "logs",
+      "gridPos": {
+        "h": 10,
+        "w": 16,
+        "x": 8,
+        "y": 100
+      },
+      "id": 43
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-app"
+      },
+      "description": "Lines the horde writes for chat refusals (the return code, then the reason; this includes worker replies refused at submit) and chat warnings such as failed image or fault-reason storage.",
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending"
+      },
+      "targets": [
+        {
+          "expr": "{app=\"ai-horde\", component=\"backend\", instance=~\"$host\"} |~ \"Chat[A-Za-z]*: |chat (request|generation)\"",
+          "refId": "A"
+        }
+      ],
+      "title": "Horde chat refusals and warnings",
+      "type": "logs",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 110
+      },
+      "id": 44
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 118
+      },
+      "id": 45,
+      "panels": [],
+      "title": "Traces",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "description": "Root spans of chat requests at the front, newest first. Open a trace to see the horde's spans beneath. Trace retention is short; keep ranges within a day.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "footer": {
+          "show": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceql",
+          "query": "{resource.service.name=\"horde-oai\" && resource.deployment.environment.name=~\"$environment\" && name=\"POST /v1/chat/completions\"}",
+          "limit": 20,
+          "tableType": "traces",
+          "refId": "A"
+        }
+      ],
+      "title": "Recent chat requests",
+      "type": "table",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 119
+      },
+      "id": 46
+    },
+    {
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "description": "Chat requests that took over 30 seconds or ended with an error status.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "footer": {
+          "show": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "tempo"
+          },
+          "queryType": "traceql",
+          "query": "{resource.service.name=\"horde-oai\" && resource.deployment.environment.name=~\"$environment\" && name=\"POST /v1/chat/completions\" && (duration > 30s || status = error)}",
+          "limit": 20,
+          "tableType": "traces",
+          "refId": "A"
+        }
+      ],
+      "title": "Slow or failed chat requests",
+      "type": "table",
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 119
+      },
+      "id": 47
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 39,
+  "tags": [
+    "horde",
+    "ai-horde",
+    "chat",
+    "text"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "production",
+          "value": "production"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir-telemetry"
+        },
+        "definition": "label_values(http_server_duration_count, deployment_environment_name)",
+        "description": "Scopes the metric and trace panels (dev or production).",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Environment",
+        "multi": false,
+        "name": "environment",
+        "options": [],
+        "query": {
+          "query": "label_values(http_server_duration_count, deployment_environment_name)",
+          "refId": "environment"
+        },
+        "refresh": 1,
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir-telemetry"
+        },
+        "definition": "label_values(horde_oai_queue_wait_count{deployment_environment_name=~\"$environment\"}, horde_model)",
+        "description": "Scopes the per-model panels.",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Model",
+        "multi": true,
+        "name": "model",
+        "options": [],
+        "query": {
+          "query": "label_values(horde_oai_queue_wait_count{deployment_environment_name=~\"$environment\"}, horde_model)",
+          "refId": "model"
+        },
+        "refresh": 2,
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".+",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir-telemetry"
+        },
+        "definition": "label_values(horde_oai_request_duration_count{deployment_environment_name=~\"$environment\"}, horde_code)",
+        "description": "Filters the finished-request log panels by outcome code (ok, client_closed or an error code).",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Code (logs)",
+        "multi": true,
+        "name": "code",
+        "options": [],
+        "query": {
+          "query": "label_values(horde_oai_request_duration_count{deployment_environment_name=~\"$environment\"}, horde_code)",
+          "refId": "code"
+        },
+        "refresh": 2,
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".+",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "loki",
+          "uid": "loki-app"
+        },
+        "definition": "label_values({app=\"ai-horde\"}, instance)",
+        "description": "Scopes the log panels by host. Dev logs as shdev.",
+        "hide": 0,
+        "includeAll": true,
+        "label": "App host (logs)",
+        "multi": true,
+        "name": "host",
+        "options": [],
+        "query": {
+          "label": "instance",
+          "stream": "{app=\"ai-horde\"}",
+          "type": 1,
+          "refId": "host"
+        },
+        "refresh": 1,
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "utc",
+  "title": "Horde Chat Completions",
+  "uid": "horde-chat",
+  "version": 1,
+  "weekStart": ""
+}

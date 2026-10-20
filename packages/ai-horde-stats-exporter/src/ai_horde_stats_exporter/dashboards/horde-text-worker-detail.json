@@ -292,7 +292,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 29 },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 29 },
       "id": 24,
       "options": { "legend": { "calcs": ["lastNotNull", "mean", "min", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
       "targets": [{ "expr": "horde_worker_uptime_seconds{worker=~\"$worker\", type=\"text\"}", "legendFormat": "{{worker}}", "refId": "A" }],
@@ -309,11 +309,30 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 29 },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 29 },
       "id": 25,
       "options": { "legend": { "calcs": ["lastNotNull", "mean", "min", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
       "targets": [{ "expr": "horde_worker_uncompleted_jobs{worker=~\"$worker\", type=\"text\"}", "legendFormat": "{{worker}}", "refId": "A" }],
       "title": "Uncompleted Jobs",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "description": "Chat replies the horde refused because they broke a strict request's tool_choice or response_format (the API's nonconformant_replies). These jobs fault without kudos and do not count as uncompleted jobs. Absent until the worker's first such reply.",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "noValue": "0",
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "lineWidth": 2, "fillOpacity": 15, "gradientMode": "none", "showPoints": "never", "spanNulls": true, "axisCenteredZero": false, "axisPlacement": "auto", "barAlignment": 0, "scaleDistribution": { "type": "linear" }, "stacking": { "group": "A", "mode": "none" }, "thresholdsStyle": { "mode": "off" } }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 29 },
+      "id": 26,
+      "options": { "legend": { "calcs": ["lastNotNull", "mean", "min", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "targets": [{ "expr": "horde_worker_nonconformant_replies{worker=~\"$worker\", type=\"text\"}", "legendFormat": "{{worker}}", "refId": "A" }],
+      "title": "Nonconformant Chat Replies",
       "type": "timeseries"
     },
     {

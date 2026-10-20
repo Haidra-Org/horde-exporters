@@ -48,7 +48,7 @@ class ZeroOmissionSettings(BaseModel):
     """
 
     models: list[str] = ["queued", "jobs", "eta"]
-    workers: list[str] = ["uncompleted_jobs"]
+    workers: list[str] = ["uncompleted_jobs", "nonconformant_replies"]
     performance: list[str] = ["queued_forms", "queued_requests", "queued_text_requests"]
     stats: list[str] = []
 
