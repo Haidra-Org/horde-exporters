@@ -1,0 +1,2302 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "horde_overlay": "alerts-infra",
+        "name": "Infra alerts",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir-infra"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "#d03b3b",
+        "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\", alertname!~\"Watchdog|HostSystemdServiceFailed|HostOutOfInodes|HostSwapFillingUp|HostDiskWillFillIn24h|HostDiskUsageHigh|WireGuardTextfileStale|PrometheusTargetsMissing|HordeRequestObservationDataReady|HordeRequestEstimatorPromotionApproved|HordeRequestUnstartedExpiryForecastValidationReady\"}",
+        "step": "30s",
+        "titleFormat": "{{alertname}}",
+        "textFormat": "{{severity}} {{instance}}{{host}}{{peer}}{{proxy}}{{name}}",
+        "useValueForTime": false
+      },
+      {
+        "horde_overlay": "alerts-telemetry",
+        "name": "App alerts (telemetry)",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir-telemetry"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "#ec835a",
+        "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\", alertname!~\"Watchdog|HostSystemdServiceFailed|HostOutOfInodes|HostSwapFillingUp|HostDiskWillFillIn24h|HostDiskUsageHigh|WireGuardTextfileStale|PrometheusTargetsMissing|HordeRequestObservationDataReady|HordeRequestEstimatorPromotionApproved|HordeRequestUnstartedExpiryForecastValidationReady\"}",
+        "step": "30s",
+        "titleFormat": "{{alertname}}",
+        "textFormat": "{{severity}} {{horde_host}}{{horde_job_name}}{{deployment_environment_name}}",
+        "useValueForTime": false
+      },
+      {
+        "horde_overlay": "alerts-app",
+        "name": "App alerts (exporter)",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir-app"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "#e0b400",
+        "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\", alertname!~\"Watchdog|HostSystemdServiceFailed|HostOutOfInodes|HostSwapFillingUp|HostDiskWillFillIn24h|HostDiskUsageHigh|WireGuardTextfileStale|PrometheusTargetsMissing|HordeRequestObservationDataReady|HordeRequestEstimatorPromotionApproved|HordeRequestUnstartedExpiryForecastValidationReady\"}",
+        "step": "30s",
+        "titleFormat": "{{alertname}}",
+        "textFormat": "{{severity}}",
+        "useValueForTime": false
+      },
+      {
+        "horde_overlay": "app-restarts",
+        "name": "App restarts",
+        "datasource": {
+          "type": "loki",
+          "uid": "loki-app"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "#8ab8ff",
+        "expr": "{app=\"ai-horde\", component=\"backend\"} |= \"INIT\" |= \"Horde Database\" | line_format \"{{.instance}} {{.container}} started\""
+      },
+      {
+        "horde_overlay": "operator",
+        "name": "Operator notes & deploys",
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "#b877d9",
+        "target": {
+          "type": "tags",
+          "tags": [
+            "ai-horde"
+          ],
+          "matchAny": true,
+          "limit": 200
+        }
+      }
+    ]
+  },
+  "description": "Text generation allowance, queue wait, legacy speed gate records and job leases from app OTLP metrics on mimir-telemetry: how many text requests run free, how long registered requests wait for a worker, what an enforced speed gate would withhold from legacy text, and how leases renew and lapse.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "horde"
+      ],
+      "targetBlank": false,
+      "title": "Horde Dashboards",
+      "type": "dashboards"
+    }
+  ],
+  "panels": [
+    {
+      "collapsed": false,
+      "panels": [],
+      "title": "Rollout indicators (over the dashboard range)",
+      "type": "row",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "How many of the three always-recorded text allowance series (decisions, estimated wait, queue wait) reported in the last hour. 3 means the deployed release exports them. Dry-run quotes are not counted, so a quiet queue of quotes alone shows fewer.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "short",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 3
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "expr": "(count(count by (__name__) (last_over_time({__name__=~\"horde_text_free_allowance_decisions|horde_text_free_allowance_estimated_wait_seconds_count|horde_text_queue_wait_seconds_count\", job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[1h])))) or vector(0)",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Allowance telemetry present",
+      "type": "stat",
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "id": 2
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "p95 of the time from creation to assignment for registered users' non-chat text requests over the range. Registered stands in for requests paying kudos upfront; a registered request under the free allowance is free. Green below 60 s, red from 120 s. Shows COLLECTING below 200 assignments.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "s",
+          "noValue": "COLLECTING",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 60
+              },
+              {
+                "color": "red",
+                "value": 120
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "expr": "(histogram_quantile(0.95, sum by (le) (increase(horde_text_queue_wait_seconds_bucket{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_requester=\"registered\", horde_chat=\"false\"}[$__range])))) and on() (sum(increase(horde_text_queue_wait_seconds_count{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_requester=\"registered\", horde_chat=\"false\"}[$__range])) >= 200)",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Registered legacy queue wait p95",
+      "type": "stat",
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "id": 3
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Text requests created without kudos held upfront over all text creation decisions in the range. Shows COLLECTING below 200 decisions.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "percentunit",
+          "noValue": "COLLECTING",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "expr": "(sum(increase(horde_text_free_allowance_decisions{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_outcome=\"free\"}[$__range])) / clamp_min(sum(increase(horde_text_free_allowance_decisions{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[$__range])), 1)) and on() (sum(increase(horde_text_free_allowance_decisions{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[$__range])) >= 200)",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Free share of text creations",
+      "type": "stat",
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "id": 4
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Share of free text requests that asked for more than 512 tokens. It is 0 while the free output ceiling is 512 and rises once the ceiling is raised, which confirms the configuration took effect. Shows COLLECTING below 200 free decisions.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "percentunit",
+          "noValue": "COLLECTING",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "expr": "((sum(increase(horde_text_free_allowance_decisions{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_outcome=\"free\", horde_requested_bucket!=\"<=512\"}[$__range])) or vector(0)) / clamp_min(sum(increase(horde_text_free_allowance_decisions{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_outcome=\"free\"}[$__range])), 1)) and on() (sum(increase(horde_text_free_allowance_decisions{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_outcome=\"free\"}[$__range])) >= 200)",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Free decisions above 512 tokens",
+      "type": "stat",
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "id": 5
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Text requests refused because the requester could not cover the upfront kudos, over all decisions in the range. Green below 2%, red from 5%. Shows COLLECTING below 200 decisions.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "percentunit",
+          "noValue": "COLLECTING",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.02
+              },
+              {
+                "color": "red",
+                "value": 0.05
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "expr": "((sum(increase(horde_text_free_allowance_decisions{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_outcome=\"refused\"}[$__range])) or vector(0)) / clamp_min(sum(increase(horde_text_free_allowance_decisions{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[$__range])), 1)) and on() (sum(increase(horde_text_free_allowance_decisions{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[$__range])) >= 200)",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Refused for kudos upfront",
+      "type": "stat",
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "id": 6
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Text requests whose max_length was lowered to the free allowance because the requester allowed it, over all decisions in the range. Green below 5%, red from 15%. Shows COLLECTING below 200 decisions.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "percentunit",
+          "noValue": "COLLECTING",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.05
+              },
+              {
+                "color": "red",
+                "value": 0.15
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "expr": "((sum(increase(horde_text_free_allowance_decisions{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_outcome=\"downgraded\"}[$__range])) or vector(0)) / clamp_min(sum(increase(horde_text_free_allowance_decisions{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[$__range])), 1)) and on() (sum(increase(horde_text_free_allowance_decisions{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[$__range])) >= 200)",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Downgraded to the allowance",
+      "type": "stat",
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "id": 7
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Legacy text jobs assigned to a worker too slow to finish them inside the base lease that were then aborted, over all such jobs that ended in the range. Compare with the all-text stale abort share beside it. Shows COLLECTING below 50 outcomes.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "percentunit",
+          "noValue": "COLLECTING",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "expr": "((sum(increase(horde_text_gate_shadow_outcomes{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_outcome=\"aborted\"}[$__range])) or vector(0)) / clamp_min(sum(increase(horde_text_gate_shadow_outcomes{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[$__range])), 1)) and on() (sum(increase(horde_text_gate_shadow_outcomes{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[$__range])) >= 50)",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Over-capacity legacy abort share",
+      "type": "stat",
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 0,
+        "y": 6
+      },
+      "id": 8
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Text and chat jobs aborted because their lease lapsed, over all text assignments in the range. Green below 2%, red from 5%. Shows COLLECTING below 200 assignments.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "percentunit",
+          "noValue": "COLLECTING",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.02
+              },
+              {
+                "color": "red",
+                "value": 0.05
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "expr": "((sum(increase(horde_text_stale_aborts{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[$__range])) or vector(0)) / clamp_min(sum(increase(horde_text_queue_wait_seconds_count{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[$__range])), 1)) and on() (sum(increase(horde_text_queue_wait_seconds_count{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[$__range])) >= 200)",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "All-text stale abort share",
+      "type": "stat",
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 4,
+        "y": 6
+      },
+      "id": 9
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Front completions over admitted front requests in the range. Green from 90%, red below 75%. Shows COLLECTING below 20 admitted.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "percentunit",
+          "noValue": "COLLECTING",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.75
+              },
+              {
+                "color": "green",
+                "value": 0.9
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "expr": "(sum(increase(horde_oai_completions{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[$__range])) / clamp_min(sum(increase(horde_oai_requests_admitted{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[$__range])), 1)) and on() (sum(increase(horde_oai_requests_admitted{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[$__range])) >= 20)",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Chat delivered of admitted",
+      "type": "stat",
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 8,
+        "y": 6
+      },
+      "id": 10
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Relayed chat streams that ended in mismatch, replaced_attempt or gap, over all relayed streams. Green below 1%, red from 5%. Shows COLLECTING below 20 relayed streams.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "percentunit",
+          "noValue": "COLLECTING",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 0.05
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "expr": "((sum(increase(horde_oai_stream_relay_outcomes{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome=~\"mismatch|replaced_attempt|gap\"}[$__range])) or vector(0)) / clamp_min(sum(increase(horde_oai_stream_relay_outcomes{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[$__range])), 1)) and on() (sum(increase(horde_oai_stream_relay_outcomes{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[$__range])) >= 20)",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Relay divergence share",
+      "type": "stat",
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 12,
+        "y": 6
+      },
+      "id": 11
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Progress posts by untrusted workers' chat jobs that found the lease already at its cap, over all counted renewals for those workers. Green below 10%, red from 30%. Shows COLLECTING below 100 renewals.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "percentunit",
+          "noValue": "COLLECTING",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.1
+              },
+              {
+                "color": "red",
+                "value": 0.3
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "expr": "((sum(increase(horde_text_lease_renewals{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_worker_trusted=\"false\", horde_outcome=\"at_cap\"}[$__range])) or vector(0)) / clamp_min(sum(increase(horde_text_lease_renewals{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_worker_trusted=\"false\"}[$__range])), 1)) and on() (sum(increase(horde_text_lease_renewals{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_worker_trusted=\"false\"}[$__range])) >= 100)",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Untrusted lease at-cap share",
+      "type": "stat",
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 16,
+        "y": 6
+      },
+      "id": 12
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Text and chat jobs assigned to workers over the range: the volume behind the shares on this row.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "short",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(horde_text_queue_wait_seconds_count{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[$__range])) or vector(0)",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Text assignments",
+      "type": "stat",
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 20,
+        "y": 6
+      },
+      "id": 13
+    },
+    {
+      "collapsed": false,
+      "panels": [],
+      "title": "Free output allowance",
+      "type": "row",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 11
+      },
+      "id": 14
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Every text request creation, dry runs excluded: free (no kudos held), funded (kudos reserved upfront), downgraded (max_length lowered to the allowance) and refused (KudosUpfront).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 25,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_outcome) (rate(horde_text_free_allowance_decisions{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat=~\"$chat\", horde_requester=~\"$requester\"}[1h])) * 3600",
+          "refId": "A",
+          "legendFormat": "{{horde_outcome}}"
+        }
+      ],
+      "title": "Allowance decisions per hour, by outcome",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 12
+      },
+      "id": 15
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Free decisions over all decisions per requester kind (anonymous, registered, shared_key), 1-hour window.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percentunit",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_requester) (rate(horde_text_free_allowance_decisions{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat=~\"$chat\", horde_requester=~\"$requester\", horde_outcome=\"free\"}[1h])) / clamp_min(sum by (horde_requester) (rate(horde_text_free_allowance_decisions{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat=~\"$chat\", horde_requester=~\"$requester\"}[1h])), 1e-9)",
+          "refId": "A",
+          "legendFormat": "{{horde_requester}}"
+        }
+      ],
+      "title": "Free share, by requester",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 12
+      },
+      "id": 16
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Free text requests over the range by the max_length they asked for. Sizes above <=512 are only free when the ceiling is above 512 and the estimated wait is short.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "basic",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "valueMode": "color"
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_requested_bucket) (increase(horde_text_free_allowance_decisions{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat=~\"$chat\", horde_requester=~\"$requester\", horde_outcome=\"free\"}[$__range]))",
+          "refId": "A",
+          "legendFormat": "{{horde_requested_bucket}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Free decisions by requested size",
+      "type": "bargauge",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 20
+      },
+      "id": 17
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Every decision over the range by the allowance it was given. At a 512 ceiling every decision is <=512.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "basic",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "valueMode": "color"
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_allowance_bucket) (increase(horde_text_free_allowance_decisions{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat=~\"$chat\", horde_requester=~\"$requester\"}[$__range]))",
+          "refId": "A",
+          "legendFormat": "{{horde_allowance_bucket}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Granted allowance by size",
+      "type": "bargauge",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 20
+      },
+      "id": 18
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "API refusals for missing kudos: KudosUpfront for users, SharedKeyInsufficientKudos for shared keys and ChatKudosCapExceeded for chat requests over their max_kudos.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_rc) (rate(horde_api_rejections{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_rc=~\"KudosUpfront|SharedKeyInsufficientKudos|ChatKudosCapExceeded\"}[1h])) * 3600",
+          "refId": "A",
+          "legendFormat": "{{horde_rc}}"
+        }
+      ],
+      "title": "Upfront kudos refusals per hour, by return code",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 20
+      },
+      "id": 19
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Distribution of the estimated wait at creation. Up to 60 s the allowance is the ceiling; it falls to the floor at 300 s. Not recorded when no worker is eligible.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "scaleDistribution": {
+              "type": "linear"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "calculate": false,
+        "cellGap": 1,
+        "color": {
+          "mode": "scheme",
+          "scheme": "Oranges",
+          "scale": "exponential",
+          "exponent": 0.5,
+          "steps": 64
+        },
+        "legend": {
+          "show": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "yHistogram": false
+        },
+        "yAxis": {
+          "axisPlacement": "left",
+          "unit": "s"
+        },
+        "rowsFrame": {
+          "layout": "auto"
+        },
+        "cellValues": {
+          "unit": "short"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (le) (increase(horde_text_free_allowance_estimated_wait_seconds_bucket{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat=~\"$chat\", horde_requester=~\"$requester\"}[$__interval]))",
+          "format": "heatmap",
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Estimated wait the allowance was sized by",
+      "type": "heatmap",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 28
+      },
+      "id": 20
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "The estimated wait at creation, split by chat and legacy text, 15-minute window.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, horde_chat) (rate(horde_text_free_allowance_estimated_wait_seconds_bucket{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat=~\"$chat\", horde_requester=~\"$requester\"}[15m])))",
+          "refId": "A",
+          "legendFormat": "p95 chat={{horde_chat}}"
+        },
+        {
+          "expr": "histogram_quantile(0.5, sum by (le, horde_chat) (rate(horde_text_free_allowance_estimated_wait_seconds_bucket{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat=~\"$chat\", horde_requester=~\"$requester\"}[15m])))",
+          "refId": "B",
+          "legendFormat": "p50 chat={{horde_chat}}"
+        }
+      ],
+      "title": "Estimated wait p50 / p95",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 28
+      },
+      "id": 21
+    },
+    {
+      "collapsed": false,
+      "panels": [],
+      "title": "Queue wait (creation to assignment)",
+      "type": "row",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 36
+      },
+      "id": 22
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Time from a text request's creation to a job's assignment, 15-minute window. Registered stands in for requests paying kudos upfront.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, horde_requester) (rate(horde_text_queue_wait_seconds_bucket{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat=~\"$chat\", horde_requester=~\"$requester\"}[15m])))",
+          "refId": "A",
+          "legendFormat": "p95 {{horde_requester}}"
+        },
+        {
+          "expr": "histogram_quantile(0.5, sum by (le, horde_requester) (rate(horde_text_queue_wait_seconds_bucket{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat=~\"$chat\", horde_requester=~\"$requester\"}[15m])))",
+          "refId": "B",
+          "legendFormat": "p50 {{horde_requester}}"
+        }
+      ],
+      "title": "Queue wait p50 / p95, by requester",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 37
+      },
+      "id": 23
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "p95 queue wait by the max_length requested, 15-minute window.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, horde_requested_bucket) (rate(horde_text_queue_wait_seconds_bucket{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat=~\"$chat\", horde_requester=~\"$requester\"}[15m])))",
+          "refId": "A",
+          "legendFormat": "{{horde_requested_bucket}}"
+        }
+      ],
+      "title": "Queue wait p95, by requested size",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 37
+      },
+      "id": 24
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "One bar per day: p95 queue wait of registered users' non-chat text requests. Compare days before and after a change to the free output ceiling.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "s",
+          "custom": {
+            "drawStyle": "bars",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 25,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (increase(horde_text_queue_wait_seconds_bucket{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_requester=\"registered\", horde_chat=\"false\"}[1d])))",
+          "refId": "A",
+          "legendFormat": "p95 per day"
+        }
+      ],
+      "title": "Registered legacy queue wait p95, per day",
+      "type": "timeseries",
+      "interval": "1d",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 45
+      },
+      "id": 25
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Text jobs assigned to workers per minute.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "reqpm",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_requester, horde_chat) (rate(horde_text_queue_wait_seconds_count{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat=~\"$chat\", horde_requester=~\"$requester\"}[5m])) * 60",
+          "refId": "A",
+          "legendFormat": "{{horde_requester}} chat={{horde_chat}}"
+        }
+      ],
+      "title": "Assignments per minute, by requester and chat",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 45
+      },
+      "id": 26
+    },
+    {
+      "collapsed": false,
+      "panels": [],
+      "title": "Speed gate for legacy text (recorded, not enforced)",
+      "type": "row",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 53
+      },
+      "id": 27
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Legacy text jobs assigned to a worker whose measured speed does not finish their max_length inside the base lease. Chat requests are refused such workers; legacy requests are still assigned and recorded here.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 25,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_size_bucket) (rate(horde_text_gate_shadow_assignments{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[1h])) * 3600",
+          "refId": "A",
+          "legendFormat": "{{horde_size_bucket}}"
+        }
+      ],
+      "title": "Over-capacity legacy assignments per hour, by size",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 54
+      },
+      "id": 28
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "How over-capacity legacy jobs ended over the range: completed, faulted or aborted, split by whether the worker's owner is trusted.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "basic",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "valueMode": "color"
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_outcome, horde_worker_trusted) (increase(horde_text_gate_shadow_outcomes{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[$__range]))",
+          "refId": "A",
+          "legendFormat": "{{horde_outcome}} trusted={{horde_worker_trusted}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Over-capacity outcomes, by trust",
+      "type": "bargauge",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 54
+      },
+      "id": 29
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Over-capacity legacy assignments over all legacy text assignments, 1-hour window: the share an enforced gate would withhold from the workers that took them.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percentunit",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "(sum(rate(horde_text_gate_shadow_assignments{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[1h])) or vector(0)) / clamp_min(sum(rate(horde_text_queue_wait_seconds_count{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat=\"false\"}[1h])), 1e-9)",
+          "refId": "A",
+          "legendFormat": "would refuse"
+        }
+      ],
+      "title": "Would-refuse share of legacy assignments",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 54
+      },
+      "id": 30
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "6-hour windows. The all-text line includes chat jobs, since stale aborts are not split by chat.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percentunit",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "(sum(increase(horde_text_gate_shadow_outcomes{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_outcome=\"aborted\"}[6h])) or vector(0)) / clamp_min(sum(increase(horde_text_gate_shadow_outcomes{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[6h])), 1)",
+          "refId": "A",
+          "legendFormat": "over-capacity legacy"
+        },
+        {
+          "expr": "(sum(increase(horde_text_stale_aborts{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[6h])) or vector(0)) / clamp_min(sum(increase(horde_text_queue_wait_seconds_count{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[6h])), 1)",
+          "refId": "B",
+          "legendFormat": "all text"
+        }
+      ],
+      "title": "Abort share: over-capacity legacy against all text",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 62
+      },
+      "id": 31
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Pop to submit time of over-capacity legacy jobs that completed, by size, 1-hour window. The base lease is 150 s; the buckets around it are 120 s and 180 s.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, horde_size_bucket) (rate(horde_text_gate_shadow_service_seconds_bucket{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[1h])))",
+          "refId": "A",
+          "legendFormat": "p95 {{horde_size_bucket}}"
+        },
+        {
+          "expr": "histogram_quantile(0.5, sum by (le, horde_size_bucket) (rate(horde_text_gate_shadow_service_seconds_bucket{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[1h])))",
+          "refId": "B",
+          "legendFormat": "p50 {{horde_size_bucket}}"
+        }
+      ],
+      "title": "Service time of completed over-capacity jobs, p50 / p95",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 62
+      },
+      "id": 32
+    },
+    {
+      "collapsed": false,
+      "panels": [],
+      "title": "Lease health",
+      "type": "row",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 70
+      },
+      "id": 33
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Chat progress posts that extended the job lease (granted) or found it at its cap (at_cap). The cap is 600 s for trusted and 200 s for untrusted workers' owners.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_outcome, horde_worker_trusted) (rate(horde_text_lease_renewals{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[5m])) * 60",
+          "refId": "A",
+          "legendFormat": "{{horde_outcome}} trusted={{horde_worker_trusted}}"
+        }
+      ],
+      "title": "Lease renewals per minute, by outcome and trust",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 71
+      },
+      "id": 34
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "at_cap over all counted renewals, 1-hour window.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percentunit",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_worker_trusted) (rate(horde_text_lease_renewals{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_outcome=\"at_cap\"}[1h])) / clamp_min(sum by (horde_worker_trusted) (rate(horde_text_lease_renewals{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[1h])), 1e-9)",
+          "refId": "A",
+          "legendFormat": "trusted={{horde_worker_trusted}}"
+        }
+      ],
+      "title": "At-cap share of renewals, by trust",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 71
+      },
+      "id": 35
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Text and chat jobs aborted because their lease lapsed before a submit.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_worker_trusted) (rate(horde_text_stale_aborts{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[1h])) * 3600",
+          "refId": "A",
+          "legendFormat": "trusted={{horde_worker_trusted}}"
+        }
+      ],
+      "title": "Stale aborts per hour, by trust",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 71
+      },
+      "id": 36
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "1-hour window. Includes chat jobs.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "100 * (sum(increase(horde_text_stale_aborts{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[1h])) or vector(0)) / clamp_min(sum(increase(horde_text_queue_wait_seconds_count{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[1h])), 1)",
+          "refId": "A",
+          "legendFormat": "stale aborts per 100"
+        }
+      ],
+      "title": "Stale aborts per 100 text assignments",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 79
+      },
+      "id": 37
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Per-request availability cache reads. absent and generation_mismatch fall back to the database.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_outcome, horde_chat) (rate(horde_worker_availability_cache_lookups{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[5m]))",
+          "refId": "A",
+          "legendFormat": "{{horde_outcome}} chat={{horde_chat}}"
+        }
+      ],
+      "title": "Worker availability cache reads, by outcome",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 79
+      },
+      "id": 38
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 39,
+  "tags": [
+    "horde",
+    "ai-horde",
+    "text",
+    "chat"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "production",
+          "value": "production"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir-telemetry"
+        },
+        "definition": "label_values(http_server_duration_count, deployment_environment_name)",
+        "description": "Scopes the metric and trace panels (dev or production).",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Environment",
+        "multi": false,
+        "name": "environment",
+        "options": [],
+        "query": {
+          "query": "label_values(http_server_duration_count, deployment_environment_name)",
+          "refId": "environment"
+        },
+        "refresh": 1,
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir-telemetry"
+        },
+        "definition": "label_values(horde_text_free_allowance_decisions{deployment_environment_name=~\"$environment\"}, horde_chat)",
+        "description": "Scopes the allowance and queue-wait panels to chat (true) or legacy text (false) requests.",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Chat",
+        "multi": true,
+        "name": "chat",
+        "options": [],
+        "query": {
+          "query": "label_values(horde_text_free_allowance_decisions{deployment_environment_name=~\"$environment\"}, horde_chat)",
+          "refId": "chat"
+        },
+        "refresh": 2,
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query",
+        "allValue": ".*"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir-telemetry"
+        },
+        "definition": "label_values(horde_text_free_allowance_decisions{deployment_environment_name=~\"$environment\"}, horde_requester)",
+        "description": "Scopes the allowance and queue-wait panels by requester kind.",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Requester",
+        "multi": true,
+        "name": "requester",
+        "options": [],
+        "query": {
+          "query": "label_values(horde_text_free_allowance_decisions{deployment_environment_name=~\"$environment\"}, horde_requester)",
+          "refId": "requester"
+        },
+        "refresh": 2,
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query",
+        "allValue": ".*"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "utc",
+  "title": "Horde Text Allowance and Lease",
+  "uid": "horde-text-allowance",
+  "version": 1,
+  "weekStart": ""
+}
