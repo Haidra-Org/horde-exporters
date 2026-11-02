@@ -1650,11 +1650,597 @@
     },
     {
       "collapsed": false,
+      "panels": [],
+      "title": "Reasoning and completion content",
+      "type": "row",
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
         "y": 57
+      },
+      "id": 66
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "What the first generation of each delivered completion holds: text (visible content), tool_calls, reasoning_only (no visible content, reasoning) or empty. Whitespace is not visible content.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_content) (rate(horde_oai_completions{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_model=~\"$model\", horde_content!=\"\"}[5m])) * 60",
+          "refId": "A",
+          "legendFormat": "{{horde_content}}"
+        }
+      ],
+      "title": "Delivered completions per minute, by content",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 58
+      },
+      "id": 67
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Delivered completions that were reasoning_only or empty, 1-hour window. reasoning_only with finish reason length is a reply whose limit went to reasoning; the client cannot resume it.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_content, horde_finish_reason) (rate(horde_oai_completions{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_model=~\"$model\", horde_content=~\"reasoning_only|empty\"}[1h])) * 3600",
+          "refId": "A",
+          "legendFormat": "{{horde_content}} {{horde_finish_reason}}"
+        },
+        {
+          "expr": "(sum(rate(horde_oai_completions{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_model=~\"$model\", horde_content=~\"reasoning_only|empty\"}[1h])) or on() vector(0)) * 3600",
+          "refId": "B",
+          "legendFormat": "all without visible text"
+        }
+      ],
+      "title": "Completions without visible text per hour, by content and finish reason",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 58
+      },
+      "id": 68
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "reasoning_only and empty completions over all completions that carry the content label, over the range.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "percentunit",
+          "noValue": "COLLECTING",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 0.05
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "expr": "(sum(increase(horde_oai_completions{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_model=~\"$model\", horde_content=~\"reasoning_only|empty\"}[$__range])) or on() vector(0)) / clamp_min(sum(increase(horde_oai_completions{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_model=~\"$model\", horde_content!=\"\"}[$__range])), 1)",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "No visible text share",
+      "type": "stat",
+      "gridPos": {
+        "h": 8,
+        "w": 4,
+        "x": 16,
+        "y": 58
+      },
+      "id": 69
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Completions over the range that held only reasoning and stopped at the limit (finish reason length).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "short",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(horde_oai_completions{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_model=~\"$model\", horde_content=\"reasoning_only\", horde_finish_reason=\"length\"}[$__range])) or on() vector(0)",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Lost to reasoning",
+      "type": "stat",
+      "gridPos": {
+        "h": 8,
+        "w": 4,
+        "x": 20,
+        "y": 58
+      },
+      "id": 70
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Reasoning tokens over completion tokens for each delivered completion with reasoning, 1-hour window. Either count may be estimated. A share near 1 with finish reason length is a reply whose budget went to reasoning.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percentunit",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, horde_finish_reason) (rate(horde_oai_reasoning_share_bucket{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_model=~\"$model\"}[1h])))",
+          "refId": "A",
+          "legendFormat": "p95 {{horde_finish_reason}}"
+        },
+        {
+          "expr": "histogram_quantile(0.5, sum by (le, horde_finish_reason) (rate(horde_oai_reasoning_share_bucket{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_model=~\"$model\"}[1h])))",
+          "refId": "B",
+          "legendFormat": "p50 {{horde_finish_reason}}"
+        }
+      ],
+      "title": "Reasoning share of completion tokens p50 / p95, by finish reason",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 66
+      },
+      "id": 71
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "The reasoning_effort the client sent, or 'omitted'.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_reasoning_effort) (rate(horde_oai_completions{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_model=~\"$model\", horde_reasoning_effort!=\"\"}[5m])) * 60",
+          "refId": "A",
+          "legendFormat": "{{horde_reasoning_effort}}"
+        }
+      ],
+      "title": "Delivered completions per minute, by reasoning effort",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 66
+      },
+      "id": 72
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "The max_tokens each request accepted by the horde ran under, 1-hour window. client: sent by the client; default: not sent, so 512; lowered: lowered to the largest limit an online worker declares. Not split by model, so the Model variable does not apply.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "none",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, horde_source) (rate(horde_oai_request_max_tokens_bucket{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[1h])))",
+          "refId": "A",
+          "legendFormat": "p95 {{horde_source}}"
+        },
+        {
+          "expr": "histogram_quantile(0.5, sum by (le, horde_source) (rate(horde_oai_request_max_tokens_bucket{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[1h])))",
+          "refId": "B",
+          "legendFormat": "p50 {{horde_source}}"
+        }
+      ],
+      "title": "Completion limit p50 / p95, by source",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 66
+      },
+      "id": 73
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Requests the horde accepted at submit, by where their max_tokens came from. A request that ended before any status read is counted as client or default even if the limit was lowered.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_source) (rate(horde_oai_request_max_tokens_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[5m])) * 60",
+          "refId": "A",
+          "legendFormat": "{{horde_source}}"
+        }
+      ],
+      "title": "Accepted requests per minute, by limit source",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 74
+      },
+      "id": 74
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Admitted requests that got an error status before any header, by the upper bound of the max_tokens bucket the request asked for ('over' is above 16384).",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "requests"
+          }
+        ],
+        "footer": {
+          "show": false
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_code, horde_max_tokens_bucket) (increase(horde_oai_requests_errors{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_max_tokens_bucket!=\"\"}[$__range])) > 0",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "Value": "requests",
+              "horde_code": "code",
+              "horde_max_tokens_bucket": "max_tokens up to"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "requests",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "title": "Errors after admission over the range, by code and max_tokens bucket",
+      "type": "table",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 74
+      },
+      "id": 75
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 82
       },
       "id": 16,
       "panels": [],
@@ -1722,7 +2308,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 58
+        "y": 83
       },
       "id": 17
     },
@@ -1787,7 +2373,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 58
+        "y": 83
       },
       "id": 18
     },
@@ -1852,7 +2438,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 66
+        "y": 91
       },
       "id": 19
     },
@@ -1912,7 +2498,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 66
+        "y": 91
       },
       "id": 20
     },
@@ -1972,7 +2558,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 66
+        "y": 91
       },
       "id": 21
     },
@@ -2037,7 +2623,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 74
+        "y": 99
       },
       "id": 22
     },
@@ -2097,7 +2683,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 74
+        "y": 99
       },
       "id": 23
     },
@@ -2157,7 +2743,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 74
+        "y": 99
       },
       "id": 24
     },
@@ -2167,7 +2753,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 82
+        "y": 107
       },
       "id": 25,
       "panels": [],
@@ -2246,7 +2832,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 83
+        "y": 108
       },
       "id": 26
     },
@@ -2327,7 +2913,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 83
+        "y": 108
       },
       "id": 27
     },
@@ -2387,7 +2973,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 83
+        "y": 108
       },
       "id": 28
     },
@@ -2452,7 +3038,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 91
+        "y": 116
       },
       "id": 48
     },
@@ -2512,7 +3098,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 91
+        "y": 116
       },
       "id": 29
     },
@@ -2572,7 +3158,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 91
+        "y": 116
       },
       "id": 30
     },
@@ -2582,7 +3168,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 99
+        "y": 124
       },
       "id": 31,
       "panels": [],
@@ -2645,7 +3231,7 @@
         "h": 8,
         "w": 10,
         "x": 0,
-        "y": 100
+        "y": 125
       },
       "id": 32
     },
@@ -2705,7 +3291,7 @@
         "h": 8,
         "w": 10,
         "x": 10,
-        "y": 100
+        "y": 125
       },
       "id": 33
     },
@@ -2762,7 +3348,7 @@
         "h": 8,
         "w": 4,
         "x": 20,
-        "y": 100
+        "y": 125
       },
       "id": 34
     },
@@ -2772,7 +3358,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 108
+        "y": 133
       },
       "id": 35,
       "panels": [],
@@ -2835,7 +3421,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 109
+        "y": 134
       },
       "id": 36
     },
@@ -2900,7 +3486,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 109
+        "y": 134
       },
       "id": 37
     },
@@ -2960,7 +3546,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 109
+        "y": 134
       },
       "id": 38
     },
@@ -3030,7 +3616,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 117
+        "y": 142
       },
       "id": 39
     },
@@ -3090,7 +3676,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 117
+        "y": 142
       },
       "id": 40
     },
@@ -3103,7 +3689,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 126
+        "y": 151
       },
       "id": 49
     },
@@ -3163,7 +3749,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 127
+        "y": 152
       },
       "id": 50
     },
@@ -3228,7 +3814,7 @@
         "h": 8,
         "w": 4,
         "x": 8,
-        "y": 127
+        "y": 152
       },
       "id": 51
     },
@@ -3289,7 +3875,7 @@
         "h": 8,
         "w": 4,
         "x": 12,
-        "y": 127
+        "y": 152
       },
       "id": 52
     },
@@ -3298,7 +3884,7 @@
         "type": "prometheus",
         "uid": "mimir-telemetry"
       },
-      "description": "Pops by a chat worker whose measured speed caps the chat output it is offered below its declared limit, and pop skips for the chat filters (lease_speed, chat_jobs, chat_features).",
+      "description": "Pops by a chat worker whose measured speed does not finish the chat output it declares inside the base lease, so longer chat requests reach it only when no capable chat worker is online, and pop skips for the chat filters (lease_speed, chat_jobs, chat_features).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -3354,9 +3940,206 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 127
+        "y": 152
       },
       "id": 53
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Stored chat replies holding the reasoning-budget marker, 1-hour window. reasoning is the budget closing the reasoning as intended. content (the marker in the visible reply) and open_think (a reply starting with an unsplit think block) are worker-side defects.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_where) (rate(horde_chat_reasoning_marker{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_model=~\"$model\"}[1h])) * 3600",
+          "refId": "A",
+          "legendFormat": "{{horde_where}}"
+        },
+        {
+          "expr": "(sum(rate(horde_chat_reasoning_marker{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_model=~\"$model\", horde_where=~\"content|open_think\"}[1h])) or on() vector(0)) * 3600",
+          "refId": "B",
+          "legendFormat": "in the visible reply (content, open_think)"
+        }
+      ],
+      "title": "Reasoning budget markers per hour, by place",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 160
+      },
+      "id": 76
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Stored chat replies holding the reasoning-budget marker, by model and where it appears.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "replies"
+          }
+        ],
+        "footer": {
+          "show": false
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_model, horde_where) (increase(horde_chat_reasoning_marker{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_model=~\"$model\"}[$__range])) > 0",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "Value": "replies",
+              "horde_model": "model",
+              "horde_where": "place"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "replies",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "title": "Reasoning budget markers over the range, by model and place",
+      "type": "table",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 160
+      },
+      "id": 77
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Chat jobs popped whose client did not send reasoning_effort, 1-hour window. applied=true: the worker declares the feature and received medium. applied=false: the worker does not declare it, so its reasoning has no budget from the horde.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_applied) (rate(horde_chat_reasoning_effort_default{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_model=~\"$model\"}[1h])) * 3600",
+          "refId": "A",
+          "legendFormat": "applied={{horde_applied}}"
+        }
+      ],
+      "title": "Chat pops without reasoning_effort per hour, by applied",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 160
+      },
+      "id": 78
     },
     {
       "collapsed": false,
@@ -3364,7 +4147,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 135
+        "y": 168
       },
       "id": 41,
       "panels": [],
@@ -3438,7 +4221,7 @@
         "h": 10,
         "w": 8,
         "x": 0,
-        "y": 136
+        "y": 169
       },
       "id": 42
     },
@@ -3470,7 +4253,7 @@
         "h": 10,
         "w": 16,
         "x": 8,
-        "y": 136
+        "y": 169
       },
       "id": 43
     },
@@ -3502,7 +4285,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 146
+        "y": 179
       },
       "id": 44
     },
@@ -3512,7 +4295,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 154
+        "y": 187
       },
       "id": 45,
       "panels": [],
@@ -3558,7 +4341,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 155
+        "y": 188
       },
       "id": 46
     },
@@ -3601,7 +4384,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 155
+        "y": 188
       },
       "id": 47
     }

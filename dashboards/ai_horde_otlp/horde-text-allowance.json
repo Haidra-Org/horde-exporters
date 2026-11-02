@@ -526,7 +526,7 @@
       },
       "targets": [
         {
-          "expr": "((sum(increase(horde_text_gate_shadow_outcomes{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_outcome=\"aborted\"}[$__range])) or vector(0)) / clamp_min(sum(increase(horde_text_gate_shadow_outcomes{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[$__range])), 1)) and on() (sum(increase(horde_text_gate_shadow_outcomes{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[$__range])) >= 50)",
+          "expr": "((sum(increase(horde_text_gate_shadow_outcomes{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat!=\"true\", horde_outcome=\"aborted\"}[$__range])) or vector(0)) / clamp_min(sum(increase(horde_text_gate_shadow_outcomes{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat!=\"true\"}[$__range])), 1)) and on() (sum(increase(horde_text_gate_shadow_outcomes{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat!=\"true\"}[$__range])) >= 50)",
           "refId": "A",
           "instant": true,
           "range": false
@@ -1570,7 +1570,7 @@
         "type": "prometheus",
         "uid": "mimir-telemetry"
       },
-      "description": "Legacy text jobs assigned to a worker whose measured speed does not finish their max_length inside the base lease. Chat requests are refused such workers; legacy requests are still assigned and recorded here.",
+      "description": "Legacy text jobs assigned to a worker whose measured speed does not finish their max_length inside the base lease. Legacy text is offered to any worker; chat jobs reach such a worker only when no capable one is online, shown in the next row.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1610,7 +1610,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (horde_size_bucket) (rate(horde_text_gate_shadow_assignments{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[1h])) * 3600",
+          "expr": "sum by (horde_size_bucket) (rate(horde_text_gate_shadow_assignments{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat!=\"true\"}[1h])) * 3600",
           "refId": "A",
           "legendFormat": "{{horde_size_bucket}}"
         }
@@ -1630,7 +1630,7 @@
         "type": "prometheus",
         "uid": "mimir-telemetry"
       },
-      "description": "How over-capacity legacy jobs ended over the range: completed, faulted or aborted, split by whether the worker's owner is trusted.",
+      "description": "How over-capacity legacy text jobs ended over the range: completed, faulted or aborted, split by whether the worker's owner is trusted.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1665,7 +1665,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (horde_outcome, horde_worker_trusted) (increase(horde_text_gate_shadow_outcomes{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[$__range]))",
+          "expr": "sum by (horde_outcome, horde_worker_trusted) (increase(horde_text_gate_shadow_outcomes{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat!=\"true\"}[$__range]))",
           "refId": "A",
           "legendFormat": "{{horde_outcome}} trusted={{horde_worker_trusted}}",
           "instant": true,
@@ -1727,7 +1727,7 @@
       },
       "targets": [
         {
-          "expr": "(sum(rate(horde_text_gate_shadow_assignments{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[1h])) or vector(0)) / clamp_min(sum(rate(horde_text_queue_wait_seconds_count{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat=\"false\"}[1h])), 1e-9)",
+          "expr": "(sum(rate(horde_text_gate_shadow_assignments{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat!=\"true\"}[1h])) or vector(0)) / clamp_min(sum(rate(horde_text_queue_wait_seconds_count{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat!=\"true\", horde_chat=\"false\"}[1h])), 1e-9)",
           "refId": "A",
           "legendFormat": "would refuse"
         }
@@ -1787,7 +1787,7 @@
       },
       "targets": [
         {
-          "expr": "(sum(increase(horde_text_gate_shadow_outcomes{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_outcome=\"aborted\"}[6h])) or vector(0)) / clamp_min(sum(increase(horde_text_gate_shadow_outcomes{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[6h])), 1)",
+          "expr": "(sum(increase(horde_text_gate_shadow_outcomes{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat!=\"true\", horde_outcome=\"aborted\"}[6h])) or vector(0)) / clamp_min(sum(increase(horde_text_gate_shadow_outcomes{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat!=\"true\"}[6h])), 1)",
           "refId": "A",
           "legendFormat": "over-capacity legacy"
         },
@@ -1812,7 +1812,7 @@
         "type": "prometheus",
         "uid": "mimir-telemetry"
       },
-      "description": "Pop to submit time of over-capacity legacy jobs that completed, by size, 1-hour window. The base lease is 150 s; the buckets around it are 120 s and 180 s.",
+      "description": "Pop to submit time of over-capacity legacy text jobs that completed, by size, 1-hour window. The base lease is 150 s; the buckets around it are 120 s and 180 s.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1852,12 +1852,12 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum by (le, horde_size_bucket) (rate(horde_text_gate_shadow_service_seconds_bucket{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[1h])))",
+          "expr": "histogram_quantile(0.95, sum by (le, horde_size_bucket) (rate(horde_text_gate_shadow_service_seconds_bucket{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat!=\"true\"}[1h])))",
           "refId": "A",
           "legendFormat": "p95 {{horde_size_bucket}}"
         },
         {
-          "expr": "histogram_quantile(0.5, sum by (le, horde_size_bucket) (rate(horde_text_gate_shadow_service_seconds_bucket{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[1h])))",
+          "expr": "histogram_quantile(0.5, sum by (le, horde_size_bucket) (rate(horde_text_gate_shadow_service_seconds_bucket{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat!=\"true\"}[1h])))",
           "refId": "B",
           "legendFormat": "p50 {{horde_size_bucket}}"
         }
@@ -1875,13 +1875,338 @@
     {
       "collapsed": false,
       "panels": [],
-      "title": "Lease health",
+      "title": "Speed gate for chat (slower workers only when no capable one is online)",
       "type": "row",
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
         "y": 70
+      },
+      "id": 39
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Chat jobs assigned to a worker whose measured speed does not finish their max_tokens inside the base lease, because no capable worker for the model was online. Without such a worker the request would be refused as no_eligible_worker.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_size_bucket) (rate(horde_text_gate_shadow_assignments{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat=\"true\"}[1h])) * 3600",
+          "refId": "A",
+          "legendFormat": "{{horde_size_bucket}}"
+        },
+        {
+          "expr": "(sum(rate(horde_text_gate_shadow_assignments{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat=\"true\"}[1h])) or on() vector(0)) * 3600",
+          "refId": "B",
+          "legendFormat": "all sizes"
+        }
+      ],
+      "title": "Over-capacity chat assignments per hour, by size",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 71
+      },
+      "id": 40
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "How over-capacity chat jobs ended over the range: completed, faulted or aborted on a lapsed lease, split by whether the worker's owner is trusted.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "basic",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "valueMode": "color"
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_outcome, horde_worker_trusted) (increase(horde_text_gate_shadow_outcomes{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat=\"true\"}[$__range]))",
+          "refId": "A",
+          "legendFormat": "{{horde_outcome}} trusted={{horde_worker_trusted}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Over-capacity chat outcomes, by trust",
+      "type": "bargauge",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 71
+      },
+      "id": 41
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Over-capacity chat assignments over all chat assignments, 1-hour window.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percentunit",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "(sum(rate(horde_text_gate_shadow_assignments{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat=\"true\"}[1h])) or vector(0)) / clamp_min(sum(rate(horde_text_queue_wait_seconds_count{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat=\"true\"}[1h])), 1e-9)",
+          "refId": "A",
+          "legendFormat": "over capacity"
+        }
+      ],
+      "title": "Over-capacity share of chat assignments",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 71
+      },
+      "id": 42
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "6-hour windows. Over-capacity chat jobs aborted on a lapsed lease over all such jobs that ended, against stale aborts over assignments for all chat jobs. A job that does not post progress keeps the base lease of 150 s.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percentunit",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "(sum(increase(horde_text_gate_shadow_outcomes{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat=\"true\", horde_outcome=\"aborted\"}[6h])) or vector(0)) / clamp_min(sum(increase(horde_text_gate_shadow_outcomes{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat=\"true\"}[6h])), 1)",
+          "refId": "A",
+          "legendFormat": "over-capacity chat"
+        },
+        {
+          "expr": "(sum(increase(horde_text_stale_aborts{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat=\"true\"}[6h])) or vector(0)) / clamp_min(sum(increase(horde_text_queue_wait_seconds_count{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat=\"true\"}[6h])), 1)",
+          "refId": "B",
+          "legendFormat": "all chat"
+        }
+      ],
+      "title": "Abort share: over-capacity chat against all chat",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 79
+      },
+      "id": 43
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Pop to submit time of over-capacity chat jobs that completed, by size, 1-hour window. The base lease is 150 s; progress posts extend it up to the trust cap.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, horde_size_bucket) (rate(horde_text_gate_shadow_service_seconds_bucket{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat=\"true\"}[1h])))",
+          "refId": "A",
+          "legendFormat": "p95 {{horde_size_bucket}}"
+        },
+        {
+          "expr": "histogram_quantile(0.5, sum by (le, horde_size_bucket) (rate(horde_text_gate_shadow_service_seconds_bucket{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat=\"true\"}[1h])))",
+          "refId": "B",
+          "legendFormat": "p50 {{horde_size_bucket}}"
+        }
+      ],
+      "title": "Service time of completed over-capacity chat jobs, p50 / p95",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 79
+      },
+      "id": 44
+    },
+    {
+      "collapsed": false,
+      "panels": [],
+      "title": "Lease health",
+      "type": "row",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 87
       },
       "id": 33
     },
@@ -1941,7 +2266,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 71
+        "y": 88
       },
       "id": 34
     },
@@ -2001,7 +2326,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 71
+        "y": 88
       },
       "id": 35
     },
@@ -2061,7 +2386,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 71
+        "y": 88
       },
       "id": 36
     },
@@ -2121,7 +2446,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 79
+        "y": 96
       },
       "id": 37
     },
@@ -2181,7 +2506,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 79
+        "y": 96
       },
       "id": 38
     }
