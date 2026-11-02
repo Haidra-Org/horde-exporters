@@ -132,21 +132,29 @@
         "type": "prometheus",
         "uid": "mimir-telemetry"
       },
-      "description": "Chat requests that took an in-flight slot over the dashboard range. Source: horde.oai.requests.admitted.",
+      "description": "Served requests divided by the requests the front could have served: served, capacity and service_fault. Unservable requests, client errors, the per-address cap, client disconnects and unclassified codes are not in it. Read from the horde.outcome_class label on horde.oai.request.duration (admitted requests) and horde.oai.requests.refused (refused before admission); releases before the label read no data.",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
-          "unit": "short",
-          "decimals": 0,
-          "noValue": "0",
+          "unit": "percentunit",
+          "decimals": 1,
+          "noValue": "No data",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "text",
+                "color": "red",
                 "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.6
+              },
+              {
+                "color": "green",
+                "value": 0.8
               }
             ]
           }
@@ -168,17 +176,17 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(horde_oai_requests_admitted{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[$__range]))",
+          "expr": "((sum(max_over_time(horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"served\"}[$__range]) - horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"served\"} offset $__range or max_over_time(horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"served\"}[$__range])) or vector(0)) + (sum(max_over_time(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"served\"}[$__range]) - horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"served\"} offset $__range or max_over_time(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"served\"}[$__range])) or vector(0))) / (((sum(max_over_time(horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"served|capacity|service_fault\"}[$__range]) - horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"served|capacity|service_fault\"} offset $__range or max_over_time(horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"served|capacity|service_fault\"}[$__range])) or vector(0)) + (sum(max_over_time(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"served|capacity|service_fault\"}[$__range]) - horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"served|capacity|service_fault\"} offset $__range or max_over_time(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"served|capacity|service_fault\"}[$__range])) or vector(0))) > 0)",
           "refId": "A",
           "instant": true,
           "range": false
         }
       ],
-      "title": "Admitted",
+      "title": "Served of servable",
       "type": "stat",
       "gridPos": {
         "h": 4,
-        "w": 4,
+        "w": 3,
         "x": 0,
         "y": 1
       },
@@ -189,7 +197,7 @@
         "type": "prometheus",
         "uid": "mimir-telemetry"
       },
-      "description": "Completions delivered to the client over the range. Source: horde.oai.completions.",
+      "description": "Requests whose completion was delivered (class served). Read from the horde.outcome_class label on horde.oai.request.duration (admitted requests) and horde.oai.requests.refused (refused before admission); releases before the label read no data.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -225,7 +233,7 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(horde_oai_completions{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[$__range]))",
+          "expr": "(sum(max_over_time(horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"served\"}[$__range]) - horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"served\"} offset $__range or max_over_time(horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"served\"}[$__range])) or vector(0)) + (sum(max_over_time(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"served\"}[$__range]) - horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"served\"} offset $__range or max_over_time(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"served\"}[$__range])) or vector(0))",
           "refId": "A",
           "instant": true,
           "range": false
@@ -235,8 +243,8 @@
       "type": "stat",
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 4,
+        "w": 3,
+        "x": 3,
         "y": 1
       },
       "id": 3
@@ -246,21 +254,25 @@
         "type": "prometheus",
         "uid": "mimir-telemetry"
       },
-      "description": "Completions divided by admitted requests over the range. Client disconnects, timeouts, horde refusals and faults all lower it.",
+      "description": "Requests the Horde, a worker or the front failed: an unreachable or unparsable Horde, a faulted or empty generation, a relayed stream that diverged. Expected 0. Read from the horde.outcome_class label on horde.oai.request.duration (admitted requests) and horde.oai.requests.refused (refused before admission); releases before the label read no data.",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
-          "unit": "percentunit",
-          "decimals": 1,
+          "unit": "short",
+          "decimals": 0,
           "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "text",
+                "color": "green",
                 "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
               }
             ]
           }
@@ -282,18 +294,18 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(horde_oai_completions{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[$__range])) / clamp_min(sum(increase(horde_oai_requests_admitted{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[$__range])), 1)",
+          "expr": "(sum(max_over_time(horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"service_fault\"}[$__range]) - horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"service_fault\"} offset $__range or max_over_time(horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"service_fault\"}[$__range])) or vector(0)) + (sum(max_over_time(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"service_fault\"}[$__range]) - horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"service_fault\"} offset $__range or max_over_time(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"service_fault\"}[$__range])) or vector(0))",
           "refId": "A",
           "instant": true,
           "range": false
         }
       ],
-      "title": "Delivered share of admitted",
+      "title": "Service faults",
       "type": "stat",
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 8,
+        "w": 3,
+        "x": 6,
         "y": 1
       },
       "id": 4
@@ -303,7 +315,7 @@
         "type": "prometheus",
         "uid": "mimir-telemetry"
       },
-      "description": "Requests refused before taking an in-flight slot: body size or read timeout, validation, authorization, front at capacity.",
+      "description": "Servable requests no worker served in time, or that the queue could not take: no_eligible_worker after the fail-fast grace, ChatRequestTimeout, queue_unavailable. Read from the horde.outcome_class label on horde.oai.request.duration (admitted requests) and horde.oai.requests.refused (refused before admission); releases before the label read no data.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -339,18 +351,18 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[$__range]))",
+          "expr": "(sum(max_over_time(horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"capacity\"}[$__range]) - horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"capacity\"} offset $__range or max_over_time(horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"capacity\"}[$__range])) or vector(0)) + (sum(max_over_time(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"capacity\"}[$__range]) - horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"capacity\"} offset $__range or max_over_time(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"capacity\"}[$__range])) or vector(0))",
           "refId": "A",
           "instant": true,
           "range": false
         }
       ],
-      "title": "Refused before admission",
+      "title": "Capacity misses",
       "type": "stat",
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 12,
+        "w": 3,
+        "x": 9,
         "y": 1
       },
       "id": 5
@@ -360,7 +372,7 @@
         "type": "prometheus",
         "uid": "mimir-telemetry"
       },
-      "description": "Admitted requests answered with an error status before any header: horde refusals at submit, timeouts, no eligible worker, faults, horde unavailable.",
+      "description": "Requests no online worker could serve when they arrived: an unknown model, a model without an online chat worker, or a feature or limit no online worker declares. Demand for models, not a service failure; a volunteer coming online changes it. Read from the horde.outcome_class label on horde.oai.request.duration (admitted requests) and horde.oai.requests.refused (refused before admission); releases before the label read no data.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -396,18 +408,18 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(horde_oai_requests_errors{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[$__range]))",
+          "expr": "(sum(max_over_time(horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"unservable\"}[$__range]) - horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"unservable\"} offset $__range or max_over_time(horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"unservable\"}[$__range])) or vector(0)) + (sum(max_over_time(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"unservable\"}[$__range]) - horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"unservable\"} offset $__range or max_over_time(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"unservable\"}[$__range])) or vector(0))",
           "refId": "A",
           "instant": true,
           "range": false
         }
       ],
-      "title": "Errors after admission",
+      "title": "Unservable demand",
       "type": "stat",
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 16,
+        "w": 3,
+        "x": 12,
         "y": 1
       },
       "id": 6
@@ -417,7 +429,7 @@
         "type": "prometheus",
         "uid": "mimir-telemetry"
       },
-      "description": "Streamed requests whose 200 headers were sent and which then ended in an SSE error event.",
+      "description": "Requests refused for the request itself: an invalid key or header, an unsupported parameter, a body too large or too slow, a rate limit, a kudos limit, a conflict. Read from the horde.outcome_class label on horde.oai.request.duration (admitted requests) and horde.oai.requests.refused (refused before admission); releases before the label read no data.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -453,21 +465,196 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(horde_oai_stream_failures{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\"}[$__range]))",
+          "expr": "(sum(max_over_time(horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"client_error\"}[$__range]) - horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"client_error\"} offset $__range or max_over_time(horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"client_error\"}[$__range])) or vector(0)) + (sum(max_over_time(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"client_error\"}[$__range]) - horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"client_error\"} offset $__range or max_over_time(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"client_error\"}[$__range])) or vector(0))",
           "refId": "A",
           "instant": true,
           "range": false
         }
       ],
-      "title": "Stream failures after headers",
+      "title": "Client errors",
       "type": "stat",
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 20,
+        "w": 3,
+        "x": 15,
         "y": 1
       },
       "id": 7
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Requests refused because the client's address, or the front in total, held its maximum of open requests (FrontAtCapacity). Rises with client concurrency and with how long admitted requests wait. Read from the horde.outcome_class label on horde.oai.request.duration (admitted requests) and horde.oai.requests.refused (refused before admission); releases before the label read no data.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "expr": "(sum(max_over_time(horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"front_capacity\"}[$__range]) - horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"front_capacity\"} offset $__range or max_over_time(horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"front_capacity\"}[$__range])) or vector(0)) + (sum(max_over_time(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"front_capacity\"}[$__range]) - horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"front_capacity\"} offset $__range or max_over_time(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"front_capacity\"}[$__range])) or vector(0))",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Per-address cap",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 2,
+        "x": 18,
+        "y": 1
+      },
+      "id": 85
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Requests whose client disconnected before delivery, before or after admission (client_closed). Read from the horde.outcome_class label on horde.oai.request.duration (admitted requests) and horde.oai.requests.refused (refused before admission); releases before the label read no data.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "expr": "(sum(max_over_time(horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"client_gave_up\"}[$__range]) - horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"client_gave_up\"} offset $__range or max_over_time(horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"client_gave_up\"}[$__range])) or vector(0)) + (sum(max_over_time(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"client_gave_up\"}[$__range]) - horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"client_gave_up\"} offset $__range or max_over_time(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"client_gave_up\"}[$__range])) or vector(0))",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Client gave up",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 2,
+        "x": 20,
+        "y": 1
+      },
+      "id": 86
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Requests whose code has no class, such as a new Horde return code the front passes through. Expected 0; a count means a code to add to the class table. Read from the horde.outcome_class label on horde.oai.request.duration (admitted requests) and horde.oai.requests.refused (refused before admission); releases before the label read no data.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "expr": "(sum(max_over_time(horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"unclassified\"}[$__range]) - horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"unclassified\"} offset $__range or max_over_time(horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"unclassified\"}[$__range])) or vector(0)) + (sum(max_over_time(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"unclassified\"}[$__range]) - horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"unclassified\"} offset $__range or max_over_time(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"unclassified\"}[$__range])) or vector(0))",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Unclassified",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 2,
+        "x": 22,
+        "y": 1
+      },
+      "id": 87
     },
     {
       "datasource": {
