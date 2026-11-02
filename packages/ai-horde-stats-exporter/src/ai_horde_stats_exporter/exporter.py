@@ -42,6 +42,9 @@ from .specs import (
 
 logger = logging.getLogger(__name__)
 
+SeriesKey = tuple[str, tuple[tuple[str, str], ...]]
+"""A labelled series: the gauge name and its label pairs, sorted by label name."""
+
 
 class HordeExporter:
     """Main exporter class."""
@@ -52,6 +55,13 @@ class HordeExporter:
         self.session = requests.Session()
         self.session.headers.update({"User-Agent": self.config.api.user_agent})
         self.rate_limit = RateLimitState()
+        # The labelled series each collection pass wrote last time, keyed by the pass's
+        # endpoint. Series a pass's next successful run does not write again are
+        # removed: the entity left the API response, or the value is a zero the
+        # zero-omission settings leave out. prometheus_client keeps a labelled series
+        # until it is removed, so without this a vanished model, an offline worker or
+        # an emptied queue would keep exporting its last value.
+        self._series_by_pass: dict[str, set[SeriesKey]] = {}
 
     # --- networking ---
 
@@ -143,6 +153,26 @@ class HordeExporter:
         nullable_fields = getattr(self.config.zero_omission, metric_type, [])
         return field_name not in nullable_fields
 
+    # --- series lifecycle ---
+
+    def _set_series(
+        self, written: set[SeriesKey], name: str, labels: dict[str, str], value: float
+    ):
+        """Set one labelled series and record it as written by the current pass."""
+        self.metrics.gauge(name).labels(**labels).set(value)
+        written.add((name, tuple(sorted(labels.items()))))
+
+    def _retire_unwritten(self, pass_key: str, written: set[SeriesKey]):
+        """Remove the series pass_key wrote on its previous run but not on this one.
+
+        Called only after a successful pass, so a failed fetch keeps the last values
+        (and horde_exporter_scrape_success reports the failure).
+        """
+        previous = self._series_by_pass.get(pass_key, set())
+        for name, label_pairs in previous - written:
+            self.metrics.remove_series(name, dict(label_pairs))
+        self._series_by_pass[pass_key] = written
+
     # --- generic helpers ---
 
     @staticmethod
@@ -159,10 +189,13 @@ class HordeExporter:
         labels: dict[str, str],
         zero_omit_category: str,
         entity_type: HordeType | None = None,
+        written: set[SeriesKey] | None = None,
     ):
         """Emit per-entity Prometheus gauges from a model's attributes.
 
-        bool fields are automatically converted to 0/1.
+        bool fields are automatically converted to 0/1. A labelled series is recorded
+        in `written`; a zero the zero-omission settings leave out is not, so the pass
+        removes it.
         """
         for spec in specs:
             if spec.condition and spec.condition != entity_type:
@@ -174,17 +207,19 @@ class HordeExporter:
             if not self.should_write_metric(zero_omit_category, spec.attr, value):
                 continue
 
-            g = self.metrics.gauge(spec.metric_name)
-            if labels:
-                g.labels(**labels).set(value)
+            if labels and written is not None:
+                self._set_series(written, spec.metric_name, labels, value)
+            elif labels:
+                self.metrics.gauge(spec.metric_name).labels(**labels).set(value)
             else:
-                g.set(value)
+                self.metrics.gauge(spec.metric_name).set(value)
 
     def _emit_aggregates(
         self,
         specs: list[AggregateSpec],
         entities: Sequence[ApiModel],
         type_label: HordeType,
+        written: set[SeriesKey],
     ):
         """Compute and emit aggregate metrics across a list of entities."""
         for spec in specs:
@@ -210,9 +245,9 @@ class HordeExporter:
                         sum(1 for e in entities if self._resolve_attr(e, spec.attr))
                     )
 
-            self.metrics.gauge(spec.metric_name).labels(type=type_label).set(value)
+            self._set_series(written, spec.metric_name, {"type": type_label}, value)
 
-    def _emit_performance(self, perf: PerformanceStatus):
+    def _emit_performance(self, perf: PerformanceStatus, written: set[SeriesKey]):
         """Emit all performance metrics from spec tables."""
         for spec in PERFORMANCE_FIELDS:
             value = float(getattr(perf, spec.attr))
@@ -220,15 +255,17 @@ class HordeExporter:
                 "performance", spec.zero_omit_key, value
             ):
                 continue
-            self.metrics.gauge(spec.metric_name).labels(type=spec.type_label).set(value)
+            self._set_series(
+                written, spec.metric_name, {"type": spec.type_label}, value
+            )
 
         for spec in PERFORMANCE_SYNTHESIZED:
             numerator = float(getattr(perf, spec.numerator_attr))
             denominator = float(getattr(perf, spec.denominator_attr))
             if denominator > 0:
                 value = numerator / denominator * spec.multiplier
-                self.metrics.gauge(spec.metric_name).labels(type=spec.type_label).set(
-                    value
+                self._set_series(
+                    written, spec.metric_name, {"type": spec.type_label}, value
                 )
 
     def _emit_stats_totals(self, totals_spec: StatsTotalsSpec):
@@ -255,11 +292,16 @@ class HordeExporter:
         start_time = time.time()
         try:
             stats = StatsModelsResponse(**self.fetch_api(endpoint))
+            written: set[SeriesKey] = set()
             for period_name in model_spec.periods:
                 for model_name, count in getattr(stats, period_name).items():
-                    self.metrics.gauge(model_spec.metric_name).labels(
-                        model=model_name, period=period_name
-                    ).set(count)
+                    self._set_series(
+                        written,
+                        model_spec.metric_name,
+                        {"model": model_name, "period": period_name},
+                        count,
+                    )
+            self._retire_unwritten(endpoint, written)
             self._record_scrape_success(endpoint, start_time)
         except Exception as e:
             logger.error(f"Error collecting stats models ({endpoint}): {e}")
@@ -275,12 +317,16 @@ class HordeExporter:
             models = [HordeModelStatus(**m) for m in self.fetch_api(endpoint)]
             logger.info(f"Fetched {len(models)} {model_type} models")
 
-            self._emit_aggregates(MODEL_AGGREGATES, models, model_type)
+            written: set[SeriesKey] = set()
+            self._emit_aggregates(MODEL_AGGREGATES, models, model_type, written)
 
             for model in models:
                 labels = {"model": model.name, "type": model_type}
-                self._emit_fields(MODEL_FIELDS, model, labels, "models", model_type)
+                self._emit_fields(
+                    MODEL_FIELDS, model, labels, "models", model_type, written
+                )
 
+            self._retire_unwritten(endpoint, written)
             logger.info(f"Collected metrics for {len(models)} {model_type} models")
             self._record_scrape_success(endpoint, start_time)
 
@@ -300,17 +346,31 @@ class HordeExporter:
                 f"(out of {len(all_workers)} total)"
             )
 
-            self._emit_aggregates(WORKER_AGGREGATES, online_workers, worker_type)
+            written: set[SeriesKey] = set()
+            self._emit_aggregates(
+                WORKER_AGGREGATES, online_workers, worker_type, written
+            )
 
+            # Only online workers are written, so a worker that goes offline is
+            # removed, and a bridge_agent change replaces its horde_worker_info series.
             for worker in online_workers:
                 labels = {"worker": worker.name, "type": worker_type}
-                self._emit_fields(WORKER_FIELDS, worker, labels, "workers", worker_type)
+                self._emit_fields(
+                    WORKER_FIELDS, worker, labels, "workers", worker_type, written
+                )
 
-                self.metrics.gauge("horde_worker_info").labels(
-                    worker=worker.name,
-                    type=worker_type,
-                    bridge_agent=worker.bridge_agent,
-                ).set(1)
+                self._set_series(
+                    written,
+                    "horde_worker_info",
+                    {
+                        "worker": worker.name,
+                        "type": worker_type,
+                        "bridge_agent": worker.bridge_agent,
+                    },
+                    1,
+                )
+
+            self._retire_unwritten(endpoint, written)
 
             logger.info(
                 f"Collected metrics for {len(online_workers)} {worker_type} workers"
@@ -328,7 +388,9 @@ class HordeExporter:
         try:
             perf = PerformanceStatus(**self.fetch_api(endpoint))
             logger.info("Fetched performance metrics")
-            self._emit_performance(perf)
+            written: set[SeriesKey] = set()
+            self._emit_performance(perf, written)
+            self._retire_unwritten(endpoint, written)
             self._record_scrape_success(endpoint, start_time)
 
         except Exception as e:
@@ -377,8 +439,12 @@ class HordeExporter:
             teams = [HordeTeam(**t) for t in self.fetch_api(endpoint)]
             self.metrics.gauge("horde_teams_total").set(len(teams))
 
+            written: set[SeriesKey] = set()
             for team in teams:
-                self._emit_fields(TEAM_FIELDS, team, {"team": team.name}, "teams")
+                self._emit_fields(
+                    TEAM_FIELDS, team, {"team": team.name}, "teams", written=written
+                )
+            self._retire_unwritten(endpoint, written)
 
             logger.info(f"Collected metrics for {len(teams)} teams")
             self._record_scrape_success(endpoint, start_time)

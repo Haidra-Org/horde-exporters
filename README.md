@@ -54,6 +54,12 @@ The exporter scrapes the following AI-Horde API endpoints:
 
 See the [AI-Horde API docs](https://aihorde.net/api/) for detailed information.
 
+Per-entity series (`model`, `worker`, `team` labels) mirror the latest successful response
+of their endpoint: a model or team the response no longer lists, or a worker that is no
+longer online, stops being exported, as does a zero the `zero_omission` settings leave out
+(for example a model's `horde_model_queued` once its queue is empty). When a fetch fails,
+the last values stay and `horde_exporter_scrape_success` for that endpoint reads 0.
+
 ## Grafana Dashboards
 
 Pre-built Grafana dashboards are bundled with the package and also available in `packages/ai-horde-stats-exporter/src/ai_horde_stats_exporter/dashboards/`. They require a Prometheus datasource pointed at this exporter (default port `9150`).

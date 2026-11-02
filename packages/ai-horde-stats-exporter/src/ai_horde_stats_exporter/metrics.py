@@ -25,6 +25,7 @@ class HordeMetrics:
 
     def __init__(self):
         self._gauges: dict[str, Gauge] = {}
+        self._label_names: dict[str, tuple[str, ...]] = {}
         self._counters: dict[str, Counter] = {}
 
         # Per-entity metrics from spec tables
@@ -117,6 +118,7 @@ class HordeMetrics:
     ) -> Gauge:
         g = Gauge(name, help_text, labels or [])
         self._gauges[name] = g
+        self._label_names[name] = tuple(labels or ())
         return g
 
     def _add_counter(
@@ -128,6 +130,18 @@ class HordeMetrics:
 
     def gauge(self, name: str) -> Gauge:
         return self._gauges[name]
+
+    def remove_series(self, name: str, labels: dict[str, str]) -> None:
+        """Remove one labelled series of gauge `name`, so it is no longer exposed.
+
+        prometheus_client's Gauge.remove takes the label values in registration order;
+        this takes them by name. A series that is not present is ignored.
+        """
+        values = [labels[label_name] for label_name in self._label_names[name]]
+        try:
+            self._gauges[name].remove(*values)
+        except KeyError:
+            pass
 
     def counter(self, name: str) -> Counter:
         return self._counters[name]
