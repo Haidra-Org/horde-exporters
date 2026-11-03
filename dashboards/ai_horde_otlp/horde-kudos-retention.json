@@ -1,0 +1,2113 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      },
+      {
+        "horde_overlay": "alerts-infra",
+        "name": "Infra alerts",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir-infra"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "#d03b3b",
+        "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\", alertname!~\"Watchdog|HostSystemdServiceFailed|HostOutOfInodes|HostSwapFillingUp|HostDiskWillFillIn24h|HostDiskUsageHigh|WireGuardTextfileStale|PrometheusTargetsMissing|HordeRequestObservationDataReady|HordeRequestEstimatorPromotionApproved|HordeRequestUnstartedExpiryForecastValidationReady\"}",
+        "step": "30s",
+        "titleFormat": "{{alertname}}",
+        "textFormat": "{{severity}} {{instance}}{{host}}{{peer}}{{proxy}}{{name}}",
+        "useValueForTime": false
+      },
+      {
+        "horde_overlay": "alerts-telemetry",
+        "name": "App alerts (telemetry)",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir-telemetry"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "#ec835a",
+        "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\", alertname!~\"Watchdog|HostSystemdServiceFailed|HostOutOfInodes|HostSwapFillingUp|HostDiskWillFillIn24h|HostDiskUsageHigh|WireGuardTextfileStale|PrometheusTargetsMissing|HordeRequestObservationDataReady|HordeRequestEstimatorPromotionApproved|HordeRequestUnstartedExpiryForecastValidationReady\"}",
+        "step": "30s",
+        "titleFormat": "{{alertname}}",
+        "textFormat": "{{severity}} {{horde_host}}{{horde_job_name}}{{deployment_environment_name}}",
+        "useValueForTime": false
+      },
+      {
+        "horde_overlay": "alerts-app",
+        "name": "App alerts (exporter)",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir-app"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "#e0b400",
+        "expr": "ALERTS{alertstate=\"firing\", severity=~\"critical|warning\", alertname!~\"Watchdog|HostSystemdServiceFailed|HostOutOfInodes|HostSwapFillingUp|HostDiskWillFillIn24h|HostDiskUsageHigh|WireGuardTextfileStale|PrometheusTargetsMissing|HordeRequestObservationDataReady|HordeRequestEstimatorPromotionApproved|HordeRequestUnstartedExpiryForecastValidationReady\"}",
+        "step": "30s",
+        "titleFormat": "{{alertname}}",
+        "textFormat": "{{severity}}",
+        "useValueForTime": false
+      },
+      {
+        "horde_overlay": "app-restarts",
+        "name": "App restarts",
+        "datasource": {
+          "type": "loki",
+          "uid": "loki-app"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "#8ab8ff",
+        "expr": "{app=\"ai-horde\", component=\"backend\"} |= \"INIT\" |= \"Horde Database\" | line_format \"{{.instance}} {{.container}} started\""
+      },
+      {
+        "horde_overlay": "operator",
+        "name": "Operator notes & deploys",
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "#b877d9",
+        "target": {
+          "type": "tags",
+          "tags": [
+            "ai-horde"
+          ],
+          "matchAny": true,
+          "limit": 200
+        }
+      }
+    ]
+  },
+  "description": "AI Horde kudos event retention: progress of partitions through archive and drop, archive size against its budget, blocked units and failures, and host and database context for the export and drop work. Application panels are scoped by environment. Datasources: app OTLP metrics on mimir-telemetry, node and postgres exporters on mimir-infra, and app logs on loki-app.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [
+        "horde"
+      ],
+      "targetBlank": false,
+      "title": "Horde Dashboards",
+      "type": "dashboards"
+    }
+  ],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 100,
+      "title": "Progress",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Age past its retention window of the oldest event partition that is still online, per dataset. Zero means every partition past the window has been archived and dropped. A large value is expected while a backlog is being worked through and should fall steadily as the transition panels below show steps completing. Amber at one week, red at two weeks.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "s",
+          "noValue": "No data",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 604800
+              },
+              {
+                "color": "red",
+                "value": 1209600
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "id": 1,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "expr": "max by (horde_kudos_dataset) (horde_kudos_retention_oldest_eligible_age{deployment_environment_name=~\"$environment\", horde_host=~\"$horde_host\"})",
+          "legendFormat": "{{horde_kudos_dataset}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Oldest Eligible Age",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Retention units currently blocked, summed over every block reason. A blocked unit stops its dataset from advancing until an operator resolves it. The Blocks and Failures row splits this by reason.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "short",
+          "noValue": "No data",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 6,
+        "y": 1
+      },
+      "id": 2,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "expr": "sum(max by (horde_kudos_block_reason) (horde_kudos_retention_blocked_units{deployment_environment_name=~\"$environment\", horde_host=~\"$horde_host\"}))",
+          "legendFormat": "blocked",
+          "refId": "A"
+        }
+      ],
+      "title": "Blocked Units",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Whether every kudos event table has a partition covering the current time and the next period. Missing coverage makes event inserts fail, so this should always read Covered.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "short",
+          "noValue": "No data",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Missing",
+                  "color": "red",
+                  "index": 0
+                },
+                "1": {
+                  "text": "Covered",
+                  "color": "green",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 10,
+        "y": 1
+      },
+      "id": 3,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "expr": "min(horde_kudos_retention_partition_coverage{deployment_environment_name=~\"$environment\", horde_host=~\"$horde_host\"})",
+          "legendFormat": "coverage",
+          "refId": "A"
+        }
+      ],
+      "title": "Partition Coverage",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Retention ticks recorded per minute across the selected hosts. Each tick records exactly one outcome. Zero means the tick is not running anywhere, which also stops partition creation.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "short",
+          "noValue": "No data",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 0.1
+              }
+            ]
+          },
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 14,
+        "y": 1
+      },
+      "id": 4,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "expr": "60 * sum(rate(horde_kudos_retention_steps{deployment_environment_name=~\"$environment\", horde_host=~\"$horde_host\"}[$__rate_interval]))",
+          "legendFormat": "ticks/min",
+          "refId": "A"
+        }
+      ],
+      "title": "Ticks per Minute",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Tick outcomes recorded in the last 15 minutes with their dataset and step. The counter does not record order, so this lists every recent outcome with its count. A run of stepped rows means a backlog is advancing, idle means there is nothing to do, and blocked, failed, deferred or refused rows explain a stall.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "ticks"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      },
+      "id": 5,
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "fields": ""
+        },
+        "sortBy": [
+          {
+            "displayName": "ticks",
+            "desc": true
+          }
+        ]
+      },
+      "targets": [
+        {
+          "expr": "sort_desc(round(sum by (horde_kudos_retention_outcome, horde_kudos_dataset, horde_kudos_retention_step) (increase(horde_kudos_retention_steps{deployment_environment_name=~\"$environment\", horde_host=~\"$horde_host\"}[15m]))) > 0)",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "horde_kudos_retention_outcome": "outcome",
+              "horde_kudos_dataset": "dataset",
+              "horde_kudos_retention_step": "step"
+            },
+            "indexByName": {
+              "horde_kudos_retention_outcome": 0,
+              "horde_kudos_dataset": 1,
+              "horde_kudos_retention_step": 2,
+              "Value": 3
+            }
+          }
+        }
+      ],
+      "title": "Recent Tick Outcomes (15m)",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Units that moved to their next state in each 10 minute window, by step. During a catch-up this is the rate of progress. Each tick advances at most one unit, so the total is bounded by the tick rate.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "fillOpacity": 60,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "min": 0,
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 6
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_kudos_retention_step) (increase(horde_kudos_retention_steps{deployment_environment_name=~\"$environment\", horde_host=~\"$horde_host\", horde_kudos_retention_outcome=\"stepped\"}[10m]))",
+          "legendFormat": "{{horde_kudos_retention_step}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Step Transitions per 10m by Step",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Ticks in each 10 minute window that did not advance a unit, by outcome and dataset. Idle and stepped ticks are left out. Deferred ticks postponed a partition drop because a long transaction holds a lock on it. Skipped_lock ticks found another process holding the retention lock. Refused ticks saw a reference time later than the real clock. Blocked and failed ticks need attention.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "fillOpacity": 60,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "min": 0,
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (horde_kudos_retention_outcome, horde_kudos_dataset) (increase(horde_kudos_retention_steps{deployment_environment_name=~\"$environment\", horde_host=~\"$horde_host\", horde_kudos_retention_outcome!~\"stepped|idle\"}[10m])) > 0",
+          "legendFormat": "{{horde_kudos_retention_outcome}} {{horde_kudos_dataset}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Non-progress Outcomes per 10m",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "id": 114,
+      "title": "Archive",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Bytes held in the archive bucket, stacked by tier, with the configured budget as a dashed line. Currency objects are kept for good. Statistics objects are evicted oldest first once the total would exceed the budget.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "budget"
+            },
+            "properties": [
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "group": "B",
+                  "mode": "none"
+                }
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "dash": [
+                    10,
+                    10
+                  ],
+                  "fill": "dash"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 10,
+        "x": 0,
+        "y": 15
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "max by (horde_kudos_archive_tier) (horde_kudos_archive_tier_bytes{deployment_environment_name=~\"$environment\", horde_host=~\"$horde_host\"})",
+          "legendFormat": "{{horde_kudos_archive_tier}}",
+          "refId": "A"
+        },
+        {
+          "expr": "horde:kudos_archive_budget_bytes:current{deployment_environment_name=~\"$environment\"}",
+          "legendFormat": "budget",
+          "refId": "B"
+        }
+      ],
+      "title": "Archive Size by Tier",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Archive bytes as a share of the configured budget. Amber at 75 percent, red at 90 percent. Above the budget the statistics tier is evicted to make room.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "percent",
+          "noValue": "No data",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 75
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 4,
+        "x": 10,
+        "y": 15
+      },
+      "id": 9,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "area"
+      },
+      "targets": [
+        {
+          "expr": "100 * horde:kudos_archive_bytes:current{deployment_environment_name=~\"$environment\"} / on (deployment_environment_name) horde:kudos_archive_budget_bytes:current{deployment_environment_name=~\"$environment\"}",
+          "legendFormat": "used",
+          "refId": "A"
+        }
+      ],
+      "title": "Archive Budget Used",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Archive size projected 90 days ahead from a linear fit over the previous 14 days, against the budget. A catch-up uploads months of history in days, so the projection overstates growth during one and for 14 days after it. The projection needs 14 days of history before it is meaningful.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "budget"
+            },
+            "properties": [
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "group": "B",
+                  "mode": "none"
+                }
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "dash": [
+                    10,
+                    10
+                  ],
+                  "fill": "dash"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 10,
+        "x": 14,
+        "y": 15
+      },
+      "id": 10,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "predict_linear(horde:kudos_archive_bytes:current{deployment_environment_name=~\"$environment\"}[14d], 90 * 86400)",
+          "legendFormat": "projected",
+          "refId": "A"
+        },
+        {
+          "expr": "horde:kudos_archive_bytes:current{deployment_environment_name=~\"$environment\"}",
+          "legendFormat": "current",
+          "refId": "B"
+        },
+        {
+          "expr": "horde:kudos_archive_budget_bytes:current{deployment_environment_name=~\"$environment\"}",
+          "legendFormat": "budget",
+          "refId": "C"
+        }
+      ],
+      "title": "Projected Archive Size in 90 Days",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Failed statistics dump attempts per hour, by dataset. A failed dump is retried on every tick for a limited window, after which the unit is blocked with the reason dump retries exhausted.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 23
+      },
+      "id": 11,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "3600 * sum by (horde_kudos_dataset) (rate(horde_kudos_retention_dump_failures{deployment_environment_name=~\"$environment\", horde_host=~\"$horde_host\"}[$__rate_interval]))",
+          "legendFormat": "{{horde_kudos_dataset}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Statistics Dump Failures per Hour",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-app"
+      },
+      "description": "Statistics objects removed from the archive to stay within the budget, summed from the eviction log lines in each hour. Evicted objects are gone for good, so any eviction is worth checking against the budget panels.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "fillOpacity": 60,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "min": 0,
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 23
+      },
+      "id": 12,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki-app"
+          },
+          "refId": "A",
+          "queryType": "range",
+          "range": true,
+          "instant": false,
+          "legendFormat": "evicted",
+          "expr": "sum(sum_over_time({app=\"ai-horde\"} |= \"Kudos archive evicted\" | regexp \"Kudos archive evicted (?P<objects>[0-9]+) statistic objects\" | unwrap objects [1h]))"
+        }
+      ],
+      "title": "Evicted Statistics Objects per Hour",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 30
+      },
+      "id": 130,
+      "title": "Blocks and Failures",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Blocked retention units by reason. Each reason is exported at zero when no unit has it. A unit stays blocked until an operator resets or waives it, so a flat non-zero line means it is still waiting.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "min": 0,
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 0,
+        "y": 31
+      },
+      "id": 13,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "max by (horde_kudos_block_reason) (horde_kudos_retention_blocked_units{deployment_environment_name=~\"$environment\", horde_host=~\"$horde_host\"})",
+          "legendFormat": "{{horde_kudos_block_reason}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Blocked Units by Reason",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-app"
+      },
+      "description": "Log lines written when a unit is blocked, when a statistics dump fails, and when a step fails. Each line includes the dataset, the unit range and the detail behind the block or failure.",
+      "gridPos": {
+        "h": 9,
+        "w": 16,
+        "x": 8,
+        "y": 31
+      },
+      "id": 14,
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending"
+      },
+      "targets": [
+        {
+          "expr": "{app=\"ai-horde\"} |~ \"Kudos retention blocked|Kudos retention dump failed|Kudos retention [a-z]+ step failed\"",
+          "refId": "A"
+        }
+      ],
+      "title": "Retention Blocks and Failures Log",
+      "type": "logs"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 40
+      },
+      "id": 140,
+      "title": "Machine Context",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "description": "Share of CPU time not idle on the host that runs the tick and on the database host. A long export or partition drop shows up here before it shows up as applier lag. Pick the hosts in the Tick host instance and Database host instance variables.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percent",
+          "custom": {
+            "drawStyle": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "orange",
+                  "value": 80
+                },
+                {
+                  "color": "red",
+                  "value": 95
+                }
+              ]
+            },
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "fillOpacity": 60,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 41
+      },
+      "id": 15,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{job=\"node\", mode=\"idle\", instance=~\"$tick_instance\"}[$__rate_interval])))",
+          "legendFormat": "tick {{instance}}",
+          "refId": "A"
+        },
+        {
+          "expr": "100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{job=\"node\", mode=\"idle\", instance=~\"$db_instance\"}[$__rate_interval])))",
+          "legendFormat": "database {{instance}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Host CPU Busy",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "description": "Share of time the busiest disk on each host had requests in flight. Values near 100 percent mean the disk is saturated and every query on that host waits on it. Pick the hosts in the Tick host instance and Database host instance variables.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "percent",
+          "custom": {
+            "drawStyle": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "orange",
+                  "value": 80
+                },
+                {
+                  "color": "red",
+                  "value": 95
+                }
+              ]
+            },
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "fillOpacity": 60,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 41
+      },
+      "id": 16,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "100 * max by (instance) (rate(node_disk_io_time_seconds_total{job=\"node\", instance=~\"$tick_instance\"}[$__rate_interval]))",
+          "legendFormat": "tick {{instance}}",
+          "refId": "A"
+        },
+        {
+          "expr": "100 * max by (instance) (rate(node_disk_io_time_seconds_total{job=\"node\", instance=~\"$db_instance\"}[$__rate_interval]))",
+          "legendFormat": "database {{instance}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Disk I/O Time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "description": "Bytes read and written per second on the database host, summed over its disks. Exporting a partition reads it in full, and dropping one is mostly metadata, so a sustained read plateau during a catch-up is expected. Pick the hosts in the Tick host instance and Database host instance variables.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "Bps",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 41
+      },
+      "id": 17,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (instance) (rate(node_disk_read_bytes_total{job=\"node\", instance=~\"$db_instance\"}[$__rate_interval]))",
+          "legendFormat": "read {{instance}}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (instance) (rate(node_disk_written_bytes_total{job=\"node\", instance=~\"$db_instance\"}[$__rate_interval]))",
+          "legendFormat": "written {{instance}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Database Host Disk Throughput",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "description": "Size of the horde database. Dropping archived partitions should step this down. The space is returned to the filesystem when each partition is dropped, without waiting for a vacuum.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 49
+      },
+      "id": 18,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "max by (instance) (pg_database_size_bytes{job=\"postgres\", datname=\"postgres\"})",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Database Size",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "description": "Bytes per second read from disk into shared buffers (blocks read at the default 8 KiB block size) and bytes per second written to temporary files by sorts and hashes that did not fit in memory. Export queries over large partitions raise both.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "Bps",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 49
+      },
+      "id": 19,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "8192 * sum by (instance) (rate(pg_stat_database_blks_read{job=\"postgres\", datname=\"postgres\"}[$__rate_interval]))",
+          "legendFormat": "blocks read {{instance}}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (instance) (rate(pg_stat_database_temp_bytes{job=\"postgres\", datname=\"postgres\"}[$__rate_interval]))",
+          "legendFormat": "temp spill {{instance}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Database Block Reads and Temp Spill",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "description": "Rows deleted per second in the horde database. Retention drops whole partitions, which does not count as row deletes, so a rise here comes from other work such as key expiry or row-level cleanup.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "min": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 49
+      },
+      "id": 20,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (instance) (rate(pg_stat_database_tup_deleted{job=\"postgres\", datname=\"postgres\"}[$__rate_interval]))",
+          "legendFormat": "{{instance}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Tuples Deleted per Second",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "description": "Deadlocks per 5 minutes in the horde database (bars) and the age of the oldest open transaction (line, right axis). Dropping a partition takes a short exclusive lock on its parent table, so a long transaction can hold it up and queue other writers behind it.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "oldest transaction.*"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "deadlocks.*"
+            },
+            "properties": [
+              {
+                "id": "custom.drawStyle",
+                "value": "bars"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 60
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 56
+      },
+      "id": 21,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (instance) (increase(pg_stat_database_deadlocks{job=\"postgres\", datname=\"postgres\"}[5m]))",
+          "legendFormat": "deadlocks {{instance}}",
+          "refId": "A"
+        },
+        {
+          "expr": "max by (instance) (pg_stat_activity_max_tx_duration{job=\"postgres\", datname=\"postgres\", state=~\"active|idle in transaction.*\"})",
+          "legendFormat": "oldest transaction {{instance}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Deadlocks and Oldest Transaction",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-infra"
+      },
+      "description": "Locks held or awaited in the horde database, by lock mode. A rise in AccessExclusiveLock during a partition drop is expected and should clear within seconds.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "min": 0,
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 56
+      },
+      "id": 22,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (mode) (pg_locks_count{job=\"postgres\", datname=\"postgres\"})",
+          "legendFormat": "{{mode}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Locks by Mode",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Delay since the kudos applier last committed a cycle (left axis) and rows waiting to be applied (right axis). The applier shares the database with retention, so a slow applier during a long export or drop is visible here.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pending rows"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 56
+      },
+      "id": 23,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "horde:kudos_applier_lag:current_seconds{deployment_environment_name=~\"$environment\"}",
+          "legendFormat": "applier lag",
+          "refId": "A"
+        },
+        {
+          "expr": "horde:kudos_pending_rows:current{deployment_environment_name=~\"$environment\"}",
+          "legendFormat": "pending rows",
+          "refId": "B"
+        }
+      ],
+      "title": "Kudos Applier Lag and Pending Rows",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 39,
+  "tags": [
+    "horde",
+    "ai-horde",
+    "kudos",
+    "retention"
+  ],
+  "templating": {
+    "list": [
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir-telemetry"
+        },
+        "definition": "label_values(horde_kudos_retention_steps, deployment_environment_name)",
+        "description": "Scopes every application telemetry panel. PostgreSQL context is the database exporter for the selected cluster.",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Environment",
+        "multi": false,
+        "name": "environment",
+        "options": [],
+        "query": {
+          "query": "label_values(horde_kudos_retention_steps, deployment_environment_name)",
+          "refId": "environment"
+        },
+        "refresh": 1,
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query",
+        "current": {
+          "selected": true,
+          "text": "production",
+          "value": "production"
+        }
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir-telemetry"
+        },
+        "definition": "label_values(horde_kudos_retention_steps{deployment_environment_name=~\"$environment\"}, horde_host)",
+        "description": "Application hosts that have recorded retention ticks. The tick runs on the quorum process, so normally one value is present.",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Tick host",
+        "multi": true,
+        "name": "horde_host",
+        "options": [],
+        "query": {
+          "query": "label_values(horde_kudos_retention_steps{deployment_environment_name=~\"$environment\"}, horde_host)",
+          "refId": "horde_host"
+        },
+        "refresh": 2,
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "allValue": ".*"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir-infra"
+        },
+        "definition": "label_values(node_cpu_seconds_total{job=\"node\"}, instance)",
+        "description": "Node exporter instances for the machine that runs the retention tick.",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Tick host instance",
+        "multi": true,
+        "name": "tick_instance",
+        "options": [],
+        "query": {
+          "query": "label_values(node_cpu_seconds_total{job=\"node\"}, instance)",
+          "refId": "tick_instance"
+        },
+        "refresh": 2,
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "mimir-infra"
+        },
+        "definition": "label_values(node_cpu_seconds_total{job=\"node\"}, instance)",
+        "description": "Node exporter instances for the database machine.",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Database host instance",
+        "multi": true,
+        "name": "db_instance",
+        "options": [],
+        "query": {
+          "query": "label_values(node_cpu_seconds_total{job=\"node\"}, instance)",
+          "refId": "db_instance"
+        },
+        "refresh": 2,
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Horde Kudos Retention",
+  "uid": "horde-kudos-retention",
+  "version": 1
+}
