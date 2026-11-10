@@ -387,7 +387,7 @@
      "refId": "A"
     }
    ],
-   "description": "Per-second rate of horde_pop_skipped by horde_skip_reason. Tenant ai-horde-telemetry via the Telemetry datasource."
+   "description": "Per-second rate of horde_pop_skipped by horde_skip_reason. Newer releases count a worker that cannot serve any request once per pop instead of once per candidate. These are stale workers (no reason label) and image workers whose bridge release cannot run one of their model baselines (bridge_version), so both rates drop after the upgrade without any change in the workers. Tenant ai-horde-telemetry via the Telemetry datasource."
   },
   {
    "collapsed": false,
@@ -1186,7 +1186,7 @@
    },
    "id": 62,
    "title": "Kudos pricing phases p95",
-   "description": "horde_wp_calculate_kudos_duration_bucket against its two components, horde_wp_kudos_torch_duration_bucket (the KudosModel forward pass) and horde_wp_kudos_commit_duration_bucket. No dimension labels on this family. Tenant ai-horde-telemetry via the Telemetry datasource.",
+   "description": "horde_wp_calculate_kudos_duration_bucket against its two components, horde_wp_kudos_torch_duration_bucket (the KudosModel forward pass) and horde_wp_kudos_commit_duration_bucket. Newer releases store the price with the activation commit, so commit has data only from older releases. No dimension labels on this family. Tenant ai-horde-telemetry via the Telemetry datasource.",
    "type": "timeseries",
    "fieldConfig": {
     "defaults": {
@@ -1221,7 +1221,7 @@
     },
     {
      "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_wp_kudos_commit_duration_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
-     "legendFormat": "commit",
+     "legendFormat": "commit (older releases)",
      "refId": "C"
     }
    ]
@@ -1239,7 +1239,7 @@
    },
    "id": 63,
    "title": "WP activate sub-phase p95",
-   "description": "The four horde_wp_activate_* sub-phase histograms, which together account for horde_wp_activate_duration. None carry dimension labels. Tenant ai-horde-telemetry via the Telemetry datasource.",
+   "description": "The four horde_wp_activate_* sub-phase histograms, which together account for horde_wp_activate_duration. On newer releases the image price is calculated inside the activation transaction before base record_usage. Its time is then in horde_wp_activate_duration but not in post super(). None have dimension labels. Tenant ai-horde-telemetry via the Telemetry datasource.",
    "type": "timeseries",
    "fieldConfig": {
     "defaults": {
@@ -1439,6 +1439,245 @@
      "expr": "sum(rate(horde_generate_source_upload_duration_sum{deployment_environment_name=~\"$environment\"}[5m])) / clamp_min(sum(rate(horde_generate_source_upload_duration_count{deployment_environment_name=~\"$environment\"}[5m])), 1e-9)",
      "legendFormat": "mean",
      "refId": "C"
+    }
+   ]
+  },
+  {
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 90
+   },
+   "id": 109,
+   "panels": [],
+   "title": "Job route cost and submit statistics",
+   "type": "row",
+   "description": "Server time on the routes that create, assign and complete jobs, the submit statistics transaction, and pop skips per pop. Switch the Environment variable to compare releases running in different environments."
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "${datasource}"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 91
+   },
+   "id": 80,
+   "title": "Job route server time (mean)",
+   "description": "Mean of http_server_duration for the async, pop and submit routes of both gentypes, by http_target. It includes time spent waiting on the database, so fewer statements and commits per request lower it most on hosts with a slow database round trip. Tenant ai-horde-telemetry via the Telemetry datasource.",
+   "type": "timeseries",
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "color": {
+      "mode": "palette-classic"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    }
+   },
+   "targets": [
+    {
+     "expr": "sum by (http_target) (rate(http_server_duration_sum{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", http_target=~\"/api/v2/generate/(text/)?(async|pop|submit)\"}[5m])) / clamp_min(sum by (http_target) (rate(http_server_duration_count{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", http_target=~\"/api/v2/generate/(text/)?(async|pop|submit)\"}[5m])), 1e-9)",
+     "legendFormat": "{{http_target}}",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "${datasource}"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 91
+   },
+   "id": 81,
+   "title": "Job route server time (p95)",
+   "description": "p95 of http_server_duration for the async, pop and submit routes of both gentypes, by http_target. Tenant ai-horde-telemetry via the Telemetry datasource.",
+   "type": "timeseries",
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ms",
+     "color": {
+      "mode": "palette-classic"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    }
+   },
+   "targets": [
+    {
+     "expr": "histogram_quantile(0.95, sum by (le, http_target) (rate(http_server_duration_bucket{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", http_target=~\"/api/v2/generate/(text/)?(async|pop|submit)\"}[5m])))",
+     "legendFormat": "{{http_target}}",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "${datasource}"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 0,
+    "y": 99
+   },
+   "id": 82,
+   "title": "Submit statistics transaction by gentype",
+   "description": "p95 and mean of horde_submit_statistics_duration by horde_gentype. It times the transaction after the submit commit that writes the model performance, fulfilment and worker performance samples and the generation statistic. A failed statistics transaction is rolled back and the submit still succeeds. Releases without this histogram show no data here. Tenant ai-horde-telemetry via the Telemetry datasource.",
+   "type": "timeseries",
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s",
+     "color": {
+      "mode": "palette-classic"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    }
+   },
+   "targets": [
+    {
+     "expr": "histogram_quantile(0.95, sum by (le, horde_gentype) (rate(horde_submit_statistics_duration_bucket{deployment_environment_name=~\"$environment\"}[5m])))",
+     "legendFormat": "{{horde_gentype}} p95",
+     "refId": "A"
+    },
+    {
+     "expr": "sum by (horde_gentype) (rate(horde_submit_statistics_duration_sum{deployment_environment_name=~\"$environment\"}[5m])) / clamp_min(sum by (horde_gentype) (rate(horde_submit_statistics_duration_count{deployment_environment_name=~\"$environment\"}[5m])), 1e-9)",
+     "legendFormat": "{{horde_gentype}} mean",
+     "refId": "B"
+    }
+   ]
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "${datasource}"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 8,
+    "y": 99
+   },
+   "id": 83,
+   "title": "Submit statistics mean, combined and separate writes",
+   "description": "Mean of the combined statistics transaction against the sum of the means of the three separate writes it replaces (record_performance, record_fulfilment_stat and genstats_record). The separate writes each had their own commit, and two of them ran before the submit commit. Each environment shows only the series recorded by its release. Tenant ai-horde-telemetry via the Telemetry datasource.",
+   "type": "timeseries",
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s",
+     "color": {
+      "mode": "palette-classic"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    }
+   },
+   "targets": [
+    {
+     "expr": "sum by (horde_gentype) (rate(horde_submit_statistics_duration_sum{deployment_environment_name=~\"$environment\"}[5m])) / clamp_min(sum by (horde_gentype) (rate(horde_submit_statistics_duration_count{deployment_environment_name=~\"$environment\"}[5m])), 1e-9)",
+     "legendFormat": "{{horde_gentype}} combined",
+     "refId": "A"
+    },
+    {
+     "expr": "(sum by (horde_gentype) (rate(horde_submit_record_performance_duration_sum{deployment_environment_name=~\"$environment\"}[5m])) / clamp_min(sum by (horde_gentype) (rate(horde_submit_record_performance_duration_count{deployment_environment_name=~\"$environment\"}[5m])), 1e-9)) + (sum by (horde_gentype) (rate(horde_submit_record_fulfilment_stat_duration_sum{deployment_environment_name=~\"$environment\"}[5m])) / clamp_min(sum by (horde_gentype) (rate(horde_submit_record_fulfilment_stat_duration_count{deployment_environment_name=~\"$environment\"}[5m])), 1e-9)) + (sum by (horde_gentype) (rate(horde_submit_genstats_record_duration_sum{deployment_environment_name=~\"$environment\"}[5m])) / clamp_min(sum by (horde_gentype) (rate(horde_submit_genstats_record_duration_count{deployment_environment_name=~\"$environment\"}[5m])), 1e-9))",
+     "legendFormat": "{{horde_gentype}} separate writes",
+     "refId": "B"
+    }
+   ]
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "${datasource}"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 16,
+    "y": 99
+   },
+   "id": 84,
+   "title": "Pop skips per pop by reason",
+   "description": "Refused candidates per pop, by horde_skip_reason, for image and text pops. A pop counts one skip for each refused candidate. Newer releases count a worker that cannot serve any request once per pop and do not read the queue for it. These are stale workers (no reason label) and image workers whose bridge release cannot run one of their model baselines (bridge_version). Tenant ai-horde-telemetry via the Telemetry datasource.",
+   "type": "timeseries",
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "color": {
+      "mode": "palette-classic"
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "calcs": [
+      "lastNotNull",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    }
+   },
+   "targets": [
+    {
+     "expr": "sum by (horde_skip_reason) (rate(horde_pop_skipped{deployment_environment_name=~\"$environment\", horde_gentype=~\"image|text\"}[5m])) / on() group_left() clamp_min(sum(rate(horde_pop_duration_count{deployment_environment_name=~\"$environment\", horde_gentype=~\"image|text\"}[5m])), 1e-9)",
+     "legendFormat": "{{horde_skip_reason}}",
+     "refId": "A"
     }
    ]
   }

@@ -3968,7 +3968,7 @@
       "type": "prometheus",
       "uid": "${telemetry}"
      },
-     "description": "p95 of the phases that run up to and including the submit commit. claim is the compare-and-set that takes ownership of the procgen, so a jump there means concurrent submissions are contending; a jump in commit points at row-lock contention or database load. Aggregated across gentypes because several sub-phases are recorded without a gentype label; use the end-to-end panel beside it for the gentype split.",
+     "description": "p95 of the phases that run up to and including the submit commit. claim is the compare-and-set that takes ownership of the procgen, so a jump there means concurrent submissions are contending; a jump in commit points at row-lock contention or database load. genstats_record has data only from releases that write the generation statistic before the commit. Newer releases write it in the statistics transaction shown in the accounting path panel. Aggregated across gentypes because several sub-phases are recorded without a gentype label; use the end-to-end panel beside it for the gentype split.",
      "fieldConfig": {
       "defaults": {
        "color": {
@@ -4049,7 +4049,7 @@
       },
       {
        "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_genstats_record_duration_bucket{horde_gentype=~\"$gentype\"}[$__rate_interval])))",
-       "legendFormat": "genstats_record",
+       "legendFormat": "genstats_record (older releases)",
        "refId": "G"
       },
       {
@@ -4066,7 +4066,7 @@
       "type": "prometheus",
       "uid": "${telemetry}"
      },
-     "description": "p95 of the accounting and post-commit phases of submit. record folds worker contribution and waiting-prompt usage; record_performance, wp_completion and record_fulfilment_stat run after the commit; server_upload is object storage and is the phase most exposed to an external dependency. Aggregated across gentypes because several sub-phases are recorded without a gentype label; use the end-to-end panel beside it for the gentype split.",
+     "description": "p95 of the accounting and post-commit phases of submit. record folds worker contribution and waiting-prompt usage; record_performance, wp_completion and record_fulfilment_stat run after the commit; server_upload is object storage and is the phase most exposed to an external dependency. Newer releases replace record_performance, record_fulfilment_stat and the request-path genstats_record with one statistics transaction after the commit. Compare it with the sum of the three old series, not with any one of them. The old series have data only from older releases. Aggregated across gentypes because several sub-phases are recorded without a gentype label; use the end-to-end panel beside it for the gentype split.",
      "fieldConfig": {
       "defaults": {
        "color": {
@@ -4132,7 +4132,7 @@
       },
       {
        "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_record_performance_duration_bucket{horde_gentype=~\"$gentype\"}[$__rate_interval])))",
-       "legendFormat": "record_performance",
+       "legendFormat": "record_performance (older releases)",
        "refId": "D"
       },
       {
@@ -4142,13 +4142,18 @@
       },
       {
        "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_record_fulfilment_stat_duration_bucket{horde_gentype=~\"$gentype\"}[$__rate_interval])))",
-       "legendFormat": "record_fulfilment_stat",
+       "legendFormat": "record_fulfilment_stat (older releases)",
        "refId": "F"
       },
       {
        "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_server_upload_duration_bucket[$__rate_interval])))",
        "legendFormat": "server_upload",
        "refId": "G"
+      },
+      {
+       "expr": "histogram_quantile(0.95, sum by (le) (rate(horde_submit_statistics_duration_bucket{horde_gentype=~\"$gentype\"}[$__rate_interval])))",
+       "legendFormat": "statistics",
+       "refId": "H"
       }
      ],
      "title": "/generate/submit Phase p95 (accounting path)",
@@ -4240,7 +4245,7 @@
       },
       {
        "expr": "sum(rate(horde_submit_genstats_record_duration_sum{horde_gentype=~\"$gentype\"}[$__rate_interval])) / clamp_min(sum(rate(horde_submit_genstats_record_duration_count{horde_gentype=~\"$gentype\"}[$__rate_interval])), 1e-9)",
-       "legendFormat": "genstats_record",
+       "legendFormat": "genstats_record (older releases)",
        "refId": "G"
       },
       {
@@ -4257,7 +4262,7 @@
       "type": "prometheus",
       "uid": "${telemetry}"
      },
-     "description": "Mean duration of the submit accounting and post-commit phases, computed as rate of the histogram sum over rate of its count. Read alongside the matching p95 panel to separate a broad slowdown from a tail. Aggregated across gentypes because several sub-phases are recorded without a gentype label; use the end-to-end panel beside it for the gentype split.",
+     "description": "Mean duration of the submit accounting and post-commit phases, computed as rate of the histogram sum over rate of its count. Read alongside the matching p95 panel to separate a broad slowdown from a tail. statistics is the combined statistics transaction of newer releases. The series marked older releases are the separate writes that it replaces. Aggregated across gentypes because several sub-phases are recorded without a gentype label; use the end-to-end panel beside it for the gentype split.",
      "fieldConfig": {
       "defaults": {
        "color": {
@@ -4323,7 +4328,7 @@
       },
       {
        "expr": "sum(rate(horde_submit_record_performance_duration_sum{horde_gentype=~\"$gentype\"}[$__rate_interval])) / clamp_min(sum(rate(horde_submit_record_performance_duration_count{horde_gentype=~\"$gentype\"}[$__rate_interval])), 1e-9)",
-       "legendFormat": "record_performance",
+       "legendFormat": "record_performance (older releases)",
        "refId": "D"
       },
       {
@@ -4333,13 +4338,18 @@
       },
       {
        "expr": "sum(rate(horde_submit_record_fulfilment_stat_duration_sum{horde_gentype=~\"$gentype\"}[$__rate_interval])) / clamp_min(sum(rate(horde_submit_record_fulfilment_stat_duration_count{horde_gentype=~\"$gentype\"}[$__rate_interval])), 1e-9)",
-       "legendFormat": "record_fulfilment_stat",
+       "legendFormat": "record_fulfilment_stat (older releases)",
        "refId": "F"
       },
       {
        "expr": "sum(rate(horde_submit_server_upload_duration_sum[$__rate_interval])) / clamp_min(sum(rate(horde_submit_server_upload_duration_count[$__rate_interval])), 1e-9)",
        "legendFormat": "server_upload",
        "refId": "G"
+      },
+      {
+       "expr": "sum(rate(horde_submit_statistics_duration_sum{horde_gentype=~\"$gentype\"}[$__rate_interval])) / clamp_min(sum(rate(horde_submit_statistics_duration_count{horde_gentype=~\"$gentype\"}[$__rate_interval])), 1e-9)",
+       "legendFormat": "statistics",
+       "refId": "H"
       }
      ],
      "title": "/generate/submit Phase Mean (accounting path)",
