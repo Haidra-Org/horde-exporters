@@ -24,6 +24,13 @@ Rules encoded here (see README "Incident overlays"):
   maintenance/raid shading from the exporter alerts on their own datasource.
 
 Usage: python3 scripts/apply_dashboard_overlays.py [--check]
+       python3 scripts/apply_dashboard_overlays.py [--check] --internal FILE [FILE ...]
+
+With ``--internal`` only the given files are stamped, in place, with the same
+internal overlay set as the infra dashboards in this repository. Deployments use
+it to stamp dashboards kept outside this repository at deploy time. The release
+tarball ships this file as ``tools/apply_dashboard_overlays.py`` for that
+purpose, so it must stay stdlib-only and must not import from the repository.
 """
 
 from __future__ import annotations
@@ -237,31 +244,64 @@ def _dump(data: dict, fmt: dict) -> str:
     return json.dumps(data, indent=fmt["indent"], ensure_ascii=fmt["ensure_ascii"], sort_keys=fmt["sort_keys"]) + fmt["trailing"]
 
 
+def _display(path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(REPO))
+    except ValueError:
+        return str(path)
+
+
+def _stamp_internal(path: Path, check: bool) -> bool | None:
+    """Apply the internal overlay set to one dashboard file.
+
+    Returns whether the file changed (or would change with ``check``), or None
+    when the file is a v2 dashboard without an overlay set and was skipped.
+    """
+    original = path.read_text(encoding="utf-8")
+    data = json.loads(original)
+    fmt = _detect_format(original, data)
+    if str(data.get("apiVersion", "")).startswith("dashboard.grafana.app/"):
+        keys = V2_ANNOTATION_SETS.get(path.name)
+        if keys is None:
+            print(f"skip {_display(path)}: v2 dashboard without an overlay set", file=sys.stderr)
+            return None
+        data = _v2(data, keys)
+    else:
+        target = data.get("dashboard", data)
+        _classic(target, INTERNAL_ANNOTATIONS, public=False)
+    rendered = _dump(data, fmt)
+    if rendered == original:
+        return False
+    if not check:
+        path.write_text(rendered, encoding="utf-8")
+    return True
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--check", action="store_true", help="exit 1 if any dashboard would change")
+    parser.add_argument(
+        "--internal",
+        nargs="+",
+        type=Path,
+        metavar="FILE",
+        help="stamp only these files with the internal (Org 1) overlay set instead of the repository dashboards",
+    )
     args = parser.parse_args()
 
     changed: list[Path] = []
 
+    if args.internal:
+        for path in args.internal:
+            if _stamp_internal(path, args.check):
+                changed.append(path)
+        for path in changed:
+            print(("would update " if args.check else "updated ") + _display(path))
+        return 1 if args.check and changed else 0
+
     for path in sorted(INFRA_DIR.rglob("*.json")):
-        original = path.read_text(encoding="utf-8")
-        data = json.loads(original)
-        fmt = _detect_format(original, data)
-        if str(data.get("apiVersion", "")).startswith("dashboard.grafana.app/"):
-            keys = V2_ANNOTATION_SETS.get(path.name)
-            if keys is None:
-                print(f"skip {path.relative_to(REPO)}: v2 dashboard without an overlay set", file=sys.stderr)
-                continue
-            data = _v2(data, keys)
-        else:
-            target = data.get("dashboard", data)
-            _classic(target, INTERNAL_ANNOTATIONS, public=False)
-        rendered = _dump(data, fmt)
-        if rendered != original:
+        if _stamp_internal(path, args.check):
             changed.append(path)
-            if not args.check:
-                path.write_text(rendered, encoding="utf-8")
 
     for path in sorted(APP_DIR.glob("*.json")):
         original = path.read_text(encoding="utf-8")

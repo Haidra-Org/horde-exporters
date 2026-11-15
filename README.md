@@ -85,6 +85,12 @@ shading from their own datasource. The third-party v2 exports (Postgres, Node Ex
 pm2) receive the infra-alert and operator overlays at conversion time, which
 `scripts/convert_grafana_v2_to_classic.py` now carries through.
 
+`--internal FILE [FILE ...]` stamps only the given files, in place, with the infra overlay set
+(it combines with `--check`). The release tarball ships the script as
+`tools/apply_dashboard_overlays.py` next to `app/` and `infra/`. A deployment can then stamp
+dashboards kept outside this repository with the overlays of the release it deploys. The script
+uses only the standard library.
+
 | Dashboard | File | Description |
 |-----------|------|-------------|
 | **Horde Performance** | `horde-performance.json` | Operator Pulse top row (active alerts + key worker/queue/scrape stats), demoted Operator Modes row, per-period stat strips for historical generation stats (replaces the legacy bargauges), Pop Diagnostics, Generation Outcomes, Teams, and Exporter Health. |
@@ -132,7 +138,19 @@ minute in the past (`offset 1m`) so lines still being shipped are counted. No IP
 
 ### Public-org variants (`-public.json`)
 
-A dashboard whose basename ends `-public.json` is the variant the deployments role provisions to the **public Grafana org (Org 2)**. The public org has `mimir-public` by default. Raw logs, traces and profiles require explicit opt-in through the deployments role's public datasource flags; production disables those three datasources. There is no public Alertmanager, `mimir-telemetry`, or `loki-app`. Bare-name dashboards that reference Org-1-only datasources should ship a `-public.json` sibling that drops or substitutes those panels. See `roles/horde_monitoring/tasks/dashboards.yml` in the deployments repo for the routing rules.
+A dashboard whose basename ends `-public.json` is the variant the deployments role provisions to the **public Grafana org (Org 2)**. The public org has `mimir-public` by default. Raw logs, traces and profiles require explicit opt-in through the deployments role's public datasource flags; production disables those three datasources. There is no public Alertmanager, `mimir-telemetry`, or `loki-app`.
+
+The deployments role routes the package dashboards (the release tarball's `app/` directory) by file name:
+
+- Org 1 gets every package dashboard except the `-public.json` files.
+- Org 2 gets every `<stem>-public.json` file, plus each bare `<stem>.json` file without a `-public.json` sibling. It does not get both versions of one dashboard.
+- A dashboard that references an Org-1-only datasource uid (`mimir-app`, `mimir-infra`, `mimir-telemetry`, `alertmanager`, `loki-app`, `loki-infra`, `tempo`, `pyroscope-app`, `pyroscope-infra`) is not provisioned to Org 2, and the deploy prints a warning. Template variables such as `${datasource}` are fine.
+
+A bare dashboard that needs Org-1-only datasources should therefore ship a `-public.json` sibling that drops or substitutes those panels. A `-public.json` file without a bare sibling (for example `horde-performance-public.json`) appears in Org 2 only. See `roles/horde_monitoring/tasks/dashboards.yml` in the deployments repo for the routing rules.
+
+### Dashboard folders (`dashboards/<subdirectory>/`)
+
+The release tarball keeps each infra dashboard's path under `dashboards/` (`infra/<subdirectory>/<file>.json`). The deployments role makes one Grafana folder per subdirectory in Org 1, with titles from its `horde_monitoring_grafana_infra_folder_titles` map (for example `node_exporter` and `pm2` both go to `Hosts`). A subdirectory without an entry gets its name in title case, with `_` and `-` replaced by spaces. Put a new dashboard in the subdirectory of the folder it belongs in, and add a map entry in the deployments role when a new subdirectory needs a different title. Files directly in `dashboards/` go to a fallback `Infrastructure` folder. Dashboard uids must be unique across all of `dashboards/`, because the deploy fails when two infra dashboards share a uid.
 
 ### Accessing Dashboards Programmatically
 

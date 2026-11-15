@@ -57,32 +57,51 @@ jobs:
           cp packages/ai-horde-stats-exporter/src/ai_horde_stats_exporter/dashboards/*.json \
              "$STAGING/app/"
 
-          # Infra dashboards (from the top-level dashboards directory)
+          # Infra dashboards (from the top-level dashboards directory). The path under
+          # dashboards/ is kept because the deployments role makes one Grafana folder
+          # per subdirectory.
           mkdir -p "$STAGING/infra"
-          find dashboards -name '*.json' | while read -r src; do
-            dest="$STAGING/infra/$(basename "$src")"
+          find dashboards -name '*.json' | sort | while read -r src; do
+            dest="$STAGING/infra/${src#dashboards/}"
+            if [ -e "$dest" ]; then
+              echo "::error::two dashboards map to infra/${src#dashboards/}" >&2
+              exit 1
+            fi
+            mkdir -p "$(dirname "$dest")"
             python3 scripts/convert_grafana_v2_to_classic.py "$src" "$dest"
           done
 
           # Guardrail: release artifact must contain classic dashboard JSON.
-          python3 - <<'PY'
+          # STAGING goes through the environment because the quoted heredoc does
+          # not expand shell variables.
+          STAGING="$STAGING" python3 - <<'PY'
           import json
+          import os
           import pathlib
-          base = pathlib.Path("$STAGING") / "infra"
+          base = pathlib.Path(os.environ["STAGING"]) / "infra"
+          paths = sorted(base.rglob("*.json"))
+          if not paths:
+              raise SystemExit(f"did not find infra dashboards under {base}")
           bad = []
-          for path in sorted(base.glob("*.json")):
+          for path in paths:
+              name = path.relative_to(base)
               data = json.loads(path.read_text())
               if isinstance(data, dict) and str(data.get("apiVersion", "")).startswith("dashboard.grafana.app/"):
-                  bad.append(f"{path.name}: still has apiVersion={data.get('apiVersion')}")
+                  bad.append(f"{name}: still has apiVersion={data.get('apiVersion')}")
               if "panels" not in data:
-                  bad.append(f"{path.name}: missing panels")
+                  bad.append(f"{name}: missing panels")
               if "templating" not in data:
-                  bad.append(f"{path.name}: missing templating")
+                  bad.append(f"{name}: missing templating")
           if bad:
               raise SystemExit("\n".join(bad))
           PY
 
-          tar -czf "dist/horde-dashboards-${VERSION}.tar.gz" -C "$STAGING" app infra
+          # The overlay script lets deployments stamp dashboards kept outside this
+          # repository with the overlays of this release.
+          mkdir -p "$STAGING/tools"
+          cp scripts/apply_dashboard_overlays.py "$STAGING/tools/"
+
+          tar -czf "dist/horde-dashboards-${VERSION}.tar.gz" -C "$STAGING" app infra tools
           rm -rf "$STAGING"
 
       - name: Generate checksums and manifest
