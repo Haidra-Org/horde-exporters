@@ -4365,6 +4365,279 @@
     "x": 0,
     "y": 69
    },
+   "id": 350,
+   "panels": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "${telemetry}"
+     },
+     "description": "hit / (hit + miss) is the hit rate among lookups that used the cache. hit / all lookups also counts bypassed lookups, which do not use the cache. 15-minute window.",
+     "fieldConfig": {
+      "defaults": {
+       "color": {
+        "mode": "palette-classic"
+       },
+       "unit": "percentunit",
+       "custom": {
+        "drawStyle": "line",
+        "lineInterpolation": "smooth",
+        "lineWidth": 1,
+        "fillOpacity": 10,
+        "gradientMode": "opacity",
+        "showPoints": "never",
+        "spanNulls": true,
+        "stacking": {
+         "group": "A",
+         "mode": "none"
+        },
+        "thresholdsStyle": {
+         "mode": "off"
+        }
+       },
+       "min": 0,
+       "max": 1
+      },
+      "overrides": []
+     },
+     "gridPos": {
+      "h": 8,
+      "w": 12,
+      "x": 0,
+      "y": 70
+     },
+     "id": 351,
+     "options": {
+      "legend": {
+       "calcs": [
+        "lastNotNull",
+        "mean"
+       ],
+       "displayMode": "table",
+       "placement": "bottom",
+       "showLegend": true
+      },
+      "tooltip": {
+       "mode": "multi",
+       "sort": "desc"
+      }
+     },
+     "targets": [
+      {
+       "expr": "(sum by (horde_gentype) (rate(horde_generate_dry_run_cache_lookups{horde_gentype=~\"$gentype\", horde_outcome=\"hit\"}[15m])) or 0 * sum by (horde_gentype) (rate(horde_generate_dry_run_cache_lookups{horde_gentype=~\"$gentype\"}[15m]))) / clamp_min(sum by (horde_gentype) (rate(horde_generate_dry_run_cache_lookups{horde_gentype=~\"$gentype\", horde_outcome=~\"hit|miss\"}[15m])), 1e-9)",
+       "legendFormat": "{{horde_gentype}} hit / (hit + miss)",
+       "refId": "A"
+      },
+      {
+       "expr": "(sum by (horde_gentype) (rate(horde_generate_dry_run_cache_lookups{horde_gentype=~\"$gentype\", horde_outcome=\"hit\"}[15m])) or 0 * sum by (horde_gentype) (rate(horde_generate_dry_run_cache_lookups{horde_gentype=~\"$gentype\"}[15m]))) / clamp_min(sum by (horde_gentype) (rate(horde_generate_dry_run_cache_lookups{horde_gentype=~\"$gentype\"}[15m])), 1e-9)",
+       "legendFormat": "{{horde_gentype}} hit / all lookups",
+       "refId": "B"
+      }
+     ],
+     "title": "Dry-run quote cache hit share, by gentype",
+     "type": "timeseries"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "${telemetry}"
+     },
+     "description": "Dry-run quote cache lookups per minute by outcome: hit, miss or bypassed.",
+     "fieldConfig": {
+      "defaults": {
+       "color": {
+        "mode": "palette-classic"
+       },
+       "unit": "short",
+       "custom": {
+        "drawStyle": "line",
+        "lineInterpolation": "smooth",
+        "lineWidth": 1,
+        "fillOpacity": 25,
+        "gradientMode": "opacity",
+        "showPoints": "never",
+        "spanNulls": true,
+        "stacking": {
+         "group": "A",
+         "mode": "normal"
+        },
+        "thresholdsStyle": {
+         "mode": "off"
+        }
+       }
+      },
+      "overrides": []
+     },
+     "gridPos": {
+      "h": 8,
+      "w": 12,
+      "x": 12,
+      "y": 70
+     },
+     "id": 352,
+     "options": {
+      "legend": {
+       "calcs": [
+        "lastNotNull",
+        "mean"
+       ],
+       "displayMode": "table",
+       "placement": "bottom",
+       "showLegend": true
+      },
+      "tooltip": {
+       "mode": "multi",
+       "sort": "desc"
+      }
+     },
+     "targets": [
+      {
+       "expr": "sum by (horde_outcome) (rate(horde_generate_dry_run_cache_lookups{horde_gentype=~\"$gentype\"}[5m])) * 60",
+       "legendFormat": "{{horde_outcome}}",
+       "refId": "A"
+      }
+     ],
+     "title": "Dry-run quote lookups per minute, by outcome",
+     "type": "timeseries"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "${telemetry}"
+     },
+     "description": "Bypassed dry-run lookups per minute by the horde_quote_unknown label (none, style or context_fit). (not recorded) marks lookups from releases that do not record the label.",
+     "fieldConfig": {
+      "defaults": {
+       "color": {
+        "mode": "palette-classic"
+       },
+       "unit": "short",
+       "custom": {
+        "drawStyle": "line",
+        "lineInterpolation": "smooth",
+        "lineWidth": 1,
+        "fillOpacity": 25,
+        "gradientMode": "opacity",
+        "showPoints": "never",
+        "spanNulls": true,
+        "stacking": {
+         "group": "A",
+         "mode": "normal"
+        },
+        "thresholdsStyle": {
+         "mode": "off"
+        }
+       }
+      },
+      "overrides": []
+     },
+     "gridPos": {
+      "h": 8,
+      "w": 12,
+      "x": 0,
+      "y": 78
+     },
+     "id": 353,
+     "options": {
+      "legend": {
+       "calcs": [
+        "lastNotNull",
+        "mean"
+       ],
+       "displayMode": "table",
+       "placement": "bottom",
+       "showLegend": true
+      },
+      "tooltip": {
+       "mode": "multi",
+       "sort": "desc"
+      }
+     },
+     "targets": [
+      {
+       "expr": "label_replace(sum by (horde_quote_unknown) (rate(horde_generate_dry_run_cache_lookups{horde_gentype=~\"$gentype\", horde_outcome=\"bypassed\"}[5m])) * 60, \"horde_quote_unknown\", \"(not recorded)\", \"horde_quote_unknown\", \"\")",
+       "legendFormat": "{{horde_quote_unknown}}",
+       "refId": "A"
+      }
+     ],
+     "title": "Dry-run cache bypasses, by unknown quote part",
+     "type": "timeseries"
+    },
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "${telemetry}"
+     },
+     "description": "Bypassed dry-run lookups per minute by the horde_admission_dependent label (none, upfront_kudos or kudos_cap). (not recorded) marks lookups from releases that do not record the label.",
+     "fieldConfig": {
+      "defaults": {
+       "color": {
+        "mode": "palette-classic"
+       },
+       "unit": "short",
+       "custom": {
+        "drawStyle": "line",
+        "lineInterpolation": "smooth",
+        "lineWidth": 1,
+        "fillOpacity": 25,
+        "gradientMode": "opacity",
+        "showPoints": "never",
+        "spanNulls": true,
+        "stacking": {
+         "group": "A",
+         "mode": "normal"
+        },
+        "thresholdsStyle": {
+         "mode": "off"
+        }
+       }
+      },
+      "overrides": []
+     },
+     "gridPos": {
+      "h": 8,
+      "w": 12,
+      "x": 12,
+      "y": 78
+     },
+     "id": 354,
+     "options": {
+      "legend": {
+       "calcs": [
+        "lastNotNull",
+        "mean"
+       ],
+       "displayMode": "table",
+       "placement": "bottom",
+       "showLegend": true
+      },
+      "tooltip": {
+       "mode": "multi",
+       "sort": "desc"
+      }
+     },
+     "targets": [
+      {
+       "expr": "label_replace(sum by (horde_admission_dependent) (rate(horde_generate_dry_run_cache_lookups{horde_gentype=~\"$gentype\", horde_outcome=\"bypassed\"}[5m])) * 60, \"horde_admission_dependent\", \"(not recorded)\", \"horde_admission_dependent\", \"\")",
+       "legendFormat": "{{horde_admission_dependent}}",
+       "refId": "A"
+      }
+     ],
+     "title": "Dry-run cache bypasses, by admission dependency",
+     "type": "timeseries"
+    }
+   ],
+   "title": "Dry-run quote cache",
+   "type": "row"
+  },
+  {
+   "collapsed": true,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 70
+   },
    "id": 105,
    "title": "Teams Overview",
    "type": "row",
@@ -4388,7 +4661,7 @@
       "h": 4,
       "w": 4,
       "x": 0,
-      "y": 67
+      "y": 68
      },
      "id": 50,
      "options": {
@@ -4467,7 +4740,7 @@
       "h": 10,
       "w": 10,
       "x": 4,
-      "y": 67
+      "y": 68
      },
      "id": 51,
      "options": {
@@ -4564,7 +4837,7 @@
       "h": 10,
       "w": 10,
       "x": 14,
-      "y": 67
+      "y": 68
      },
      "id": 52,
      "options": {
@@ -4617,7 +4890,7 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 70
+    "y": 71
    },
    "id": 106,
    "title": "Exporter Health",
@@ -4663,7 +4936,7 @@
       "h": 8,
       "w": 12,
       "x": 0,
-      "y": 68
+      "y": 69
      },
      "id": 60,
      "options": {
@@ -4731,7 +5004,7 @@
       "h": 8,
       "w": 12,
       "x": 12,
-      "y": 68
+      "y": 69
      },
      "id": 61,
      "options": {

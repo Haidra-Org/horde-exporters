@@ -3148,7 +3148,7 @@
    "id": 196,
    "type": "stat",
    "title": "Chat In-Flight",
-   "description": "Requests holding an in-flight slot at the chat front. The front refuses with FrontAtCapacity at its global cap (default 100). '-' means the front is not reporting in production.",
+   "description": "Requests holding an in-flight slot at the chat front. The front refuses with 503 FrontAtCapacity at its global cap (default 1000). '-' means the front is not reporting in production.",
    "datasource": {
     "type": "prometheus",
     "uid": "mimir-telemetry"
@@ -3372,7 +3372,7 @@
    "id": 199,
    "type": "stat",
    "title": "Chat Refused at Capacity (5m)",
-   "description": "Chat requests refused because the front's global or per-source in-flight cap was reached, per second.",
+   "description": "Chat requests refused with 503 FrontAtCapacity because the front's global in-flight cap was reached, per second. Refusals at the per-address cap (429 TooManyOpenRequests) are not counted here.",
    "datasource": {
     "type": "prometheus",
     "uid": "mimir-telemetry"
@@ -3574,6 +3574,207 @@
      "expr": "histogram_quantile(0.95, sum by (le, http_method, http_target) (rate(http_server_duration_bucket{job=\"ai-horde/ai-horde\", deployment_environment_name=\"production\", http_target=~\"/api/v2/generate/chat/.*\"}[5m])))",
      "legendFormat": "{{http_method}} {{http_target}}",
      "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 202,
+   "type": "row",
+   "title": "Registrations",
+   "gridPos": {
+    "x": 0,
+    "y": 115,
+    "w": 24,
+    "h": 1
+   },
+   "collapsed": false,
+   "panels": []
+  },
+  {
+   "id": 203,
+   "type": "stat",
+   "title": "Registrations passed",
+   "description": "Share of registration form submissions that passed the reCAPTCHA check over the dashboard range. '-' means there were no submissions in production.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 116,
+    "w": 4,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "blue",
+        "value": null
+       }
+      ]
+     },
+     "color": {
+      "mode": "thresholds"
+     },
+     "noValue": "-",
+     "unit": "percentunit",
+     "decimals": 1
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "orientation": "auto",
+    "textMode": "auto",
+    "colorMode": "value",
+    "graphMode": "none"
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-telemetry"
+     },
+     "expr": "(sum(increase(horde_recaptcha_verifications{job=\"ai-horde/ai-horde\", deployment_environment_name=\"production\", horde_outcome=\"passed\"}[$__range])) or vector(0)) / clamp_min(sum(increase(horde_recaptcha_verifications{job=\"ai-horde/ai-horde\", deployment_environment_name=\"production\"}[$__range])), 1)",
+     "legendFormat": "",
+     "refId": "A",
+     "instant": true
+    }
+   ]
+  },
+  {
+   "id": 204,
+   "type": "timeseries",
+   "title": "Registration outcomes per hour",
+   "description": "Registration form submissions per hour by reCAPTCHA result. disabled means the secret key is not configured. unavailable means Google's endpoint could not be reached.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "gridPos": {
+    "x": 4,
+    "y": 116,
+    "w": 12,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "color": {
+      "mode": "palette-classic"
+     },
+     "custom": {
+      "drawStyle": "line",
+      "lineWidth": 1,
+      "fillOpacity": 20,
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "normal"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "calcs": [
+      "mean",
+      "max"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-telemetry"
+     },
+     "expr": "sum by (horde_outcome) (rate(horde_recaptcha_verifications{job=\"ai-horde/ai-horde\", deployment_environment_name=\"production\"}[1h])) * 3600",
+     "legendFormat": "{{horde_outcome}}",
+     "refId": "A"
+    }
+   ]
+  },
+  {
+   "id": 205,
+   "type": "heatmap",
+   "title": "reCAPTCHA score",
+   "description": "reCAPTCHA v3 scores of registration submissions. 0 is likely automated, 1 likely a person.",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 116,
+    "w": 8,
+    "h": 8
+   },
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "scaleDistribution": {
+       "type": "linear"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "calculate": false,
+    "cellGap": 1,
+    "color": {
+     "mode": "scheme",
+     "scheme": "Oranges",
+     "scale": "exponential",
+     "exponent": 0.5,
+     "steps": 64
+    },
+    "legend": {
+     "show": true
+    },
+    "tooltip": {
+     "mode": "single",
+     "yHistogram": false
+    },
+    "yAxis": {
+     "axisPlacement": "left",
+     "unit": "short"
+    },
+    "rowsFrame": {
+     "layout": "auto"
+    },
+    "cellValues": {
+     "unit": "short"
+    }
+   },
+   "targets": [
+    {
+     "datasource": {
+      "type": "prometheus",
+      "uid": "mimir-telemetry"
+     },
+     "expr": "sum by (le) (increase(horde_recaptcha_score_bucket{job=\"ai-horde/ai-horde\", deployment_environment_name=\"production\"}[$__interval]))",
+     "legendFormat": "{{le}}",
+     "refId": "A",
+     "format": "heatmap"
     }
    ]
   }

@@ -425,7 +425,7 @@
         "type": "prometheus",
         "uid": "mimir-telemetry"
       },
-      "description": "Text requests whose max_length was lowered to the free allowance because the requester allowed it, over all decisions in the range. Green below 5%, red from 15%. Shows COLLECTING below 200 decisions.",
+      "description": "Text requests lowered to the free allowances because the requester allowed it, over all decisions in the range. max_length is lowered to the free output allowance, max_context_length to the free input allowance, or both. Green below 5%, red from 15%. Shows COLLECTING below 200 decisions.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -860,15 +860,72 @@
       "id": 13
     },
     {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Text requests refused because the prompt was above the free input allowance while max_length was within the free output allowance, over all decisions in the range. Shows COLLECTING below 200 decisions.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "percentunit",
+          "noValue": "COLLECTING",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "targets": [
+        {
+          "expr": "((sum(increase(horde_text_free_allowance_decisions{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_outcome=\"refused\", horde_exceeded=\"input\"}[$__range])) or vector(0)) / clamp_min(sum(increase(horde_text_free_allowance_decisions{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[$__range])), 1)) and on() (sum(increase(horde_text_free_allowance_decisions{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[$__range])) >= 200)",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Refused for input only",
+      "type": "stat",
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 0,
+        "y": 11
+      },
+      "id": 45
+    },
+    {
       "collapsed": false,
       "panels": [],
-      "title": "Free output allowance",
+      "title": "Free output and input allowances",
       "type": "row",
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 11
+        "y": 16
       },
       "id": 14
     },
@@ -877,7 +934,7 @@
         "type": "prometheus",
         "uid": "mimir-telemetry"
       },
-      "description": "Every text request creation, dry runs excluded: free (no kudos held), funded (kudos reserved upfront), downgraded (max_length lowered to the allowance) and refused (KudosUpfront).",
+      "description": "Every text request creation, dry runs excluded: free (no kudos held), funded (kudos reserved upfront), downgraded (max_length or max_context_length lowered to the free allowances) and refused (KudosUpfront).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -928,7 +985,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 12
+        "y": 17
       },
       "id": 15
     },
@@ -988,7 +1045,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 12
+        "y": 17
       },
       "id": 16
     },
@@ -1045,7 +1102,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 20
+        "y": 25
       },
       "id": 17
     },
@@ -1102,7 +1159,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 20
+        "y": 25
       },
       "id": 18
     },
@@ -1162,7 +1219,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 20
+        "y": 25
       },
       "id": 19
     },
@@ -1224,7 +1281,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 28
+        "y": 33
       },
       "id": 20
     },
@@ -1289,9 +1346,190 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 28
+        "y": 33
       },
       "id": 21
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Text request decisions per hour by prompt length in tokens. A prompt above 16384 tokens always needs kudos upfront. A prompt of 4096 tokens or less always fits the free input allowance. (not recorded) marks decisions from releases that do not record the prompt size.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "label_replace(sum by (horde_prompt_bucket) (increase(horde_text_free_allowance_decisions{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat=~\"$chat\", horde_requester=~\"$requester\"}[1h])), \"horde_prompt_bucket\", \"(not recorded)\", \"horde_prompt_bucket\", \"\")",
+          "refId": "A",
+          "legendFormat": "{{horde_prompt_bucket}}"
+        }
+      ],
+      "title": "Decisions per hour, by prompt size",
+      "type": "timeseries",
+      "interval": "1h",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 41
+      },
+      "id": 46
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Decisions per hour by the free allowance that the request went over (none, output, input or both) and by outcome. A max_length above 4096 or a prompt above 16384 tokens always needs kudos upfront. Below those limits the free allowances shrink as the estimated wait grows, down to their floors. The free input floor is 4096 prompt tokens. Refusals with input exceeded and a prompt of 16384 tokens or less come from the wait-sized input allowance. The prompt size panel shows how many prompts are above 16384 tokens. (not recorded) marks decisions from releases that do not record the exceeded allowance.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 25,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "label_replace(sum by (horde_exceeded, horde_outcome) (rate(horde_text_free_allowance_decisions{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat=~\"$chat\", horde_requester=~\"$requester\"}[1h])) * 3600, \"horde_exceeded\", \"(not recorded)\", \"horde_exceeded\", \"\")",
+          "refId": "A",
+          "legendFormat": "{{horde_exceeded}} exceeded, {{horde_outcome}}"
+        }
+      ],
+      "title": "Decisions by allowance exceeded and outcome",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 41
+      },
+      "id": 47
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-telemetry"
+      },
+      "description": "Downgraded text requests per hour. true means max_context_length was lowered, with or without a lower max_length. A downgrade for the output allowance alone can also lower the context. false means only max_length was lowered. (not recorded) marks decisions from releases that do not record the label.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 25,
+            "gradientMode": "none",
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "expr": "label_replace(sum by (horde_context_lowered) (rate(horde_text_free_allowance_decisions{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", horde_chat=~\"$chat\", horde_requester=~\"$requester\", horde_outcome=\"downgraded\"}[1h])) * 3600, \"horde_context_lowered\", \"(not recorded)\", \"horde_context_lowered\", \"\")",
+          "refId": "A",
+          "legendFormat": "context lowered: {{horde_context_lowered}}"
+        }
+      ],
+      "title": "Downgrades, by whether the context was lowered",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 41
+      },
+      "id": 48
     },
     {
       "collapsed": false,
@@ -1302,7 +1540,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 36
+        "y": 49
       },
       "id": 22
     },
@@ -1367,7 +1605,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 37
+        "y": 50
       },
       "id": 23
     },
@@ -1427,7 +1665,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 37
+        "y": 50
       },
       "id": 24
     },
@@ -1488,7 +1726,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 45
+        "y": 58
       },
       "id": 25
     },
@@ -1548,7 +1786,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 45
+        "y": 58
       },
       "id": 26
     },
@@ -1561,7 +1799,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 53
+        "y": 66
       },
       "id": 27
     },
@@ -1621,7 +1859,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 54
+        "y": 67
       },
       "id": 28
     },
@@ -1678,7 +1916,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 54
+        "y": 67
       },
       "id": 29
     },
@@ -1738,7 +1976,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 54
+        "y": 67
       },
       "id": 30
     },
@@ -1803,7 +2041,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 62
+        "y": 75
       },
       "id": 31
     },
@@ -1868,7 +2106,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 62
+        "y": 75
       },
       "id": 32
     },
@@ -1881,7 +2119,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 70
+        "y": 83
       },
       "id": 39
     },
@@ -1946,7 +2184,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 71
+        "y": 84
       },
       "id": 40
     },
@@ -2003,7 +2241,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 71
+        "y": 84
       },
       "id": 41
     },
@@ -2063,7 +2301,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 71
+        "y": 84
       },
       "id": 42
     },
@@ -2128,7 +2366,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 79
+        "y": 92
       },
       "id": 43
     },
@@ -2193,7 +2431,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 79
+        "y": 92
       },
       "id": 44
     },
@@ -2206,7 +2444,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 87
+        "y": 100
       },
       "id": 33
     },
@@ -2266,7 +2504,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 88
+        "y": 101
       },
       "id": 34
     },
@@ -2326,7 +2564,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 88
+        "y": 101
       },
       "id": 35
     },
@@ -2386,7 +2624,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 88
+        "y": 101
       },
       "id": 36
     },
@@ -2446,7 +2684,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 96
+        "y": 109
       },
       "id": 37
     },
@@ -2506,7 +2744,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 96
+        "y": 109
       },
       "id": 38
     }

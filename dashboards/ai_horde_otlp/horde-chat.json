@@ -486,7 +486,7 @@
         "type": "prometheus",
         "uid": "mimir-telemetry"
       },
-      "description": "Requests refused because the client's address, or the front in total, held its maximum of open requests (FrontAtCapacity). Rises with client concurrency and with how long admitted requests wait. Read from the horde.outcome_class label on horde.oai.request.duration (admitted requests) and horde.oai.requests.refused (refused before admission); releases before the label read no data.",
+      "description": "Requests refused at an in-flight cap: TooManyOpenRequests (429, class client_capacity) when the client's address held its maximum of open requests, and FrontAtCapacity (503, class front_capacity) when the front in total held its maximum. The first rises with the concurrency of one client, the second with how long admitted requests wait. Read from the horde.outcome_class label on horde.oai.request.duration (admitted requests) and horde.oai.requests.refused (refused before admission); releases before the label read no data.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -522,13 +522,13 @@
       },
       "targets": [
         {
-          "expr": "(sum(max_over_time(horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"front_capacity\"}[$__range]) - horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"front_capacity\"} offset $__range or max_over_time(horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"front_capacity\"}[$__range])) or vector(0)) + (sum(max_over_time(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"front_capacity\"}[$__range]) - horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"front_capacity\"} offset $__range or max_over_time(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"front_capacity\"}[$__range])) or vector(0))",
+          "expr": "(sum(max_over_time(horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"client_capacity|front_capacity\"}[$__range]) - horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"client_capacity|front_capacity\"} offset $__range or max_over_time(horde_oai_request_duration_count{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"client_capacity|front_capacity\"}[$__range])) or vector(0)) + (sum(max_over_time(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"client_capacity|front_capacity\"}[$__range]) - horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"client_capacity|front_capacity\"} offset $__range or max_over_time(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_outcome_class=~\"client_capacity|front_capacity\"}[$__range])) or vector(0))",
           "refId": "A",
           "instant": true,
           "range": false
         }
       ],
-      "title": "Per-address cap",
+      "title": "In-flight caps",
       "type": "stat",
       "gridPos": {
         "h": 4,
@@ -856,7 +856,7 @@
         "type": "prometheus",
         "uid": "mimir-telemetry"
       },
-      "description": "Refusals before an in-flight slot. FrontAtCapacity (503) means the front's global or per-source cap was reached.",
+      "description": "Refusals before an in-flight slot. TooManyOpenRequests (429) means the client's address held its maximum of open requests. FrontAtCapacity (503) means the front's global cap was reached.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -3169,7 +3169,7 @@
         "type": "prometheus",
         "uid": "mimir-telemetry"
       },
-      "description": "FrontAtCapacity (503, refused before admission) when the front's global or per-source in-flight cap is reached, and ChatRequestTimeout (408, after admission) when a request reaches its time budget without a result. Both responses carry Retry-After. Front counters only appear after their first event, so a quiet front shows no series.",
+      "description": "FrontAtCapacity (503, refused before admission) when the front's global in-flight cap is reached, TooManyOpenRequests (429, refused before admission) when a client's address holds its maximum of open requests, and ChatRequestTimeout (408, after admission) when a request reaches its time budget without a result. All three responses include Retry-After. Front counters only appear after their first event, so a quiet front shows no series.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -3212,6 +3212,11 @@
           "expr": "sum(rate(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_code=\"FrontAtCapacity\"}[5m])) * 60",
           "legendFormat": "503 FrontAtCapacity (refused)",
           "refId": "A"
+        },
+        {
+          "expr": "sum(rate(horde_oai_requests_refused{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_code=\"TooManyOpenRequests\"}[5m])) * 60",
+          "legendFormat": "429 TooManyOpenRequests (refused)",
+          "refId": "C"
         },
         {
           "expr": "sum(rate(horde_oai_requests_errors{job=\"ai-horde/horde-oai\", deployment_environment_name=~\"$environment\", horde_code=\"ChatRequestTimeout\"}[5m])) * 60",

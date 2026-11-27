@@ -770,12 +770,333 @@
    "type": "timeseries"
   },
   {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Distribution of the kudos charged to each completed text request divided by the kudos held for it upfront. The hold is sized from max_length and the charge from the delivered output plus the prompt, so values above 1 mean the hold was smaller than the charge.",
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "scaleDistribution": {
+       "type": "linear"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 0,
+    "y": 20
+   },
+   "id": 155,
+   "options": {
+    "calculate": false,
+    "cellGap": 1,
+    "color": {
+     "mode": "scheme",
+     "scheme": "Oranges",
+     "scale": "exponential",
+     "exponent": 0.5,
+     "steps": 64
+    },
+    "legend": {
+     "show": true
+    },
+    "tooltip": {
+     "mode": "single",
+     "yHistogram": false
+    },
+    "yAxis": {
+     "axisPlacement": "left",
+     "unit": "short"
+    },
+    "rowsFrame": {
+     "layout": "auto"
+    },
+    "cellValues": {
+     "unit": "short"
+    }
+   },
+   "targets": [
+    {
+     "expr": "sum by (le) (increase(horde_text_upfront_hold_charge_ratio_bucket{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[$__interval]))",
+     "format": "heatmap",
+     "legendFormat": "{{le}}",
+     "refId": "A"
+    }
+   ],
+   "title": "Text charge \u00f7 upfront hold",
+   "type": "heatmap"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Share of completed text requests whose charge was larger than the upfront hold, split by chat and legacy text, 15-minute window. Reads 0 when no text request completed in the window.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "percentunit",
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 20,
+      "gradientMode": "opacity",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 8,
+    "y": 20
+   },
+   "id": 156,
+   "options": {
+    "legend": {
+     "calcs": [
+      "mean",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "(sum by (horde_chat) (rate(horde_text_upfront_hold_charge_ratio_count{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[15m])) - sum by (horde_chat) (rate(horde_text_upfront_hold_charge_ratio_bucket{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\", le=~\"1(\\\\.0)?\"}[15m]))) / clamp_min(sum by (horde_chat) (rate(horde_text_upfront_hold_charge_ratio_count{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[15m])), 1e-9)",
+     "legendFormat": "chat={{horde_chat}}",
+     "refId": "A"
+    }
+   ],
+   "title": "Charged more than held",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Charge divided by upfront hold for completed text requests, by requested max_length bucket, 15-minute window. Above 1 means the hold was smaller than the charge.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "short",
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 20,
+      "gradientMode": "opacity",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 16,
+    "y": 20
+   },
+   "id": 157,
+   "options": {
+    "legend": {
+     "calcs": [
+      "mean",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "histogram_quantile(0.95, sum by (le, horde_requested_bucket) (rate(horde_text_upfront_hold_charge_ratio_bucket{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[15m])))",
+     "legendFormat": "p95 {{horde_requested_bucket}}",
+     "refId": "A"
+    },
+    {
+     "expr": "histogram_quantile(0.5, sum by (le, horde_requested_bucket) (rate(horde_text_upfront_hold_charge_ratio_bucket{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[15m])))",
+     "legendFormat": "p50 {{horde_requested_bucket}}",
+     "refId": "B"
+    }
+   ],
+   "title": "Charge \u00f7 hold p50 / p95, by requested size",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Jobs that debited kudos after the cancel of their request had already released the upfront hold, per hour by generation type. A hold does not cover these debits.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "short",
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 20,
+      "gradientMode": "opacity",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     },
+     "noValue": "0"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 0,
+    "y": 28
+   },
+   "id": 158,
+   "options": {
+    "legend": {
+     "calcs": [
+      "mean",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "sum by (horde_gentype) (rate(horde_request_cancelled_unreserved_debit_count{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[1h])) * 3600",
+     "legendFormat": "{{horde_gentype}}",
+     "refId": "A"
+    }
+   ],
+   "title": "Debits after a cancel released the hold, per hour",
+   "type": "timeseries"
+  },
+  {
+   "datasource": {
+    "type": "prometheus",
+    "uid": "mimir-telemetry"
+   },
+   "description": "Kudos debited by jobs that settled after the cancel of their request had already released the upfront hold, per hour by generation type.",
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "palette-classic"
+     },
+     "unit": "short",
+     "custom": {
+      "drawStyle": "line",
+      "lineInterpolation": "smooth",
+      "lineWidth": 2,
+      "fillOpacity": 20,
+      "gradientMode": "opacity",
+      "showPoints": "never",
+      "spanNulls": true,
+      "stacking": {
+       "group": "A",
+       "mode": "none"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     },
+     "noValue": "0"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "h": 7,
+    "w": 12,
+    "x": 12,
+    "y": 28
+   },
+   "id": 159,
+   "options": {
+    "legend": {
+     "calcs": [
+      "mean",
+      "max"
+     ],
+     "displayMode": "table",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc"
+    }
+   },
+   "targets": [
+    {
+     "expr": "sum by (horde_gentype) (rate(horde_request_cancelled_unreserved_debit_sum{job=\"ai-horde/ai-horde\", deployment_environment_name=~\"$environment\"}[1h])) * 3600",
+     "legendFormat": "{{horde_gentype}}",
+     "refId": "A"
+    }
+   ],
+   "title": "Kudos debited after a cancel released the hold, per hour",
+   "type": "timeseries"
+  },
+  {
    "collapsed": false,
    "gridPos": {
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 20
+    "y": 35
    },
    "id": 120,
    "title": "Economy Events",
@@ -829,7 +1150,7 @@
     "h": 7,
     "w": 8,
     "x": 0,
-    "y": 21
+    "y": 36
    },
    "id": 9,
    "options": {
@@ -909,7 +1230,7 @@
     "h": 7,
     "w": 8,
     "x": 8,
-    "y": 21
+    "y": 36
    },
    "id": 16,
    "options": {
@@ -970,7 +1291,7 @@
     "h": 7,
     "w": 8,
     "x": 16,
-    "y": 21
+    "y": 36
    },
    "id": 10,
    "options": {
@@ -1006,7 +1327,7 @@
     "h": 8,
     "w": 24,
     "x": 0,
-    "y": 35
+    "y": 50
    },
    "id": 12,
    "options": {
@@ -1034,7 +1355,7 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 43
+    "y": 58
    },
    "id": 140,
    "title": "Projection Diagnostics",
@@ -1056,7 +1377,7 @@
     "h": 6,
     "w": 8,
     "x": 0,
-    "y": 44
+    "y": 59
    },
    "id": 19,
    "options": {
@@ -1100,7 +1421,7 @@
     "h": 6,
     "w": 8,
     "x": 8,
-    "y": 44
+    "y": 59
    },
    "id": 25,
    "options": {
@@ -1161,7 +1482,7 @@
     "h": 6,
     "w": 8,
     "x": 16,
-    "y": 44
+    "y": 59
    },
    "id": 20,
    "options": {
@@ -1210,7 +1531,7 @@
     "h": 8,
     "w": 12,
     "x": 0,
-    "y": 50
+    "y": 65
    },
    "id": 21,
    "options": {
@@ -1254,7 +1575,7 @@
     "h": 8,
     "w": 8,
     "x": 12,
-    "y": 50
+    "y": 65
    },
    "id": 26,
    "options": {
@@ -1315,7 +1636,7 @@
     "h": 8,
     "w": 4,
     "x": 20,
-    "y": 50
+    "y": 65
    },
    "id": 27,
    "options": {
@@ -1347,7 +1668,7 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 58
+    "y": 73
    },
    "id": 150,
    "title": "Incident Signals \u2014 blank or zero when healthy",
@@ -1385,7 +1706,7 @@
     "h": 6,
     "w": 4,
     "x": 0,
-    "y": 59
+    "y": 74
    },
    "id": 17,
    "options": {
@@ -1439,7 +1760,7 @@
     "h": 6,
     "w": 4,
     "x": 4,
-    "y": 59
+    "y": 74
    },
    "id": 28,
    "options": {
@@ -1497,7 +1818,7 @@
     "h": 6,
     "w": 4,
     "x": 8,
-    "y": 59
+    "y": 74
    },
    "id": 18,
    "options": {
@@ -1558,7 +1879,7 @@
     "h": 6,
     "w": 12,
     "x": 12,
-    "y": 59
+    "y": 74
    },
    "id": 11,
    "options": {
@@ -1602,7 +1923,7 @@
     "h": 7,
     "w": 24,
     "x": 0,
-    "y": 65
+    "y": 80
    },
    "id": 22,
    "options": {
@@ -1639,7 +1960,7 @@
     "h": 8,
     "w": 24,
     "x": 0,
-    "y": 72
+    "y": 87
    },
    "id": 23,
    "options": {
@@ -1667,7 +1988,7 @@
     "h": 1,
     "w": 24,
     "x": 0,
-    "y": 87
+    "y": 102
    },
    "id": 130,
    "title": "Database Context",
@@ -1724,7 +2045,7 @@
     "h": 7,
     "w": 12,
     "x": 0,
-    "y": 88
+    "y": 103
    },
    "id": 13,
    "options": {
@@ -1804,7 +2125,7 @@
     "h": 7,
     "w": 12,
     "x": 12,
-    "y": 88
+    "y": 103
    },
    "id": 14,
    "options": {
@@ -1843,7 +2164,7 @@
    },
    "gridPos": {
     "x": 0,
-    "y": 80,
+    "y": 95,
     "w": 12,
     "h": 7
    },
@@ -2042,7 +2363,7 @@
    },
    "gridPos": {
     "x": 12,
-    "y": 80,
+    "y": 95,
     "w": 12,
     "h": 7
    },
@@ -2266,7 +2587,7 @@
     "h": 7,
     "w": 16,
     "x": 0,
-    "y": 28
+    "y": 43
    },
    "options": {
     "legend": {
@@ -2346,7 +2667,7 @@
     "h": 7,
     "w": 8,
     "x": 16,
-    "y": 28
+    "y": 43
    },
    "options": {
     "reduceOptions": {
